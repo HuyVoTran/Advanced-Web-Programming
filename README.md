@@ -1,7 +1,7 @@
 <!-- 
 
 git add .
-git commit -m "Update Husky and Swagger integration"
+git commit -m "Fix gitignore and setup"
 git push 
 
 cd server
