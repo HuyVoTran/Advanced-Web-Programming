@@ -1,10 +1,11 @@
 <!-- 
 
 git add .
-git commit -m "update something"
+git commit -m "Update Husky and Swagger integration"
 git push 
 
 cd server
+npm start
 
 cd client
 npm run dev
