@@ -1,0 +1,75 @@
+import mongoose from 'mongoose';
+
+const orderItemSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: [1, 'Số lượng phải ít nhất là 1'],
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+});
+
+const customerInfoSchema = new mongoose.Schema({
+  fullName: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
+  phone: {
+    type: String,
+    required: true,
+  },
+  address: {
+    type: String,
+    required: true,
+  },
+});
+
+const orderSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    customerInfo: {
+      type: customerInfoSchema,
+      required: true,
+    },
+    items: [orderItemSchema],
+    totalPrice: {
+      type: Number,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'processing', 'shipping', 'completed', 'cancelled'],
+      default: 'pending',
+    },
+    notes: {
+      type: String,
+      default: '',
+    },
+  },
+  { timestamps: true }
+);
+
+// Lấy dữ liệu sản phẩm và người dùng
+orderSchema.pre(/^find/, function () {
+  this.populate('items.product').populate('user');
+});
+
+const Order = mongoose.model('Order', orderSchema);
+
+export default Order;

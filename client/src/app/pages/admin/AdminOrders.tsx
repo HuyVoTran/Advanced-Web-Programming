@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Eye, Package } from 'lucide-react';
-import { mockOrders, formatPrice, getStatusText, getStatusColor } from '@/data/mockData';
+import { Search, Eye } from 'lucide-react';
+import { mockOrders, formatPrice, getStatusText, getStatusColor } from '../../../data/mockData';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 

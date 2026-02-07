@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Badge } from '@/app/components/ui/badge';
+import { Badge } from '../../components/ui/badge';
 
 interface FilterChipProps {
   label: string;
@@ -14,7 +14,6 @@ export const FilterChip: React.FC<FilterChipProps> = ({
   label,
   active = false,
   onClick,
-  onRemove,
   count,
 }) => {
   return (

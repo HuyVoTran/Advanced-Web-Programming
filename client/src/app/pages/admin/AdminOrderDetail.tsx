@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Package, MapPin, CreditCard, User } from 'lucide-react';
-import { mockOrders, formatPrice, getStatusText, getStatusColor, getPaymentMethodText } from '@/data/mockData';
+import { mockOrders, formatPrice, getStatusText, getStatusColor, getPaymentMethodText } from '../../../data/mockData';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 export const AdminOrderDetail: React.FC = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const order = mockOrders.find(o => o.id === id);
 
   const [status, setStatus] = useState(order?.status || 'pending');

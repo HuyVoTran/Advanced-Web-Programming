@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -10,12 +10,25 @@ export const Login: React.FC = () => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(email, password);
-    if (success) {
+    const loggedUser = await login(email, password);
+    if (loggedUser) {
       toast.success('Đăng nhập thành công!');
+      // If the logged in user is admin, redirect to admin dashboard
+      if (loggedUser.isAdmin) {
+        navigate('/admin');
+        return;
+      }
+
+      // If the route was /admin/login but a non-admin logs in, redirect to home
+      if (location.pathname.startsWith('/admin')) {
+        navigate('/');
+        return;
+      }
+
       navigate('/');
     } else {
       toast.error('Email hoặc mật khẩu không đúng');
@@ -79,11 +92,7 @@ export const Login: React.FC = () => {
             </Link>
           </p>
 
-          <div className="mt-8 p-4 bg-gray-50 rounded-sm text-sm text-gray-600">
-            <p className="mb-2">Demo:</p>
-            <p>Email: user@example.com</p>
-            <p>Mật khẩu: password</p>
-          </div>
+          {/* Demo credentials removed */}
         </div>
       </div>
     </div>

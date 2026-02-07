@@ -1,7 +1,7 @@
 <!-- 
 
 git add .
-git commit -m "Fix gitignore and setup"
+git commit -m "Fix css"
 git push 
 
 cd server

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { useOrders } from '@/contexts/OrderContext';
-import { formatPrice } from '@/data/mockData';
-import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Textarea } from '@/app/components/ui/textarea';
+import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useOrders } from '../../contexts/OrderContext';
+import { formatPrice } from '../../data/mockData';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export const Checkout: React.FC = () => {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ export const Checkout: React.FC = () => {
         productName: item.name,
         price: item.price,
         quantity: item.quantity,
-        image: item.images[0],
+        image: item.image,
       })),
       total,
       status: 'pending',
@@ -192,7 +192,7 @@ export const Checkout: React.FC = () => {
 
                 <div className="space-y-4 mb-6">
                   {items.map((item) => {
-                    const imageUrl = `https://source.unsplash.com/200x250/?${encodeURIComponent(item.images[0])}`;
+                    const imageUrl = `https://source.unsplash.com/200x250/?${encodeURIComponent(item.image)}`;
                     return (
                       <div key={item.id} className="flex gap-4">
                         <div className="w-16 h-20 bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">

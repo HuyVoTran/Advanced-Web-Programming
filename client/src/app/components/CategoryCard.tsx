@@ -1,17 +1,27 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Category } from '@/data/mockData';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface CategoryCardProps {
-  category: Category;
+  category: any;
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
-  const imageUrl = `https://source.unsplash.com/800x1000/?${encodeURIComponent(category.image)}`;
+  // Xử lý hình ảnh từ API
+  let imageUrl = '';
+  
+  if (category.image) {
+    if (category.image.startsWith('http')) {
+      imageUrl = category.image;
+    } else {
+      imageUrl = `https://source.unsplash.com/800x1000/?${encodeURIComponent(category.image)}`;
+    }
+  } else {
+    imageUrl = `https://source.unsplash.com/800x1000/?${encodeURIComponent(category.name || 'jewelry')}`;
+  }
 
   return (
-    <Link to={`/products?category=${category.id}`} className="group block">
+    <Link to={`/products?category=${category._id || category.id}`} className="group block">
       <div className="relative overflow-hidden bg-gray-100 aspect-square rounded-sm">
         <ImageWithFallback
           src={imageUrl}
@@ -28,7 +38,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
             {category.name}
           </h3>
           <p className="text-sm text-white/90 mb-6 text-center max-w-xs">
-            {category.description}
+            {category.description || `${category.productCount || 0} sản phẩm`}
           </p>
           <span className="inline-block border border-white px-8 py-2 text-sm tracking-wider uppercase group-hover:bg-white group-hover:text-gray-900 transition-all duration-300">
             Xem thêm

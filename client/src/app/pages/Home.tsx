@@ -4,12 +4,17 @@ import { HeroCarousel } from '@/app/components/HeroCarousel';
 import { ProductCard } from '@/app/components/ProductCard';
 import { CategoryCard } from '@/app/components/CategoryCard';
 import { Newsletter } from '@/app/components/Newsletter';
-import { products, categories } from '@/data/mockData';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { useProducts, useCategories, useFeaturedProducts } from '@/hooks/useCustomHooks';
+import { Skeleton } from '@/app/components/shared/Skeleton';
+import { ErrorState } from '@/app/components/shared/ErrorState';
 
 export const Home: React.FC = () => {
-  const newProducts = products.filter(p => p.new).slice(0, 4);
-  const featuredProducts = products.filter(p => p.featured).slice(0, 3);
+  const { products: allProducts, loading: loadingProducts, error: errorProducts } = useProducts();
+  const { categories, loading: loadingCategories, error: errorCategories } = useCategories();
+  const { products: featuredProducts, loading: loadingFeatured, error: errorFeatured } = useFeaturedProducts();
+
+  const newProducts = allProducts.filter(p => p.new || p.createdAt).slice(0, 4);
 
   return (
     <div className="min-h-screen">
@@ -28,11 +33,27 @@ export const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            {newProducts.map((product, index) => (
-              <ProductCard key={product.id} product={product} index={index} />
-            ))}
-          </div>
+          {errorProducts ? (
+            <ErrorState message="Lỗi tải sản phẩm mới" onRetry={() => window.location.reload()} />
+          ) : loadingProducts ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+              {newProducts.length > 0 ? (
+                newProducts.map((product, index) => (
+                  <ProductCard key={product._id || product.id} product={product} index={index} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-gray-500">Không có sản phẩm mới</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="text-center">
             <Link
@@ -57,11 +78,27 @@ export const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {categories.map((category) => (
-              <CategoryCard key={category.id} category={category} />
-            ))}
-          </div>
+          {errorCategories ? (
+            <ErrorState message="Lỗi tải danh mục" onRetry={() => window.location.reload()} />
+          ) : loadingCategories ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <CategoryCard key={category._id || category.id} category={category} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-gray-500">Không có danh mục nào</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -105,11 +142,27 @@ export const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredProducts.map((product, index) => (
-              <ProductCard key={product.id} product={product} index={index} />
-            ))}
-          </div>
+          {errorFeatured ? (
+            <ErrorState message="Lỗi tải sản phẩm nổi bật" onRetry={() => window.location.reload()} />
+          ) : loadingFeatured ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredProducts.length > 0 ? (
+                featuredProducts.slice(0, 3).map((product, index) => (
+                  <ProductCard key={product._id || product.id} product={product} index={index} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-gray-500">Không có sản phẩm nổi bật</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

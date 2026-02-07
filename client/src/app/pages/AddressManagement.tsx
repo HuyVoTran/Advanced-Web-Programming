@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Plus, Edit2, Trash2, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { Address } from '@/data/mockData';
+import { Address } from '../../data/mockData';
 
 const mockAddresses: Address[] = [
   {

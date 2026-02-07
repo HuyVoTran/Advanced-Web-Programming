@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export const About: React.FC = () => {
   return (

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '@/contexts/CartContext';
-import { formatPrice } from '@/data/mockData';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { useCart } from '../../contexts/CartContext';
+import { formatPrice } from '../../data/mockData';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { Trash2, ShoppingBag, Plus, Minus, AlertCircle } from 'lucide-react';
-import { EmptyState } from '@/app/components/shared/EmptyState';
-import { ConfirmDialog } from '@/app/components/shared/ConfirmDialog';
+import { EmptyState } from '../components/shared/EmptyState';
+import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
-import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 
 export const Cart: React.FC = () => {
@@ -19,7 +19,7 @@ export const Cart: React.FC = () => {
   });
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const handleRemoveItem = (itemId: string, itemName: string) => {
+  const handleRemoveItem = (itemId: string) => {
     setConfirmDelete({ open: true, itemId });
   };
 
@@ -46,7 +46,7 @@ export const Cart: React.FC = () => {
 
   const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) {
-      handleRemoveItem(itemId, items.find(i => i.id === itemId)?.name || '');
+      handleRemoveItem(itemId);
       return;
     }
     updateQuantity(itemId, newQuantity);
@@ -98,7 +98,7 @@ export const Cart: React.FC = () => {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence mode="popLayout">
-              {items.map((item, index) => {
+              {items.map((item) => {
                 const imageUrl = `https://source.unsplash.com/400x500/?${encodeURIComponent(item.image || item.name)}`;
                 
                 return (
@@ -163,7 +163,7 @@ export const Cart: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveItem(item.id, item.name)}
+                          onClick={() => handleRemoveItem(item.id)}
                           className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4 mr-1" />

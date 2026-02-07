@@ -245,3 +245,215 @@ export const useAsync = <T,>(
 
   return { execute, status, value, error };
 };
+
+/**
+ * Hook để fetch dữ liệu từ API với state loading và error
+ */
+export const useFetch = <T,>(
+  fetchFunction: () => Promise<T>,
+  dependencies: any[] = []
+) => {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await fetchFunction();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refetch();
+  }, dependencies);
+
+  return { data, loading, error, refetch };
+};
+
+/**
+ * Hook để fetch Products từ API
+ */
+export const useProducts = (params?: Record<string, any>) => {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const { productsAPI } = await import('@/services/api');
+        const result = await productsAPI.getAll(params);
+        setProducts(Array.isArray(result) ? result : result.products || []);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải sản phẩm');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [JSON.stringify(params)]);
+
+  return { products, loading, error };
+};
+
+/**
+ * Hook để fetch Categories từ API
+ */
+export const useCategories = () => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const { categoriesAPI } = await import('@/services/api');
+        const result = await categoriesAPI.getAll();
+        setCategories(Array.isArray(result) ? result : result.categories || []);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải danh mục');
+        setCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  return { categories, loading, error };
+};
+
+/**
+ * Hook để fetch Brands từ API
+ */
+export const useBrands = () => {
+  const [brands, setBrands] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        setLoading(true);
+        const { brandsAPI } = await import('@/services/api');
+        const result = await brandsAPI.getAll();
+        setBrands(Array.isArray(result) ? result : result.brands || []);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải thương hiệu');
+        setBrands([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBrands();
+  }, []);
+
+  return { brands, loading, error };
+};
+
+/**
+ * Hook để fetch News từ API
+ */
+export const useNews = (params?: Record<string, any>) => {
+  const [news, setNews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setLoading(true);
+        const { newsAPI } = await import('@/services/api');
+        const result = await newsAPI.getAll(params);
+        setNews(Array.isArray(result) ? result : result.news || []);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải tin tức');
+        setNews([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, [JSON.stringify(params)]);
+
+  return { news, loading, error };
+};
+
+/**
+ * Hook để fetch featured Products từ API
+ */
+export const useFeaturedProducts = () => {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const { productsAPI } = await import('@/services/api');
+        const result = await productsAPI.getFeatured();
+        setProducts(Array.isArray(result) ? result : result.products || []);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải sản phẩm nổi bật');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  return { products, loading, error };
+};
+
+/**
+ * Hook để fetch Home Data từ API
+ */
+export const useHomeData = () => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        setLoading(true);
+        const { homeAPI } = await import('@/services/api');
+        const result = await homeAPI.getHomeData();
+        setData(result);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải dữ liệu trang chủ');
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
+  }, []);
+
+  return { data, loading, error };
+};

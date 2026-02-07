@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Search, Package } from 'lucide-react';
-import { products, formatPrice } from '@/data/mockData';
+import { products, formatPrice } from '../../../data/mockData';
 import { toast } from 'sonner';
 
 export const AdminProducts: React.FC = () => {
@@ -14,7 +14,7 @@ export const AdminProducts: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = (_productId: string, name: string) => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${name}"?`)) {
       toast.success('Xóa sản phẩm thành công!');
       // Simulate delete - in real app, would update state

@@ -7,7 +7,7 @@ export const UserProfile: React.FC = () => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: user?.fullName || '',
+    fullName: user?.fullName || user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
   });
@@ -98,7 +98,7 @@ export const UserProfile: React.FC = () => {
                       onClick={() => {
                         setIsEditing(false);
                         setFormData({
-                          fullName: user?.fullName || '',
+                          fullName: user?.fullName || user?.name || '',
                           email: user?.email || '',
                           phone: user?.phone || '',
                         });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, User, Shield, Mail, Phone } from 'lucide-react';
-import { mockUsers } from '@/data/mockData';
+import { mockUsers } from '../../../data/mockData';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -18,7 +18,7 @@ export const AdminUsers: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
-  const handleToggleRole = (userId: string, currentRole: string) => {
+  const handleToggleRole = (_userId: string, currentRole: string) => {
     const newRole = currentRole === 'USER' ? 'ADMIN' : 'USER';
     if (window.confirm(`Bạn có chắc chắn muốn thay đổi quyền thành ${newRole}?`)) {
       toast.success('Cập nhật quyền người dùng thành công!');

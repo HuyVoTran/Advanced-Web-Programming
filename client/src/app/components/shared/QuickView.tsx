@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ShoppingCart, Heart, Share2 } from 'lucide-react';
-import { Product, formatPrice } from '@/data/mockData';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
-import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
-import { useCart } from '@/contexts/CartContext';
+import { Product, formatPrice } from '../../../data/mockData';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { useCart } from '../../../contexts/CartContext';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 

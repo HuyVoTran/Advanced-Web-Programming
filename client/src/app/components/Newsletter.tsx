@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Input } from '@/app/components/ui/input';
+import { Input } from './ui/input';
 import { toast } from 'sonner';
 
 export const Newsletter: React.FC = () => {

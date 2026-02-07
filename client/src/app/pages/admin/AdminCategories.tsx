@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, FolderOpen } from 'lucide-react';
-import { categories } from '@/data/mockData';
+import { categories } from '../../../data/mockData';
 import { toast } from 'sonner';
 
 export const AdminCategories: React.FC = () => {
@@ -27,7 +27,7 @@ export const AdminCategories: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = (_id: string, name: string) => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${name}"?`)) {
       toast.success('Xóa danh mục thành công!');
     }

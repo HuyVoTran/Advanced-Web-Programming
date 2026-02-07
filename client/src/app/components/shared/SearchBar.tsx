@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Input } from '@/app/components/ui/input';
+import { Input } from '../../components/ui/input';
 
 interface SearchBarProps {
   value: string;

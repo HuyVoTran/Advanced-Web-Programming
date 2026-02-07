@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export interface User {
   id: string;
   name: string;
+  fullName?: string;
   email: string;
   phone: string;
   addresses: Address[];
@@ -43,8 +44,7 @@ export interface Order {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  loginAdmin: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<User | null>;
   register: (name: string, email: string, password: string, phone: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
@@ -55,27 +55,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users data
+// Mock users data (keep only admin for admin login; remove demo regular user)
 const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'Nguyễn Văn A',
-    email: 'user@example.com',
-    phone: '0123456789',
-    addresses: [
-      {
-        id: '1',
-        fullName: 'Nguyễn Văn A',
-        phone: '0123456789',
-        address: '123 Đường Lê Lợi',
-        city: 'Hồ Chí Minh',
-        district: 'Quận 1',
-        ward: 'Phường Bến Nghé',
-        isDefault: true,
-      },
-    ],
-    isAdmin: false,
-  },
   {
     id: 'admin',
     name: 'Admin',
@@ -100,30 +81,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock authentication
-    const foundUser = mockUsers.find(u => u.email === email && !u.isAdmin);
-    if (foundUser && password === 'password') {
-      setUser(foundUser);
-      return true;
-    }
-    return false;
-  };
+  const login = async (email: string, password: string): Promise<User | null> => {
+    // Mock authentication: find any user (admin or user) and validate password
+    const foundUser = mockUsers.find(u => u.email === email);
+    // debug logging to help trace login issues
+    // eslint-disable-next-line no-console
+    console.debug('[Auth] login attempt', { email, found: !!foundUser });
+    if (!foundUser) return null;
 
-  const loginAdmin = async (email: string, password: string): Promise<boolean> => {
-    // Mock admin authentication
-    const foundUser = mockUsers.find(u => u.email === email && u.isAdmin);
-    if (foundUser && password === 'admin123') {
+    // Simple mock password rules: admins use 'admin123', regular users 'password'
+    const expected = foundUser.isAdmin ? 'admin123' : 'password';
+    // eslint-disable-next-line no-console
+    console.debug('[Auth] expected password for user', { email, expected });
+    if (password === expected) {
       setUser(foundUser);
-      return true;
+      // eslint-disable-next-line no-console
+      console.debug('[Auth] login success', { email });
+      return foundUser;
     }
-    return false;
+
+    // eslint-disable-next-line no-console
+    console.debug('[Auth] login failed - wrong password', { email });
+    return null;
   };
 
   const register = async (
     name: string,
     email: string,
-    password: string,
+    _password: string,
     phone: string
   ): Promise<boolean> => {
     // Mock registration
@@ -205,7 +190,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         login,
-        loginAdmin,
         register,
         logout,
         updateUser,

@@ -27,7 +27,6 @@ import { About } from '@/app/pages/About';
 import { Contact } from '@/app/pages/Contact';
 
 // Admin
-import { AdminLogin } from '@/app/pages/admin/AdminLogin';
 import { AdminLayout } from '@/app/pages/admin/AdminLayout';
 import { AdminDashboard } from '@/app/pages/admin/AdminDashboard';
 import { AdminProducts } from '@/app/pages/admin/AdminProducts';
@@ -101,7 +100,7 @@ function App() {
                 <Route path="/legal/shipping" element={<SimplePage title="Chính sách giao hàng" description="Thông tin giao hàng" />} />
 
                 {/* Admin Routes */}
-                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/login" element={<Login />} />
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="categories" element={<AdminCategories />} />

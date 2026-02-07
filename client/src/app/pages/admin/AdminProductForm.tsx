@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Upload } from 'lucide-react';
-import { products, categories, brands } from '@/data/mockData';
+import { products, categories, brands } from '../../../data/mockData';
 import { toast } from 'sonner';
 
 export const AdminProductForm: React.FC = () => {

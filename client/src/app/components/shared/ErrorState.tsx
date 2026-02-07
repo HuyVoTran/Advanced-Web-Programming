@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, XCircle, WifiOff, ServerCrash } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
+import { Button } from '../../components/ui/button';
 
 interface ErrorStateProps {
   type?: 'general' | 'network' | 'notfound' | 'server';

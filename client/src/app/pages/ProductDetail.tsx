@@ -1,20 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { products, formatPrice } from '@/data/mockData';
+import { formatPrice } from '@/data/mockData';
 import { ProductCard } from '@/app/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { ShoppingBag, Heart, Share2 } from 'lucide-react';
+import { Skeleton } from '@/app/components/shared/Skeleton';
+import { ErrorState } from '@/app/components/shared/ErrorState';
+import { productsAPI } from '@/services/api';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const product = products.find(p => p.id === id);
 
+  const [product, setProduct] = useState<any>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch product detail
+        const productData = await productsAPI.getById(id!);
+        setProduct(productData);
+
+        // Fetch related products
+        const relatedData = await productsAPI.getRelated(id!);
+        setRelatedProducts(Array.isArray(relatedData) ? relatedData : relatedData.products || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải sản phẩm');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-24 pb-16">
+        <ErrorState
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white pt-24 pb-16">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <Skeleton className="aspect-square rounded" />
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-6 w-2/3" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -32,10 +91,6 @@ export const ProductDetail: React.FC = () => {
     );
   }
 
-  const relatedProducts = products
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
-
   const handleAddToCart = () => {
     addToCart(product, quantity);
     toast.success('Đã thêm vào giỏ hàng');
@@ -46,9 +101,16 @@ export const ProductDetail: React.FC = () => {
     navigate('/cart');
   };
 
-  const imageUrls = product.images.map(
-    (img) => `https://source.unsplash.com/800x1000/?${encodeURIComponent(img)}`
-  );
+  const imageUrls = (product.images || []).map((img: string) => {
+    if (img.startsWith('http')) {
+      return img;
+    }
+    return `https://source.unsplash.com/800x1000/?${encodeURIComponent(img)}`;
+  });
+
+  if (imageUrls.length === 0) {
+    imageUrls.push('https://source.unsplash.com/800x1000/?jewelry');
+  }
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
@@ -69,7 +131,7 @@ export const ProductDetail: React.FC = () => {
             {/* Thumbnail Images */}
             {imageUrls.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
-                {imageUrls.map((url, index) => (
+                {imageUrls.map((url: string, index: number) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}

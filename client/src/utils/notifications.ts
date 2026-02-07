@@ -1,5 +1,4 @@
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 
 // Helper functions for consistent toast notifications throughout the app
 
@@ -7,28 +6,24 @@ export const notify = {
   success: (title: string, description?: string) => {
     toast.success(title, {
       description,
-      icon: <CheckCircle className="w-5 h-5" />,
     });
   },
 
   error: (title: string, description?: string) => {
     toast.error(title, {
       description,
-      icon: <XCircle className="w-5 h-5" />,
     });
   },
 
   warning: (title: string, description?: string) => {
     toast.warning(title, {
       description,
-      icon: <AlertTriangle className="w-5 h-5" />,
     });
   },
 
   info: (title: string, description?: string) => {
     toast.info(title, {
       description,
-      icon: <Info className="w-5 h-5" />,
     });
   },
 

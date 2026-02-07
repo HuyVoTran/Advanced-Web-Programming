@@ -2,16 +2,17 @@ import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProductCard } from '@/app/components/ProductCard';
-import { products, categories, brands } from '@/data/mockData';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
 import { Label } from '@/app/components/ui/label';
-import { SlidersHorizontal, X, Grid3x3, List, ArrowUpDown } from 'lucide-react';
+import { SlidersHorizontal, Grid3x3, List, ArrowUpDown } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/app/components/ui/sheet';
 import { SearchBar } from '@/app/components/shared/SearchBar';
 import { EmptyState } from '@/app/components/shared/EmptyState';
 import { ActiveFilterTag } from '@/app/components/shared/FilterComponents';
 import { Button } from '@/app/components/ui/button';
+import { Skeleton } from '@/app/components/shared/Skeleton';
+import { ErrorState } from '@/app/components/shared/ErrorState';
 import {
   Select,
   SelectContent,
@@ -20,11 +21,17 @@ import {
   SelectValue,
 } from '@/app/components/ui/select';
 import { ShoppingBag } from 'lucide-react';
+import { useProducts, useCategories, useBrands } from '@/hooks/useCustomHooks';
 
 export const Products: React.FC = () => {
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const brandParam = searchParams.get('brand');
+
+  // Fetch dữ liệu từ API
+  const { products: apiProducts, loading: loadingProducts, error: errorProducts } = useProducts();
+  const { categories } = useCategories();
+  const { brands: apiBrands } = useBrands();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
@@ -38,26 +45,32 @@ export const Products: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const materials = Array.from(new Set(products.map(p => p.material.split(',')[0].trim())));
+  const materials = Array.from(new Set(apiProducts.map((p: any) => {
+    const mat = p.material || p.category || '';
+    return typeof mat === 'string' ? mat.split(',')[0].trim() : mat;
+  })));
 
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter(product => {
+    let filtered = apiProducts.filter((product: any) => {
       // Search
       const searchMatch = searchQuery === '' || 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchQuery.toLowerCase());
+        (product.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const categoryMatch = selectedCategories.length === 0 || 
-        selectedCategories.some(cat => categories.find(c => c.id === cat)?.name === product.category);
+        selectedCategories.some(cat => {
+          const category = categories.find(c => (c._id || c.id) === cat);
+          return category && (product.category === category.name || product.category === category._id);
+        });
       
       const brandMatch = selectedBrands.length === 0 || 
-        selectedBrands.includes(product.brand);
+        selectedBrands.includes(product.brand || product.brandId);
       
-      const priceMatch = product.price <= priceRange[0];
+      const priceMatch = (product.price || 0) <= priceRange[0];
       
       const materialMatch = selectedMaterials.length === 0 || 
-        selectedMaterials.some(mat => product.material.includes(mat));
+        selectedMaterials.some(mat => (product.material || '').includes(mat));
 
       return searchMatch && categoryMatch && brandMatch && priceMatch && materialMatch;
     });
@@ -65,28 +78,28 @@ export const Products: React.FC = () => {
     // Sorting
     switch (sortBy) {
       case 'price-asc':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a: any, b: any) => (a.price || 0) - (b.price || 0));
         break;
       case 'price-desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a: any, b: any) => (b.price || 0) - (a.price || 0));
         break;
       case 'name-asc':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        filtered.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
         break;
       case 'name-desc':
-        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        filtered.sort((a: any, b: any) => (b.name || '').localeCompare(a.name || ''));
         break;
       case 'newest':
-        filtered = filtered.filter(p => p.new);
+        filtered = filtered.filter((p: any) => p.new || p.createdAt);
         break;
       case 'featured':
       default:
-        filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+        filtered.sort((a: any, b: any) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
         break;
     }
 
     return filtered;
-  }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, sortBy]);
+  }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, sortBy, apiProducts, categories]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories(prev =>
@@ -147,15 +160,15 @@ export const Products: React.FC = () => {
       <div>
         <h3 className="text-lg mb-4">Thương hiệu</h3>
         <div className="space-y-3">
-          {brands.map(brand => (
-            <div key={brand.id} className="flex items-center space-x-2">
+          {apiBrands.map(brand => (
+            <div key={brand._id || brand.id} className="flex items-center space-x-2">
               <Checkbox
-                id={`brand-${brand.id}`}
+                id={`brand-${brand._id || brand.id}`}
                 checked={selectedBrands.includes(brand.name)}
                 onCheckedChange={() => toggleBrand(brand.name)}
               />
               <Label
-                htmlFor={`brand-${brand.id}`}
+                htmlFor={`brand-${brand._id || brand.id}`}
                 className="text-sm cursor-pointer"
               >
                 {brand.name}
@@ -331,7 +344,7 @@ export const Products: React.FC = () => {
 
           {/* Results Count */}
           <p className="text-sm text-muted-foreground">
-            {filteredProducts.length === products.length 
+            {loadingProducts ? 'Đang tải...' : filteredProducts.length === apiProducts.length 
               ? `Hiển thị tất cả ${filteredProducts.length} sản phẩm`
               : `Tìm thấy ${filteredProducts.length} sản phẩm`
             }
@@ -348,7 +361,18 @@ export const Products: React.FC = () => {
 
           {/* Products Grid/List */}
           <div className="flex-1">
-            {filteredProducts.length > 0 ? (
+            {errorProducts ? (
+              <ErrorState 
+                message="Lỗi tải sản phẩm" 
+                onRetry={() => window.location.reload()} 
+              />
+            ) : loadingProducts ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded" />
+                ))}
+              </div>
+            ) : filteredProducts.length > 0 ? (
               <motion.div 
                 layout
                 className={
@@ -360,7 +384,7 @@ export const Products: React.FC = () => {
                 <AnimatePresence mode="popLayout">
                   {filteredProducts.map((product, index) => (
                     <motion.div
-                      key={product.id}
+                      key={product._id || product.id}
                       layout
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}

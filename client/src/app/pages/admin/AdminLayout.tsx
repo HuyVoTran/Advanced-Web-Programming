@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { LayoutDashboard, Package, ShoppingCart, Users, List, LogOut } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {

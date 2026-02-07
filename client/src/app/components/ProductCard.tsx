@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Product, formatPrice } from '@/data/mockData';
 import { motion } from 'motion/react';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
-import { ShoppingCart, Eye } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
-import { useCart } from '@/contexts/CartContext';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ShoppingCart } from 'lucide-react';
+import { Button } from './ui/button';
+import { useCart } from '../../contexts/CartContext';
 import { toast } from 'sonner';
+import { formatPrice } from '../../data/mockData';
 
 interface ProductCardProps {
-  product: Product;
+  product: any;
   index?: number;
   viewMode?: 'grid' | 'list';
 }
@@ -21,9 +21,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const { addItem } = useCart();
 
   useEffect(() => {
-    // Simulate loading image URL from product.images[0]
-    setImageUrl(`https://source.unsplash.com/600x800/?${encodeURIComponent(product.images[0])}`);
-  }, [product.images]);
+    // Lấy hình ảnh từ product
+    const images = product.images || product.image || [];
+    const firstImage = Array.isArray(images) ? images[0] : images;
+    
+    if (firstImage && typeof firstImage === 'string') {
+      // Nếu là URL thực, sử dụng trực tiếp
+      if (firstImage.startsWith('http')) {
+        setImageUrl(firstImage);
+      } else {
+        // Nếu là tên, tạo URL Unsplash
+        setImageUrl(`https://source.unsplash.com/600x800/?${encodeURIComponent(firstImage)}`);
+      }
+    } else {
+      // Fallback
+      setImageUrl(`https://source.unsplash.com/600x800/?jewelry`);
+    }
+  }, [product.images, product.image]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -154,7 +168,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white p-6">
             <h3 className="text-xl mb-2 text-center">{product.name}</h3>
-            <p className="text-sm text-white/80 mb-1">{product.category}</p>
+            <p className="text-sm text-white/80 mb-1">{product.category.name}</p>
             <p className="text-lg text-[#C9A24D] font-light tracking-wide mb-4">
               {formatPrice(product.price)}
             </p>
@@ -171,7 +185,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
 
         {/* Product Info (shown below image on desktop) */}
         <div className="mt-4 space-y-1">
-          <p className="text-xs text-gray-500 tracking-wide uppercase">{product.brand}</p>
+          <p className="text-xs text-gray-500 tracking-wide uppercase">{product.brand.name}</p>
           <h3 className="text-sm text-gray-900 line-clamp-1">{product.name}</h3>
           <p className="text-base text-[#C9A24D]">{formatPrice(product.price)}</p>
         </div>

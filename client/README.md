@@ -154,13 +154,7 @@ Dự án sử dụng mock data trong `/src/data/mockData.ts` bao gồm:
 
 ## 🔐 Demo Accounts
 
-### User
-- Email: `user@example.com`
-- Password: `password`
-
-### Admin
-- Email: `admin@example.com`
-- Password: `admin123`
+Demo accounts and credentials have been removed from this repository. Use real backend credentials or create accounts via the registration flow when integrating with a backend.
 
 ## 📱 Responsive Breakpoints
 
