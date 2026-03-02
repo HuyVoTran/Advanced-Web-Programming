@@ -1,32 +1,126 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Package, MapPin, CreditCard, User } from 'lucide-react';
-import { mockOrders, formatPrice, getStatusText, getStatusColor, getPaymentMethodText } from '../../../data/mockData';
+import { ArrowLeft, Package, MapPin, CreditCard, User, AlertCircle } from 'lucide-react';
+import { useAdminFetch, useAdminMutation } from '../../../hooks/useCustomHooks';
+import { adminApi } from '../../../services/adminApi';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 
+const STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  confirmed: 'bg-blue-100 text-blue-800',
+  shipping: 'bg-purple-100 text-purple-800',
+  completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+};
+
+const STATUS_TEXT: Record<string, string> = {
+  pending: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  shipping: 'Đang giao hàng',
+  completed: 'Đã giao hàng',
+  cancelled: 'Đã hủy',
+};
+
+interface OrderDetail {
+  _id: string;
+  orderNumber: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  items: Array<{
+    productId: string;
+    productName: string;
+    price: number;
+    quantity: number;
+  }>;
+  totalPrice: number;
+  shippingAddress: {
+    street: string;
+    ward: string;
+    district: string;
+    city: string;
+  };
+  status: string;
+  paymentMethod: string;
+  createdAt: string;
+  updatedAt: string;
+  note?: string;
+}
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(price);
+}
+
+function formatAddress(addr: any): string {
+  if (!addr) return '';
+  return `${addr.street}, ${addr.ward}, ${addr.district}, ${addr.city}`;
+}
+
 export const AdminOrderDetail: React.FC = () => {
-  const { id } = useParams();
-  const order = mockOrders.find(o => o.id === id);
+  const { id } = useParams<{ id: string }>();
+  const [newStatus, setNewStatus] = useState<string>('');
 
-  const [status, setStatus] = useState(order?.status || 'pending');
+  const { data: order, loading, error } = useAdminFetch<OrderDetail>(
+    () => adminApi.getOrderById(id!),
+    [id]
+  );
 
-  if (!order) {
+  const { mutate: updateStatus, loading: updateLoading } = useAdminMutation(
+    (status: string) => adminApi.updateOrderStatus(id!, status)
+  );
+
+  React.useEffect(() => {
+    if (order?.status) {
+      setNewStatus(order.status);
+    }
+  }, [order]);
+
+  const handleUpdateStatus = async () => {
+    if (!newStatus) {
+      toast.error('Vui lòng chọn trạng thái');
+      return;
+    }
+
+    try {
+      await updateStatus(newStatus);
+      toast.success('Cập nhật trạng thái đơn hàng thành công!');
+    } catch (err) {
+      toast.error('Cập nhật trạng thái thất bại');
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">Không tìm thấy đơn hàng</p>
-        <Link to="/admin/orders" className="text-[#C9A24D] hover:underline">
-          Quay lại danh sách
-        </Link>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A24D]"></div>
       </div>
     );
   }
 
-  const handleUpdateStatus = () => {
-    toast.success('Cập nhật trạng thái đơn hàng thành công!');
-    // In real app, would call API
-  };
+  if (error || !order) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-gap gap-3 mb-6">
+        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+        <div>
+          <p className="text-red-800 font-medium">Lỗi</p>
+          <p className="text-red-700 text-sm">{error || 'Không tìm thấy đơn hàng'}</p>
+          <Link to="/admin/orders" className="text-red-600 hover:underline text-sm mt-2 inline-block">
+            Quay lại danh sách
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <div>
@@ -43,8 +137,8 @@ export const AdminOrderDetail: React.FC = () => {
             <h1 className="text-3xl mb-2 tracking-wide">Chi Tiết Đơn Hàng</h1>
             <p className="text-gray-600">Mã đơn: {order.orderNumber}</p>
           </div>
-          <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm ${getStatusColor(order.status)}`}>
-            {getStatusText(order.status)}
+          <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
+            {STATUS_TEXT[order.status] || order.status}
           </span>
         </div>
       </div>
@@ -77,15 +171,11 @@ export const AdminOrderDetail: React.FC = () => {
             <div className="mt-6 pt-6 border-t-2 border-gray-200 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tạm tính:</span>
-                <span>{formatPrice(order.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Phí vận chuyển:</span>
-                <span>{formatPrice(order.shippingFee)}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between text-lg pt-2">
                 <span>Tổng cộng:</span>
-                <span className="text-[#C9A24D]">{formatPrice(order.total)}</span>
+                <span className="text-[#C9A24D]">{formatPrice(order.totalPrice)}</span>
               </div>
             </div>
           </div>
@@ -99,23 +189,25 @@ export const AdminOrderDetail: React.FC = () => {
                   Trạng thái đơn hàng
                 </label>
                 <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:opacity-50"
+                  disabled={updateLoading}
                 >
                   <option value="pending">Chờ xác nhận</option>
                   <option value="confirmed">Đã xác nhận</option>
                   <option value="shipping">Đang giao hàng</option>
-                  <option value="delivered">Đã giao hàng</option>
+                  <option value="completed">Đã giao hàng</option>
                   <option value="cancelled">Đã hủy</option>
                 </select>
               </div>
 
               <button
                 onClick={handleUpdateStatus}
-                className="w-full bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors"
+                disabled={updateLoading}
+                className="w-full bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors disabled:opacity-50"
               >
-                Cập Nhật Trạng Thái
+                {updateLoading ? 'Đang cập nhật...' : 'Cập Nhật Trạng Thái'}
               </button>
             </div>
           </div>
@@ -131,23 +223,16 @@ export const AdminOrderDetail: React.FC = () => {
             <div className="space-y-3 text-sm">
               <div>
                 <div className="text-gray-600 mb-1">Họ tên:</div>
-                <div>{order.customerName}</div>
+                <div>{order.user?.name || 'N/A'}</div>
               </div>
               <div>
                 <div className="text-gray-600 mb-1">Email:</div>
-                <div>{order.customerEmail}</div>
+                <div>{order.user?.email || 'N/A'}</div>
               </div>
               <div>
                 <div className="text-gray-600 mb-1">Số điện thoại:</div>
-                <div>{order.customerPhone}</div>
+                <div>{order.user?.phone || 'N/A'}</div>
               </div>
-              {!order.userId && (
-                <div className="pt-3 border-t border-gray-200">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
-                    Khách vãng lai (Guest)
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -157,7 +242,7 @@ export const AdminOrderDetail: React.FC = () => {
               <h2 className="text-xl">Địa Chỉ Giao Hàng</h2>
             </div>
 
-            <p className="text-sm">{order.shippingAddress}</p>
+            <p className="text-sm">{formatAddress(order.shippingAddress)}</p>
 
             {order.note && (
               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -170,13 +255,13 @@ export const AdminOrderDetail: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-6">
               <CreditCard className="w-6 h-6 text-[#C9A24D]" />
-              <h2 className="text-xl">Thanh Toán</h2>
+              <h2 className="text-xl">Thông Tin Khác</h2>
             </div>
 
             <div className="space-y-3 text-sm">
               <div>
-                <div className="text-gray-600 mb-1">Phương thức:</div>
-                <div>{getPaymentMethodText(order.paymentMethod)}</div>
+                <div className="text-gray-600 mb-1">Phương thức thanh toán:</div>
+                <div className="capitalize">{order.paymentMethod || 'N/A'}</div>
               </div>
               <div>
                 <div className="text-gray-600 mb-1">Ngày đặt:</div>

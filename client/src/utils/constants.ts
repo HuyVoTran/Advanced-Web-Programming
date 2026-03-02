@@ -5,6 +5,62 @@ export const APP_NAME = 'Luxury Jewelry Store';
 export const APP_DESCRIPTION = 'Hệ thống thương mại điện tử trang sức cao cấp';
 export const APP_VERSION = '1.0.0';
 
+/**
+ * Format price to Vietnamese Dong currency
+ */
+export const formatPrice = (value: number): string => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(value);
+};
+
+/**
+ * Get order status display text in Vietnamese
+ */
+export const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'pending':
+      return 'Chờ xác nhận';
+    case 'processing':
+      return 'Đang xử lý';
+    case 'confirmed':
+      return 'Đã xác nhận';
+    case 'shipping':
+      return 'Đang giao';
+    case 'completed':
+    case 'delivered':
+      return 'Hoàn thành';
+    case 'cancelled':
+      return 'Đã hủy';
+    default:
+      return status;
+  }
+};
+
+/**
+ * Get order status badge color classes
+ */
+export const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-700';
+    case 'processing':
+      return 'bg-blue-100 text-blue-700';
+    case 'confirmed':
+      return 'bg-indigo-100 text-indigo-700';
+    case 'shipping':
+      return 'bg-purple-100 text-purple-700';
+    case 'completed':
+    case 'delivered':
+      return 'bg-green-100 text-green-700';
+    case 'cancelled':
+      return 'bg-red-100 text-red-700';
+    default:
+      return 'bg-gray-100 text-gray-700';
+  }
+};
+
 // Colors (matching theme.css)
 export const COLORS = {
   primary: '#C9A24D',

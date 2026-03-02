@@ -49,6 +49,8 @@ export const register = async (req, res, next) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        // convenience flag for clients
+        isAdmin: user.role === 'admin',
       },
       token,
     });
@@ -94,6 +96,7 @@ export const login = async (req, res, next) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        isAdmin: user.role === 'admin',
         phone: user.phone,
       },
       token,
@@ -118,6 +121,7 @@ export const getProfile = async (req, res, next) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        isAdmin: user.role === 'admin',
         addresses: user.addresses,
         createdAt: user.createdAt,
       },

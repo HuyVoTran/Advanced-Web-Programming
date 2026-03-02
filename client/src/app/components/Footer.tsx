@@ -11,7 +11,7 @@ export const Footer: React.FC = () => {
           <div>
             <Link to="/" className="inline-block mb-6">
               <span className="text-2xl font-light tracking-wider">
-                <span className="text-[#C9A24D]">BIJOUX</span>
+                <span className="text-[#C9A24D]">SALVIO</span>
                 <span className="text-white"> ROYALE</span>
               </span>
             </Link>
@@ -101,7 +101,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-[#C9A24D]" />
-                <span className="text-gray-400 text-sm">info@bijouxroyale.vn</span>
+                <span className="text-gray-400 text-sm">info@Salvioroyale.vn</span>
               </li>
             </ul>
           </div>
@@ -109,7 +109,7 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center">
           <p className="text-gray-500 text-sm">
-            &copy; 2026 Bijoux Royale. Bảo lưu mọi quyền.
+            &copy; 2026 Salvio Royale. Bảo lưu mọi quyền.
           </p>
         </div>
       </div>

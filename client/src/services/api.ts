@@ -167,6 +167,8 @@ export const cartAPI = {
 export const ordersAPI = {
   getAll: (token: string) => apiCall('/orders/my-orders', { token }),
 
+  getUserOrders: (token: string) => apiCall('/orders/my-orders', { token }),
+
   getById: (id: string, token: string) => apiCall(`/orders/${id}`, { token }),
 
   create: (data: any, token?: string) =>

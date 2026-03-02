@@ -1,5 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product } from '@/data/mockData';
+
+export interface Product {
+  _id?: string;
+  id?: string;
+  name: string;
+  price: number;
+  image?: string;
+  images?: string[];
+  category?: string;
+  description?: string;
+  brand?: string;
+  material?: string;
+  new?: boolean;
+  featured?: boolean;
+}
 
 export interface CartItem {
   id: string;

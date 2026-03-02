@@ -1,39 +1,88 @@
 import React, { useState } from 'react';
-import { Search, User, Shield, Mail, Phone } from 'lucide-react';
-import { mockUsers } from '../../../data/mockData';
+import { Search, User, Shield, Mail, Phone, AlertCircle } from 'lucide-react';
+import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
+import { adminApi } from '@/services/adminApi';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
+
+interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'user' | 'admin';
+  isActive: boolean;
+  addresses: any[];
+  createdAt: string;
+}
 
 export const AdminUsers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  const filteredUsers = mockUsers.filter(user => {
+  // Fetch users
+  const { data: allUsers = [], loading, error, refetch } = useAdminFetch<AdminUser[]>(
+    () => adminApi.getAllUsers(1, 100),
+    []
+  );
+
+  // Update role mutation
+  const { mutate: updateRole, loading: updatingLoading } = useAdminMutation<any>(
+    (data) => adminApi.updateUserRole(data.id, data.role)
+  );
+
+  const filteredUsers = (allUsers || []).filter(user => {
     const matchesSearch = 
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone.includes(searchTerm);
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
-  const handleToggleRole = (_userId: string, currentRole: string) => {
-    const newRole = currentRole === 'USER' ? 'ADMIN' : 'USER';
+  const handleToggleRole = async (userId: string, currentRole: string) => {
+    const newRole = currentRole === 'user' ? 'admin' : 'user';
     if (window.confirm(`Bạn có chắc chắn muốn thay đổi quyền thành ${newRole}?`)) {
-      toast.success('Cập nhật quyền người dùng thành công!');
+      try {
+        await updateRole({ id: userId, role: newRole });
+        toast.success('Cập nhật quyền người dùng thành công!');
+        refetch();
+      } catch (err) {
+        toast.error('Lỗi khi cập nhật quyền');
+      }
     }
   };
 
-  const userCount = mockUsers.filter(u => u.role === 'USER').length;
-  const adminCount = mockUsers.filter(u => u.role === 'ADMIN').length;
+  const userCount = (allUsers || []).filter(u => u.role === 'user').length;
+  const adminCount = (allUsers || []).filter(u => u.role === 'admin').length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A24D]"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-gap-3">
+        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-red-800 font-medium">Lỗi tải dữ liệu</p>
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="mb-8">
         <h1 className="text-3xl mb-2 tracking-wide">Quản Lý Người Dùng</h1>
         <div className="flex gap-6 text-sm">
-          <p className="text-gray-600">Tổng số: {mockUsers.length} người dùng</p>
+          <p className="text-gray-600">Tổng số: {(allUsers || []).length} người dùng</p>
           <p className="text-gray-600">User: {userCount}</p>
           <p className="text-gray-600">Admin: {adminCount}</p>
         </div>
@@ -41,9 +90,9 @@ export const AdminUsers: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
-          { role: 'all', label: 'Tất cả', count: mockUsers.length, icon: User },
-          { role: 'USER', label: 'Người dùng', count: userCount, icon: User },
-          { role: 'ADMIN', label: 'Quản trị viên', count: adminCount, icon: Shield },
+          { role: 'all', label: 'Tất cả', count: (allUsers || []).length, icon: User },
+          { role: 'user', label: 'Người dùng', count: userCount, icon: User },
+          { role: 'admin', label: 'Quản trị viên', count: adminCount, icon: Shield },
         ].map(item => (
           <button
             key={item.role}
@@ -108,19 +157,19 @@ export const AdminUsers: React.FC = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredUsers.length > 0 ? (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[#C9A24D]/10 rounded-full flex items-center justify-center">
-                          {user.role === 'ADMIN' ? (
+                          {user.role === 'admin' ? (
                             <Shield className="w-5 h-5 text-[#C9A24D]" />
                           ) : (
                             <User className="w-5 h-5 text-[#C9A24D]" />
                           )}
                         </div>
                         <div>
-                          <div className="text-sm">{user.fullName}</div>
-                          <div className="text-xs text-gray-500">ID: {user.id}</div>
+                          <div className="text-sm">{user.name}</div>
+                          <div className="text-xs text-gray-500">ID: {user._id}</div>
                         </div>
                       </div>
                     </td>
@@ -148,11 +197,11 @@ export const AdminUsers: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
-                        user.role === 'ADMIN'
+                        user.role === 'admin'
                           ? 'bg-purple-100 text-purple-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {user.role === 'ADMIN' ? (
+                        {user.role === 'admin' ? (
                           <>
                             <Shield className="w-3 h-3" />
                             Quản trị viên
@@ -167,8 +216,9 @@ export const AdminUsers: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
-                        onClick={() => handleToggleRole(user.id, user.role)}
-                        className="text-sm text-[#C9A24D] hover:underline"
+                        onClick={() => handleToggleRole(user._id, user.role)}
+                        className="text-sm text-[#C9A24D] hover:underline disabled:opacity-50"
+                        disabled={updatingLoading}
                       >
                         Đổi quyền
                       </button>

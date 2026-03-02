@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { formatPrice } from '@/data/mockData';
+import { formatPrice } from '@/utils/constants';
 import { ProductCard } from '@/app/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';

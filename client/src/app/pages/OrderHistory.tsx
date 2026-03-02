@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
-import { formatPrice } from '@/data/mockData';
+import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { Package } from 'lucide-react';
 
 export const OrderHistory: React.FC = () => {
@@ -16,44 +16,6 @@ export const OrderHistory: React.FC = () => {
   }
 
   const orders = getUserOrders(user.id);
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Chờ xác nhận';
-      case 'processing': return 'Đang xử lý';
-      case 'shipping': return 'Đang giao';
-      case 'completed': return 'Hoàn thành';
-      case 'cancelled': return 'Đã hủy';
-      default: return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-700';
-      case 'processing': return 'bg-blue-100 text-blue-700';
-      case 'shipping': return 'bg-purple-100 text-purple-700';
-      case 'completed': return 'bg-green-100 text-green-700';
-      case 'cancelled': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  if (orders.length === 0) {
-    return (
-      <div className="min-h-screen bg-white pt-24 pb-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center py-20">
-            <Package className="w-16 h-16 mx-auto mb-6 text-gray-300" />
-            <h2 className="text-3xl font-light mb-4">Chưa có đơn hàng</h2>
-            <p className="text-gray-600 mb-8">
-              Bạn chưa có đơn hàng nào
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">

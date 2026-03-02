@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, ShoppingBag, User, Search } from 'lucide-react';
+import { Menu, ShoppingBag, User, Search } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
@@ -33,7 +33,7 @@ export const Header: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <span className="text-2xl font-light tracking-wider">
-              <span className="text-[#C9A24D]">BIJOUX</span>
+              <span className="text-[#C9A24D]">SALVIO</span>
               <span className="text-gray-900"> ROYALE</span>
             </span>
           </Link>
@@ -125,12 +125,6 @@ export const Header: React.FC = () => {
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
                       Đăng ký
-                    </Link>
-                    <Link
-                      to="/admin/login"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100"
-                    >
-                      Đăng nhập Admin
                     </Link>
                   </>
                 )}

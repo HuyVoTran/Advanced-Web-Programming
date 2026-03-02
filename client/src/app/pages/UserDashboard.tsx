@@ -1,16 +1,39 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, MapPin, ShoppingBag, Settings, LogOut } from 'lucide-react';
-import { mockOrders, formatPrice, getStatusText, getStatusColor } from '@/data/mockData';
+import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { ordersAPI } from '@/services/api';
 
 export const UserDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
+  const navigate = useNavigate();
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter orders for current user (mock - in real app would use user.id)
-  const userOrders = mockOrders.slice(0, 3);
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchOrders = async () => {
+      try {
+        if (token) {
+          const response = await ordersAPI.getUserOrders(token);
+          setUserOrders(response?.data?.orders || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user, token, navigate]);
 
   const menuItems = [
     { icon: User, label: 'Thông tin cá nhân', path: '/profile', description: 'Cập nhật thông tin tài khoản' },

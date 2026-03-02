@@ -6,7 +6,7 @@ import { ShoppingCart } from 'lucide-react';
 import { Button } from './ui/button';
 import { useCart } from '../../contexts/CartContext';
 import { toast } from 'sonner';
-import { formatPrice } from '../../data/mockData';
+import { formatPrice } from '@/utils/constants';
 
 interface ProductCardProps {
   product: any;

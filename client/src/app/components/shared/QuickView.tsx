@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ShoppingCart, Heart, Share2 } from 'lucide-react';
-import { Product, formatPrice } from '../../../data/mockData';
+import { formatPrice } from '@/utils/constants';
+import { Product } from '../../../contexts/CartContext';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -22,12 +23,16 @@ export const QuickView: React.FC<QuickViewProps> = ({ product, isOpen, onClose }
 
   if (!product) return null;
 
+  const productId = product.id || product._id || '';
+  const images = product.images || [product.image || 'jewelry'];
+  const imageUrl = images[selectedImageIndex] || 'jewelry';
+
   const handleAddToCart = () => {
     addItem({
-      productId: product.id,
+      productId: productId || '',
       name: product.name,
       price: product.price,
-      image: product.images[0],
+      image: images[0] || '',
       quantity,
     });
     toast.success('Đã thêm vào giỏ hàng', {
@@ -72,26 +77,26 @@ export const QuickView: React.FC<QuickViewProps> = ({ product, isOpen, onClose }
 
               {/* Content */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                {/* Images */}
-                <div>
-                  <div className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden mb-4">
-                    <ImageWithFallback
-                      src={`https://source.unsplash.com/800x1000/?${encodeURIComponent(product.images[selectedImageIndex])}`}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {product.new && (
-                      <Badge className="absolute top-4 left-4 bg-primary">MỚI</Badge>
-                    )}
-                    {product.featured && (
-                      <Badge className="absolute top-4 right-4 bg-gray-900">NỔI BẬT</Badge>
-                    )}
-                  </div>
+              {/* Images */}
+              <div>
+                <div className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden mb-4">
+                  <ImageWithFallback
+                    src={`https://source.unsplash.com/800x1000/?${encodeURIComponent(imageUrl)}`}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {product.new && (
+                    <Badge className="absolute top-4 left-4 bg-primary">MỚI</Badge>
+                  )}
+                  {product.featured && (
+                    <Badge className="absolute top-4 right-4 bg-gray-900">NỔI BẬT</Badge>
+                  )}
+                </div>
 
-                  {/* Thumbnails */}
-                  {product.images.length > 1 && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {product.images.slice(0, 4).map((image, index) => (
+                {/* Thumbnails */}
+                {images && images.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {images.slice(0, 4).map((image, index) => (
                         <button
                           key={index}
                           onClick={() => setSelectedImageIndex(index)}
@@ -114,7 +119,7 @@ export const QuickView: React.FC<QuickViewProps> = ({ product, isOpen, onClose }
                 <div className="flex flex-col">
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">
-                      {product.brand}
+                      {product.brand || 'Chưa có thương hiệu'}
                     </p>
                     <h3 className="text-3xl font-light tracking-wide mb-4">
                       {product.name}
@@ -131,22 +136,22 @@ export const QuickView: React.FC<QuickViewProps> = ({ product, isOpen, onClose }
                         Mô tả
                       </h4>
                       <p className="text-muted-foreground leading-relaxed">
-                        {product.description}
+                        {product.description || 'Không có mô tả'}
                       </p>
                     </div>
 
                     <div className="mb-6 space-y-3">
                       <div className="flex items-center justify-between py-2 border-b">
                         <span className="text-sm text-muted-foreground">Danh mục</span>
-                        <span className="text-sm font-medium">{product.category}</span>
+                        <span className="text-sm font-medium">{product.category || 'N/A'}</span>
                       </div>
                       <div className="flex items-center justify-between py-2 border-b">
                         <span className="text-sm text-muted-foreground">Chất liệu</span>
-                        <span className="text-sm font-medium">{product.material}</span>
+                        <span className="text-sm font-medium">{product.material || 'N/A'}</span>
                       </div>
                       <div className="flex items-center justify-between py-2 border-b">
                         <span className="text-sm text-muted-foreground">Thương hiệu</span>
-                        <span className="text-sm font-medium">{product.brand}</span>
+                        <span className="text-sm font-medium">{product.brand || 'N/A'}</span>
                       </div>
                     </div>
 

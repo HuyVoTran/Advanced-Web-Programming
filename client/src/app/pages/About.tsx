@@ -11,7 +11,7 @@ export const About: React.FC = () => {
             Câu chuyện của chúng tôi
           </h1>
           <p className="text-xl text-gray-600 font-light max-w-3xl mx-auto">
-            Bijoux Royale - Nơi nghệ thuật chế tác trang sức gặp gỡ di sản văn hóa
+            Salvio Royale - Nơi nghệ thuật chế tác trang sức gặp gỡ di sản văn hóa
           </p>
         </div>
 
@@ -20,7 +20,7 @@ export const About: React.FC = () => {
           <div className="relative h-[500px] rounded-sm overflow-hidden">
             <ImageWithFallback
               src="https://images.unsplash.com/photo-1758631279366-8e8aeaf94082?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5JTIwc3RvcmUlMjBpbnRlcmlvcnxlbnwxfHx8fDE3Njk4NTkxOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="About Bijoux Royale"
+              alt="About Salvio Royale"
               className="w-full h-full object-cover"
             />
           </div>
@@ -31,13 +31,13 @@ export const About: React.FC = () => {
           <div>
             <h2 className="text-3xl font-light mb-6">Di sản và Truyền thống</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              Được thành lập với niềm đam mê với nghệ thuật chế tác trang sức cao cấp, Bijoux Royale 
+              Được thành lập với niềm đam mê với nghệ thuật chế tác trang sức cao cấp, Salvio Royale 
               đã và đang khẳng định vị thế là một trong những thương hiệu trang sức uy tín hàng đầu 
               tại Việt Nam. Chúng tôi tự hào mang đến những sản phẩm được chế tác tỉ mỉ từ những 
               nghệ nhân lành nghề nhất.
             </p>
             <p className="text-gray-600 leading-relaxed">
-              Mỗi món trang sức của Bijoux Royale đều mang trong mình một câu chuyện riêng, 
+              Mỗi món trang sức của Salvio Royale đều mang trong mình một câu chuyện riêng, 
               được kể bằng ngôn ngữ của kim cương, vàng bạc và những viên đá quý thiên nhiên hiếm có.
             </p>
           </div>

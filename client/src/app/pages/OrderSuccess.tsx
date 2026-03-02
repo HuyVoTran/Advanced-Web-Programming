@@ -12,7 +12,7 @@ export const OrderSuccess: React.FC = () => {
           <CheckCircle className="w-20 h-20 mx-auto mb-6 text-green-500" />
           <h1 className="text-4xl font-light mb-4">Đặt hàng thành công!</h1>
           <p className="text-gray-600 mb-2">
-            Cảm ơn bạn đã tin tưởng Bijoux Royale
+            Cảm ơn bạn đã tin tưởng Salvio Royale
           </p>
           <p className="text-lg text-[#C9A24D] mb-8">
             Mã đơn hàng: <span className="font-medium">{orderId}</span>

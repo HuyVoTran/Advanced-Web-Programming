@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
-import { formatPrice } from '../../data/mockData';
+import { formatPrice } from '@/utils/constants';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { Trash2, ShoppingBag, Plus, Minus, AlertCircle } from 'lucide-react';
 import { EmptyState } from '../components/shared/EmptyState';

@@ -89,7 +89,8 @@ export const Home: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               {categories.length > 0 ? (
-                categories.map((category) => (
+                // show only first 4 categories on the home page
+                categories.slice(0, 4).map((category) => (
                   <CategoryCard key={category._id || category.id} category={category} />
                 ))
               ) : (

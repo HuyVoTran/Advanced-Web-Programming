@@ -100,11 +100,11 @@ function App() {
                 <Route path="/legal/shipping" element={<SimplePage title="Chính sách giao hàng" description="Thông tin giao hàng" />} />
 
                 {/* Admin Routes */}
-                <Route path="/admin/login" element={<Login />} />
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="categories" element={<AdminCategories />} />
                   <Route path="products" element={<AdminProducts />} />
+                  <Route path="products/new" element={<AdminProductForm />} />
                   <Route path="products/:id" element={<AdminProductForm />} />
                   <Route path="orders" element={<AdminOrders />} />
                   <Route path="orders/:id" element={<AdminOrderDetail />} />

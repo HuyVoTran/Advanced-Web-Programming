@@ -28,19 +28,19 @@ const PrevArrow: React.FC<ArrowProps> = ({ onClick }) => (
 export const HeroCarousel: React.FC = () => {
   const slides = [
     {
-      image: 'https://images.unsplash.com/photo-1763256614634-7feb3ff79ff3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBkaWFtb25kJTIwamV3ZWxyeSUyMGVsZWdhbmNlfGVufDF8fHx8MTc2OTg1OTE5Mnww&ixlib=rb-4.1.0&q=80&w=1080',
+      image: 'https://i.pinimg.com/1200x/5c/37/70/5c3770d600bd7f7f3859196b182db006.jpg',
       title: 'Bộ Sưu Tập Kim Cương',
       subtitle: 'Vẻ đẹp vĩnh cửu từ thiên nhiên',
       cta: 'Khám phá ngay',
     },
     {
-      image: 'https://images.unsplash.com/photo-1765546994111-d6e2d216a2c2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBnb2xkJTIwbmVja2xhY2UlMjBkaXNwbGF5fGVufDF8fHx8MTc2OTg1OTE5Mnww&ixlib=rb-4.1.0&q=80&w=1080',
+      image: 'https://i.pinimg.com/1200x/c3/ab/cb/c3abcbd1eb2eebdc0dbefa6b53f5d1b9.jpg',
       title: 'Vàng Ý Cao Cấp',
       subtitle: 'Nghệ thuật chế tác từ Italia',
       cta: 'Xem bộ sưu tập',
     },
     {
-      image: 'https://images.unsplash.com/photo-1758631279366-8e8aeaf94082?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5JTIwc3RvcmUlMjBpbnRlcmlvcnxlbnwxfHx8fDE3Njk4NTkxOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      image: 'https://i.pinimg.com/1200x/2a/d6/a1/2ad6a10031953dc7d6c81facfc3ebe19.jpg',
       title: 'Trang Sức Cao Cấp',
       subtitle: 'Sự lựa chọn của người sành điệu',
       cta: 'Khám phá thêm',

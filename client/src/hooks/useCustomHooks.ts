@@ -457,3 +457,72 @@ export const useHomeData = () => {
 
   return { data, loading, error };
 };
+
+/**
+ * Hook to fetch data from admin API with error handling
+ */
+export const useAdminFetch = <T,>(
+  fetchFn: () => Promise<T>,
+  dependencies: any[] = []
+): { data: T | null; loading: boolean; error: string | null; refetch: () => Promise<void> } => {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await fetchFn();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Lỗi tải dữ liệu');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, dependencies);
+
+  return { data, loading, error, refetch };
+};
+
+/**
+ * Hook to handle admin mutations with loading and error states
+ */
+export const useAdminMutation = <T,>(
+  mutationFn: (...args: any[]) => Promise<T>
+): {
+  mutate: (...args: any[]) => Promise<T | null>;
+  loading: boolean;
+  error: string | null;
+  data: T | null;
+} => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<T | null>(null);
+
+  const mutate = async (...args: any[]): Promise<T | null> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await mutationFn(...args);
+      setData(result);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+      setError(errorMessage);
+      setData(null);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { mutate, loading, error, data };
+};
+

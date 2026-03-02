@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { MapPin, Plus, Edit2, Trash2, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { Address } from '../../data/mockData';
+
+export interface Address {
+  id: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  district: string;
+  ward?: string;
+  isDefault: boolean;
+}
 
 const mockAddresses: Address[] = [
   {

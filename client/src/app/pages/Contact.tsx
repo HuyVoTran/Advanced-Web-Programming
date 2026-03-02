@@ -129,8 +129,8 @@ export const Contact: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-lg mb-2">Email</h3>
-                  <p className="text-gray-600">info@bijouxroyale.vn</p>
-                  <p className="text-gray-600">support@bijouxroyale.vn</p>
+                  <p className="text-gray-600">info@Salvioroyale.vn</p>
+                  <p className="text-gray-600">support@Salvioroyale.vn</p>
                 </div>
               </div>
 

@@ -9,7 +9,7 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
 
   if (!user || !user.isAdmin) {
-    navigate('/admin/login');
+    navigate('/login');
     return null;
   }
 
@@ -33,7 +33,7 @@ export const AdminLayout: React.FC = () => {
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-3">
             <span className="text-xl font-light">
-              <span className="text-[#C9A24D]">BIJOUX</span> Admin
+              <span className="text-[#C9A24D]">Salvio</span> Admin
             </span>
           </div>
           <div className="flex items-center space-x-4">
