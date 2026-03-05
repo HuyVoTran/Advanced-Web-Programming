@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
+import { MultiImageUpload } from '@/app/components/admin/MultiImageUpload';
 import { toast } from 'sonner';
 
 interface FormData {
@@ -14,6 +15,7 @@ interface FormData {
   description: string;
   isFeatured: boolean;
   stock: string;
+  images?: string[];
 }
 
 export const AdminProductForm: React.FC = () => {
@@ -30,7 +32,10 @@ export const AdminProductForm: React.FC = () => {
     description: '',
     isFeatured: false,
     stock: '0',
+    images: [],
   });
+
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // Fetch product if editing
   const { data: product, loading: productLoading } = useAdminFetch(
@@ -39,15 +44,22 @@ export const AdminProductForm: React.FC = () => {
   );
 
   // Fetch categories and brands
-  const { data: categories = [] } = useAdminFetch(
+  const { data: categoriesData } = useAdminFetch(
     () => adminApi.getAllCategories(),
     []
   );
 
-  const { data: brands = [] } = useAdminFetch(
+  const { data: brandsData } = useAdminFetch(
     () => adminApi.getAllBrands(),
     []
   );
+
+  // useAdminFetch initializes `data` to null, so we cannot rely on the
+  // destructuring default value (which only applies when the property is
+  // undefined).  Instead convert null -> empty array here to avoid map
+  // errors during the initial render.
+  const categories = categoriesData || [];
+  const brands = brandsData || [];
 
   // Save mutation
   const { mutate: saveProduct, loading: savingLoading } = useAdminMutation<any>(
@@ -61,12 +73,14 @@ export const AdminProductForm: React.FC = () => {
       setFormData({
         name: product.name,
         price: product.price.toString(),
-        category: product.category,
-        brand: product.brand,
+        // product.category/brand may be populated objects or just IDs
+        category: typeof product.category === 'object' ? product.category._id : product.category,
+        brand: typeof product.brand === 'object' ? product.brand._id : product.brand,
         material: product.material,
         description: product.description,
         isFeatured: product.isFeatured,
         stock: product.stock?.toString() || '0',
+        images: product.images || [],
       });
     }
   }, [product]);
@@ -93,6 +107,29 @@ export const AdminProductForm: React.FC = () => {
       setFormData({ ...formData, [name]: checked });
     } else {
       setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleImageUpload = async (files: File[]) => {
+    if (!id || id === 'new') {
+      toast.error('Vui lòng tạo sản phẩm trước khi upload ảnh');
+      return;
+    }
+
+    setUploadingImages(true);
+    try {
+      const result = await adminApi.uploadProductImages(id, files);
+      // Replace images with new ones from upload (don't append)
+      setFormData({
+        ...formData,
+        images: result.paths,
+      });
+      toast.success('Upload ảnh thành công!');
+    } catch (err) {
+      toast.error('Lỗi khi upload ảnh');
+      console.error(err);
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -143,6 +180,25 @@ export const AdminProductForm: React.FC = () => {
 
                 <div>
                   <label className="block text-sm mb-2 text-gray-700">
+                    Ảnh sản phẩm (Tối đa 4 ảnh)
+                  </label>
+                  {!isEditing && (
+                    <p className="text-sm text-gray-500 mb-4">
+                      Lưu ý: Tạo sản phẩm trước, sau đó upload ảnh
+                    </p>
+                  )}
+                  {isEditing && (
+                    <MultiImageUpload
+                      onUpload={handleImageUpload}
+                      currentImages={formData.images || []}
+                      loading={uploadingImages}
+                      maxFiles={4}
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 text-gray-700">
                     Mô tả <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -160,16 +216,22 @@ export const AdminProductForm: React.FC = () => {
                   <label className="block text-sm mb-2 text-gray-700">
                     Chất liệu <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="material"
                     value={formData.material}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:opacity-50"
-                    placeholder="VD: Vàng 18K, Kim cương"
                     required
                     disabled={savingLoading}
-                  />
+                  >
+                    <option value="">Chọn chất liệu</option>
+                    <option value="gold">Vàng</option>
+                    <option value="silver">Bạc</option>
+                    <option value="platinum">Bạch kim</option>
+                    <option value="diamond">Kim cương</option>
+                    <option value="gemstone">Đá quý</option>
+                    <option value="mixed">Hỗn hợp</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -194,7 +256,7 @@ export const AdminProductForm: React.FC = () => {
                   >
                     <option value="">Chọn danh mục</option>
                     {categories.map((cat: any) => (
-                      <option key={cat._id} value={cat.name}>{cat.name}</option>
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
@@ -213,7 +275,7 @@ export const AdminProductForm: React.FC = () => {
                   >
                     <option value="">Chọn thương hiệu</option>
                     {brands.map((brand: any) => (
-                      <option key={brand._id} value={brand.name}>{brand.name}</option>
+                      <option key={brand._id} value={brand._id}>{brand.name}</option>
                     ))}
                   </select>
                 </div>

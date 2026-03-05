@@ -309,6 +309,36 @@ export const useProducts = (params?: Record<string, any>) => {
 };
 
 /**
+ * Hook để fetch News từ API
+ */
+export const useNews = (params?: Record<string, any>) => {
+  const [news, setNews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setLoading(true);
+        const { newsAPI } = await import('@/services/api');
+        const result = await newsAPI.getAll(params);
+        setNews(Array.isArray(result) ? result : result.news || result.data || []);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tải tin tức');
+        setNews([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, [JSON.stringify(params)]);
+
+  return { news, loading, error };
+};
+
+/**
  * Hook để fetch Categories từ API
  */
 export const useCategories = () => {
@@ -366,36 +396,6 @@ export const useBrands = () => {
   }, []);
 
   return { brands, loading, error };
-};
-
-/**
- * Hook để fetch News từ API
- */
-export const useNews = (params?: Record<string, any>) => {
-  const [news, setNews] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        setLoading(true);
-        const { newsAPI } = await import('@/services/api');
-        const result = await newsAPI.getAll(params);
-        setNews(Array.isArray(result) ? result : result.news || []);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Lỗi tải tin tức');
-        setNews([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNews();
-  }, [JSON.stringify(params)]);
-
-  return { news, loading, error };
 };
 
 /**

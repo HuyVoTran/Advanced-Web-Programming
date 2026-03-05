@@ -9,8 +9,11 @@ interface Product {
   _id: string;
   name: string;
   price: number;
-  category: string;
-  brand: string;
+  // the admin API populates category/brand objects, but other parts of the
+  // codebase sometimes treat them as strings.  Accept either and we'll
+  // normalize when rendering/filtering.
+  category: string | { _id: string; name: string };
+  brand: string | { _id: string; name: string };
   stock: number;
   isFeatured: boolean;
   isActive: boolean;
@@ -38,9 +41,20 @@ export const AdminProducts: React.FC = () => {
     (id) => adminApi.deleteProduct(id)
   );
 
+  const normalizeCategory = (cat: Product['category']): string => {
+    if (!cat) return '';
+    return typeof cat === 'string' ? cat : cat.name;
+  };
+
+  const normalizeBrand = (br: Product['brand']): string => {
+    if (!br) return '';
+    return typeof br === 'string' ? br : br.name;
+  };
+
   const filteredProducts = (allProducts || []).filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    const catStr = normalizeCategory(product.category);
+    const matchesCategory = categoryFilter === 'all' || catStr === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -56,7 +70,10 @@ export const AdminProducts: React.FC = () => {
     }
   };
 
-  const categories = ['all', ...new Set((allProducts || []).map(p => p.category))];
+  const categories = [
+    'all',
+    ...new Set((allProducts || []).map(p => normalizeCategory(p.category)))
+  ];
 
   if (loading) {
     return (
@@ -163,12 +180,12 @@ export const AdminProducts: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                        {product.category}
-                      </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                          {normalizeCategory(product.category)}
+                        </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {product.brand}
+                      {normalizeBrand(product.brand)}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
                       {formatPrice(product.price)}

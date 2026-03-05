@@ -2,16 +2,26 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { authAPI } from '@/services/api';
 
 export const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate sending reset email
-    toast.success('Email khôi phục mật khẩu đã được gửi!');
-    setIsSubmitted(true);
+    try {
+      setIsSubmitting(true);
+      await authAPI.forgotPassword(email);
+      toast.success('Email khôi phục mật khẩu đã được gửi!');
+      setIsSubmitted(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gửi email thất bại';
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -47,9 +57,10 @@ export const ForgotPassword: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors mb-4"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors mb-4 disabled:opacity-50"
                 >
-                  Gửi Liên Kết Khôi Phục
+                  {isSubmitting ? 'Đang gửi...' : 'Gửi Liên Kết Khôi Phục'}
                 </button>
 
                 <Link
@@ -74,10 +85,20 @@ export const ForgotPassword: React.FC = () => {
                 <p className="text-sm text-gray-600 mb-4">
                   Không nhận được email?{' '}
                   <button
-                    onClick={() => {
-                      toast.success('Email đã được gửi lại!');
+                    onClick={async () => {
+                      try {
+                        setIsSubmitting(true);
+                        await authAPI.forgotPassword(email);
+                        toast.success('Email đã được gửi lại!');
+                      } catch (error) {
+                        const message = error instanceof Error ? error.message : 'Gửi lại thất bại';
+                        toast.error(message);
+                      } finally {
+                        setIsSubmitting(false);
+                      }
                     }}
                     className="text-[#C9A24D] hover:underline"
+                    disabled={isSubmitting}
                   >
                     Gửi lại
                   </button>

@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './docs/swagger.js';
 import connectDB from './config/db.js';
@@ -9,6 +11,11 @@ import { errorHandler, notFoundHandler } from './middlewares/error.middleware.js
 
 dotenv.config();
 
+// Setup __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '../../');
+
 // Khởi tạo ứng dụng Express
 const app = express();
 
@@ -16,6 +23,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Serve static files from client/public
+app.use('/client/public', express.static(path.join(projectRoot, 'client/public')));
 
 // Kết nối đến MongoDB
 connectDB();

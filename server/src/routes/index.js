@@ -9,6 +9,8 @@ import orderRoutes from './orderRoutes.js';
 import newsRoutes from './newsRoutes.js';
 import contactRoutes from './contactRoutes.js';
 import adminRoutes from './adminRoutes.js';
+import newsletterRoutes from './newsletterRoutes.js';
+import uploadRoutes from './uploadRoutes.js';
 
 const router = express.Router();
 
@@ -71,6 +73,8 @@ router.use('/cart', cartRoutes);
 router.use('/orders', orderRoutes);
 router.use('/news', newsRoutes);
 router.use('/contact', contactRoutes);
+router.use('/newsletter', newsletterRoutes);
+router.use('/upload', uploadRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

@@ -1,6 +1,8 @@
 import News from '../models/News.js';
+import NewsletterSubscription from '../models/NewsletterSubscription.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination } from '../utils/validators.js';
+import sendEmail from '../utils/sendEmail.js';
 
 export const getNews = async (req, res, next) => {
   try {
@@ -8,6 +10,43 @@ export const getNews = async (req, res, next) => {
     const { page: pageNum, limit: limitNum } = validatePagination(page, limit);
 
     const filter = { status: 'published' };
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const total = await News.countDocuments(filter);
+    const news = await News.find(filter)
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
+      .sort({ createdAt: -1 });
+
+    return sendPaginatedResponse(
+      res,
+      200,
+      'Tin tức được lấy thành công',
+      news,
+      pageNum,
+      limitNum,
+      total
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllNewsAdmin = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, search, status } = req.query;
+    const { page: pageNum, limit: limitNum } = validatePagination(page, limit);
+
+    const filter = {};
+    if (status) {
+      filter.status = status;
+    }
 
     if (search) {
       filter.$or = [
@@ -105,6 +144,28 @@ export const publishNews = async (req, res, next) => {
 
     if (!newsItem) {
       return sendError(res, 404, 'Tin tức không tìm thấy');
+    }
+
+    try {
+      const subscribers = await NewsletterSubscription.find({}, 'email');
+      const emails = subscribers.map((sub) => sub.email);
+
+      if (emails.length > 0) {
+        const subject = `Bài viết mới: ${newsItem.title}`;
+        const newsUrl = `${process.env.CLIENT_URL || ''}/blog?search=${encodeURIComponent(newsItem.title)}`;
+        const html = `
+          <h1>Bài viết mới từ Salvio Royale!</h1>
+          <p>Chúng tôi vừa đăng một bài viết mới mà bạn có thể quan tâm:</p>
+          <h2>${newsItem.title}</h2>
+          <p>${newsItem.content.substring(0, 200)}...</p>
+          <a href="${newsUrl}">Đọc thêm</a>
+        `;
+
+        await sendEmail({ to: emails.join(','), subject, html });
+      }
+    } catch (emailError) {
+      // eslint-disable-next-line no-console
+      console.error('Lỗi khi gửi email tin tức:', emailError);
     }
 
     return sendResponse(res, 200, 'Tin tức được xuất bản thành công', newsItem);

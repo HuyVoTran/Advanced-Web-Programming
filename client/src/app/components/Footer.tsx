@@ -101,7 +101,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-[#C9A24D]" />
-                <span className="text-gray-400 text-sm">info@Salvioroyale.vn</span>
+                <span className="text-gray-400 text-sm">info@salvioroyale.vn</span>
               </li>
             </ul>
           </div>

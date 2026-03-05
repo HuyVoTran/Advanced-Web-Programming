@@ -18,7 +18,12 @@ import {
   deleteCategory,
 } from '../controllers/categoryController.js';
 import { createBrand, updateBrand, deleteBrand } from '../controllers/brandController.js';
-import { createNews, updateNews, publishNews, deleteNews } from '../controllers/newsController.js';
+import { createNews, updateNews, publishNews, deleteNews, getAllNewsAdmin } from '../controllers/newsController.js';
+import {
+  getNewsletterSubscribers,
+  getNewsletterUsers,
+  sendNewsletterBroadcast,
+} from '../controllers/newsletterAdminController.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import { adminOnly } from '../middlewares/role.middleware.js';
 
@@ -57,9 +62,15 @@ router.put('/users/:id/role', updateUserRole);
 router.delete('/users/:id', deleteUser);
 
 // News Management
+router.get('/news', getAllNewsAdmin);
 router.post('/news', createNews);
 router.put('/news/:id', updateNews);
 router.put('/news/:id/publish', publishNews);
 router.delete('/news/:id', deleteNews);
+
+// Newsletter Management
+router.get('/newsletter/subscribers', getNewsletterSubscribers);
+router.get('/newsletter/users', getNewsletterUsers);
+router.post('/newsletter/send', sendNewsletterBroadcast);
 
 export default router;

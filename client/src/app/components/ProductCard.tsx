@@ -15,29 +15,11 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode = 'grid' }) => {
-  const [imageUrl, setImageUrl] = useState<string>('');
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
 
-  useEffect(() => {
-    // Lấy hình ảnh từ product
-    const images = product.images || product.image || [];
-    const firstImage = Array.isArray(images) ? images[0] : images;
-    
-    if (firstImage && typeof firstImage === 'string') {
-      // Nếu là URL thực, sử dụng trực tiếp
-      if (firstImage.startsWith('http')) {
-        setImageUrl(firstImage);
-      } else {
-        // Nếu là tên, tạo URL Unsplash
-        setImageUrl(`https://source.unsplash.com/600x800/?${encodeURIComponent(firstImage)}`);
-      }
-    } else {
-      // Fallback
-      setImageUrl(`https://source.unsplash.com/600x800/?jewelry`);
-    }
-  }, [product.images, product.image]);
+  const imageUrl = product.image || 'https://source.unsplash.com/600x800/?jewelry';
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -63,10 +45,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     addItem({
-      productId: product.id,
+      productId: product._id || product.id,
       name: product.name,
       price: product.price,
-      image: product.images[0],
+      image: product.image || 'https://source.unsplash.com/600x800/?jewelry',
       quantity: 1,
     });
     toast.success('Đã thêm vào giỏ hàng', {
@@ -83,7 +65,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
         transition={{ duration: 0.6, delay: index * 0.1 }}
         className="group"
       >
-        <Link to={`/product/${product.id}`} className="flex gap-6 bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Link to={`/product/${product._id || product.id}`} className="flex gap-6 bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
           {/* Image */}
           <div className="relative w-48 h-48 flex-shrink-0 bg-gray-100">
             <ImageWithFallback
@@ -109,7 +91,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
           {/* Info */}
           <div className="flex-1 py-4 pr-4 flex flex-col justify-between">
             <div>
-              <p className="text-xs text-muted-foreground tracking-wide uppercase mb-1">{product.brand}</p>
+              <p className="text-xs text-muted-foreground tracking-wide uppercase mb-1">{typeof product.brand === 'object' ? product.brand.name : product.brand}</p>
               <h3 className="text-lg font-light tracking-wide mb-2">{product.name}</h3>
               <p className="text-sm text-gray-600 line-clamp-2 mb-3">{product.description}</p>
               <p className="text-sm text-muted-foreground">{product.material}</p>
@@ -142,7 +124,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
       animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       transition={{ duration: 0.6, delay: index * 0.1 }}
     >
-      <Link to={`/product/${product.id}`} className="group block">
+      <Link to={`/product/${product._id || product.id}`} className="group block">
         <div className="relative overflow-hidden bg-gray-100 aspect-[3/4] rounded-sm">
           {/* Product Image */}
           <ImageWithFallback
@@ -185,7 +167,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
 
         {/* Product Info (shown below image on desktop) */}
         <div className="mt-4 space-y-1">
-          <p className="text-xs text-gray-500 tracking-wide uppercase">{product.brand.name}</p>
+          <p className="text-xs text-gray-500 tracking-wide uppercase">{typeof product.brand === 'object' ? product.brand.name : product.brand}</p>
           <h3 className="text-sm text-gray-900 line-clamp-1">{product.name}</h3>
           <p className="text-base text-[#C9A24D]">{formatPrice(product.price)}</p>
         </div>

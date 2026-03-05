@@ -40,7 +40,8 @@ export const Products: React.FC = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>(
     brandParam ? [brandParam] : []
   );
-  const [priceRange, setPriceRange] = useState<[number]>([500000000]);
+  const MAX_PRICE = 500000000;
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -52,22 +53,39 @@ export const Products: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     let filtered = apiProducts.filter((product: any) => {
+      const brandName = typeof product.brand === 'object' ? product.brand?.name : product.brand;
+      const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
+      const materialText = product.material || '';
       // Search
       const searchMatch = searchQuery === '' || 
         (product.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
+        (brandName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (categoryName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        materialText.toLowerCase().includes(searchQuery.toLowerCase());
 
+      const productCategoryId = typeof product.category === 'object'
+        ? product.category?._id
+        : product.category;
+      const productCategoryName = typeof product.category === 'object'
+        ? product.category?.name
+        : product.category;
       const categoryMatch = selectedCategories.length === 0 || 
-        selectedCategories.some(cat => {
-          const category = categories.find(c => (c._id || c.id) === cat);
-          return category && (product.category === category.name || product.category === category._id);
+        selectedCategories.some(catId => {
+          const category = categories.find(c => (c._id || c.id) === catId);
+          return category && (productCategoryId === category._id || productCategoryName === category.name);
         });
-      
+
+      const productBrandId = typeof product.brand === 'object'
+        ? product.brand?._id
+        : product.brand;
       const brandMatch = selectedBrands.length === 0 || 
-        selectedBrands.includes(product.brand || product.brandId);
-      
-      const priceMatch = (product.price || 0) <= priceRange[0];
+        selectedBrands.includes(productBrandId);
+
+      const priceValue = product.price || 0;
+      const minPrice = priceRange[0];
+      const maxPrice = priceRange[1];
+      const priceMatch = priceValue >= minPrice && (maxPrice === MAX_PRICE ? true : priceValue <= maxPrice);
       
       const materialMatch = selectedMaterials.length === 0 || 
         selectedMaterials.some(mat => (product.material || '').includes(mat));
@@ -109,11 +127,11 @@ export const Products: React.FC = () => {
     );
   };
 
-  const toggleBrand = (brandName: string) => {
+  const toggleBrand = (brandId: string) => {
     setSelectedBrands(prev =>
-      prev.includes(brandName)
-        ? prev.filter(name => name !== brandName)
-        : [...prev, brandName]
+      prev.includes(brandId)
+        ? prev.filter(id => id !== brandId)
+        : [...prev, brandId]
     );
   };
 
@@ -128,7 +146,7 @@ export const Products: React.FC = () => {
   const clearFilters = () => {
     setSelectedCategories([]);
     setSelectedBrands([]);
-    setPriceRange([500000000]);
+    setPriceRange([0, MAX_PRICE]);
     setSelectedMaterials([]);
   };
 
@@ -139,14 +157,14 @@ export const Products: React.FC = () => {
         <h3 className="text-lg mb-4">Danh mục</h3>
         <div className="space-y-3">
           {categories.map(category => (
-            <div key={category.id} className="flex items-center space-x-2">
+            <div key={category._id || category.id} className="flex items-center space-x-2">
               <Checkbox
-                id={`category-${category.id}`}
-                checked={selectedCategories.includes(category.id)}
-                onCheckedChange={() => toggleCategory(category.id)}
+                id={`category-${category._id || category.id}`}
+                checked={selectedCategories.includes(category._id || category.id)}
+                onCheckedChange={() => toggleCategory(category._id || category.id)}
               />
               <Label
-                htmlFor={`category-${category.id}`}
+                htmlFor={`category-${category._id || category.id}`}
                 className="text-sm cursor-pointer"
               >
                 {category.name}
@@ -164,8 +182,8 @@ export const Products: React.FC = () => {
             <div key={brand._id || brand.id} className="flex items-center space-x-2">
               <Checkbox
                 id={`brand-${brand._id || brand.id}`}
-                checked={selectedBrands.includes(brand.name)}
-                onCheckedChange={() => toggleBrand(brand.name)}
+                checked={selectedBrands.includes(brand._id || brand.id)}
+                onCheckedChange={() => toggleBrand(brand._id || brand.id)}
               />
               <Label
                 htmlFor={`brand-${brand._id || brand.id}`}
@@ -184,14 +202,19 @@ export const Products: React.FC = () => {
         <div className="px-2">
           <Slider
             value={priceRange}
-            onValueChange={(value) => setPriceRange(value as [number])}
-            max={500000000}
-            min={10000000}
-            step={10000000}
+            onValueChange={(value) => setPriceRange(value as [number, number])}
+            max={MAX_PRICE}
+            min={0}
+            step={1000000}
             className="mb-4"
           />
           <p className="text-sm text-gray-600">
-            Tối đa: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceRange[0])}
+            Từ: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceRange[0])}
+          </p>
+          <p className="text-sm text-gray-600">
+            Đến: {priceRange[1] === MAX_PRICE
+              ? '500.000.000+ VND'
+              : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceRange[1])}
           </p>
         </div>
       </div>
@@ -237,22 +260,12 @@ export const Products: React.FC = () => {
             Sản phẩm
           </h1>
 
-          {/* Search Bar */}
-          <div className="mb-6">
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Tìm kiếm sản phẩm, thương hiệu..."
-              className="max-w-2xl"
-            />
-          </div>
-
           {/* Active Filters & Controls */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             {/* Active Filters */}
             <div className="flex flex-wrap items-center gap-2">
               {selectedCategories.length > 0 && selectedCategories.map(catId => {
-                const category = categories.find(c => c.id === catId);
+                const category = categories.find(c => (c._id || c.id) === catId);
                 return category ? (
                   <ActiveFilterTag
                     key={catId}
@@ -261,13 +274,16 @@ export const Products: React.FC = () => {
                   />
                 ) : null;
               })}
-              {selectedBrands.length > 0 && selectedBrands.map(brand => (
+              {selectedBrands.length > 0 && selectedBrands.map(brandId => {
+                const brand = apiBrands.find(b => (b._id || b.id) === brandId);
+                return brand ? (
                 <ActiveFilterTag
-                  key={brand}
-                  label={brand}
-                  onRemove={() => toggleBrand(brand)}
+                  key={brandId}
+                  label={brand.name}
+                  onRemove={() => toggleBrand(brandId)}
                 />
-              ))}
+                ) : null;
+              })}
               {selectedMaterials.length > 0 && selectedMaterials.map(material => (
                 <ActiveFilterTag
                   key={material}
@@ -288,7 +304,14 @@ export const Products: React.FC = () => {
             </div>
 
             {/* Sort & View Controls */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={setSearchQuery}
+                placeholder="Tìm theo tên, thương hiệu, chất liệu..."
+                className="w-full sm:w-80"
+              />
               {/* View Mode Toggle */}
               <div className="hidden sm:flex items-center gap-1 border border-gray-200 rounded-md p-1">
                 <button

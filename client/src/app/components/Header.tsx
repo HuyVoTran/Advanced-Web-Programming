@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, ShoppingBag, User, Search } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import { SearchBar } from './shared/SearchBar';
+import { useProducts, useClickOutside, useNews } from '@/hooks/useCustomHooks';
 
 export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchRef = useRef<HTMLDivElement | null>(null);
   const { itemCount } = useCart();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { products } = useProducts();
+  const { news } = useNews();
 
   const menuItems = [
     { name: 'Trang chủ', path: '/' },
@@ -25,6 +32,38 @@ export const Header: React.FC = () => {
     logout();
     navigate('/');
   };
+
+  useClickOutside(searchRef, () => setSearchOpen(false));
+
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return { products: [], posts: [] };
+    }
+
+    const matchedProducts = products
+      .filter((product: any) => {
+        const brandName = typeof product.brand === 'object' ? product.brand?.name : product.brand;
+        const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
+        return (
+          (product.name || '').toLowerCase().includes(query) ||
+          (product.description || '').toLowerCase().includes(query) ||
+          (brandName || '').toLowerCase().includes(query) ||
+          (categoryName || '').toLowerCase().includes(query) ||
+          (product.material || '').toLowerCase().includes(query)
+        );
+      })
+      .slice(0, 5);
+
+    const matchedPosts = news
+      .filter((post) =>
+        (post.title || '').toLowerCase().includes(query) ||
+        (post.content || '').toLowerCase().includes(query)
+      )
+      .slice(0, 3);
+
+    return { products: matchedProducts, posts: matchedPosts };
+  }, [products, searchQuery]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
@@ -52,10 +91,82 @@ export const Header: React.FC = () => {
           </nav>
 
           {/* Right Icons */}
-          <div className="flex items-center space-x-6">
-            <button className="text-gray-700 hover:text-[#C9A24D] transition-colors duration-300">
-              <Search className="w-5 h-5" />
-            </button>
+          <div className="flex items-center space-x-6 relative">
+            <div ref={searchRef} className="relative">
+              <button
+                onClick={() => setSearchOpen((prev) => !prev)}
+                className="text-gray-700 hover:text-[#C9A24D] transition-colors duration-300"
+                aria-label="Mở tìm kiếm"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+
+              {searchOpen && (
+                <div className="absolute right-0 mt-4 w-[320px] bg-white rounded-lg shadow-xl border border-gray-100 p-4 z-50">
+                  <SearchBar
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onSearch={(value) => {
+                      setSearchQuery(value);
+                      if (value.trim()) {
+                        navigate(`/products?search=${encodeURIComponent(value.trim())}`);
+                        setSearchOpen(false);
+                      }
+                    }}
+                    placeholder="Tìm sản phẩm, tin tức..."
+                    showButton
+                    buttonVariant="icon"
+                  />
+
+                  {searchQuery && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <p className="text-xs uppercase text-gray-500 tracking-wider mb-2">Sản phẩm</p>
+                        {searchResults.products.length > 0 ? (
+                          <div className="space-y-2">
+                            {searchResults.products.map((product: any) => (
+                              <button
+                                key={product._id || product.id}
+                                onClick={() => {
+                                  navigate(`/product/${product._id || product.id}`);
+                                  setSearchOpen(false);
+                                }}
+                                className="w-full text-left text-sm text-gray-700 hover:text-[#C9A24D] transition-colors"
+                              >
+                                {product.name}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">Không có kết quả</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase text-gray-500 tracking-wider mb-2">Tin tức</p>
+                        {searchResults.posts.length > 0 ? (
+                          <div className="space-y-2">
+                            {searchResults.posts.map((post) => (
+                              <button
+                                key={post.title}
+                                onClick={() => {
+                                  navigate(`/blog?search=${encodeURIComponent(searchQuery.trim())}`);
+                                  setSearchOpen(false);
+                                }}
+                                className="w-full text-left text-sm text-gray-700 hover:text-[#C9A24D] transition-colors"
+                              >
+                                {post.title}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">Không có kết quả</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <Link
               to="/cart"

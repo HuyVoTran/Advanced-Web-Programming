@@ -31,40 +31,46 @@ export const Checkout: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const orderId = addOrder({
-      userId: user?.id || 'guest',
-      items: items.map(item => ({
-        productId: item.id,
-        productName: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-      })),
-      total,
-      status: 'pending',
-      shippingAddress: {
-        id: '1',
-        fullName: formData.fullName,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        district: formData.district,
-        ward: formData.ward,
-        isDefault: false,
-      },
-      guestInfo: !user ? {
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-      } : undefined,
-    });
+    try {
+      const orderId = await addOrder({
+        userId: user?.id || 'guest',
+        items: items.map(item => ({
+          productId: item.productId || item.id,
+          productName: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+        })),
+        total,
+        status: 'pending',
+        shippingAddress: {
+          id: 'checkout',
+          fullName: formData.fullName,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          district: formData.district,
+          ward: formData.ward,
+          isDefault: false,
+        },
+        guestInfo: !user
+          ? {
+              name: formData.fullName,
+              email: formData.email,
+              phone: formData.phone,
+            }
+          : undefined,
+      });
 
-    clearCart();
-    toast.success('Đặt hàng thành công!');
-    navigate(`/order-success/${orderId}`);
+      clearCart();
+      toast.success('Đặt hàng thành công!');
+      navigate(`/order-success/${orderId}`);
+    } catch (err) {
+      toast.error('Đặt hàng thất bại, vui lòng thử lại');
+    }
   };
 
   if (items.length === 0) {

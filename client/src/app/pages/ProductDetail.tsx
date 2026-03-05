@@ -28,12 +28,17 @@ export const ProductDetail: React.FC = () => {
         setLoading(true);
         setError(null);
 
+        if (!id) {
+          setError('Sản phẩm không tìm thấy');
+          return;
+        }
+
         // Fetch product detail
-        const productData = await productsAPI.getById(id!);
+        const productData = await productsAPI.getById(id);
         setProduct(productData);
 
         // Fetch related products
-        const relatedData = await productsAPI.getRelated(id!);
+        const relatedData = await productsAPI.getRelated(id);
         setRelatedProducts(Array.isArray(relatedData) ? relatedData : relatedData.products || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Lỗi tải sản phẩm');
@@ -154,7 +159,7 @@ export const ProductDetail: React.FC = () => {
           <div className="space-y-6">
             <div>
               <p className="text-sm text-gray-500 mb-2 tracking-wide uppercase">
-                {product.brand}
+                  {typeof product.brand === 'object' ? product.brand.name : product.brand}
               </p>
               <h1 className="text-4xl font-light mb-4 tracking-wide">
                 {product.name}
@@ -167,7 +172,11 @@ export const ProductDetail: React.FC = () => {
             <div className="border-t border-b border-gray-200 py-6 space-y-4">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Danh mục</p>
-                <p className="text-base">{product.category}</p>
+                  <p className="text-base">
+                    {typeof product.category === 'object'
+                      ? product.category.name
+                      : product.category}
+                  </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Chất liệu</p>
@@ -241,7 +250,11 @@ export const ProductDetail: React.FC = () => {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {relatedProducts.map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
+                <ProductCard
+                  key={product._id || product.id}
+                  product={product}
+                  index={index}
+                />
               ))}
             </div>
           </div>

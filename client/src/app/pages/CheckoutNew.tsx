@@ -107,33 +107,47 @@ export const CheckoutNew: React.FC = () => {
 
     setIsProcessing(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const orderId = await addOrder({
+        userId: user?.id || 'guest',
+        items: items.map(item => ({
+          productId: item.productId,
+          productName: item.name,
+          image: item.image || item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        total,
+        status: 'pending',
+        shippingAddress: {
+          id: 'checkout',
+          fullName: formData.fullName,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          district: formData.district,
+          ward: '',
+          isDefault: false,
+        },
+        guestInfo: !user
+          ? {
+              name: formData.fullName,
+              email: formData.email,
+              phone: formData.phone,
+            }
+          : undefined,
+      });
 
-    const orderId = addOrder({
-      userId: user?.id || 'guest',
-      items: items.map(item => ({
-        productId: item.productId,
-        productName: item.name,
-        productImage: item.image || item.name,
-        price: item.price,
-        quantity: item.quantity,
-      })),
-      total,
-      status: 'pending',
-      paymentMethod: formData.paymentMethod,
-      customerName: formData.fullName,
-      customerEmail: formData.email,
-      customerPhone: formData.phone,
-      shippingAddress: `${formData.address}, ${formData.district}, ${formData.city}`,
-      note: formData.notes,
-    });
-
-    clearCart();
-    toast.success('Đặt hàng thành công!', {
-      description: `Mã đơn hàng: ${orderId}`,
-    });
-    navigate(`/order-success/${orderId}`);
+      clearCart();
+      toast.success('Đặt hàng thành công!', {
+        description: `Mã đơn hàng: ${orderId}`,
+      });
+      navigate(`/order-success/${orderId}`);
+    } catch (err) {
+      toast.error('Đặt hàng thất bại, vui lòng thử lại');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (items.length === 0) {

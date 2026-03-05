@@ -57,9 +57,39 @@ export const getProductBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
 
-    const product = await Product.findOne({ slug, isActive: true })
-      .populate('category')
-      .populate('brand');
+    let product;
+    
+    // Check if slug is a valid MongoDB ObjectId
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
+    // Debug log to help trace 404 issues in development
+    // eslint-disable-next-line no-console
+    console.debug('[getProductBySlug] param:', slug, 'isObjectId:', isObjectId);
+
+    if (isObjectId) {
+      // Try to find by ID first
+      product = await Product.findById(slug)
+        .populate('category')
+        .populate('brand');
+
+      // If not found by ID, it's possible the frontend sent a value
+      // that looks like an ObjectId but is actually a slug stored as a
+      // string in the slug field. Try a fallback search by slug.
+      if (!product) {
+        // eslint-disable-next-line no-console
+        console.debug('[getProductBySlug] not found by ID, trying slug fallback');
+        product = await Product.findOne({ slug, isActive: true })
+          .populate('category')
+          .populate('brand');
+      }
+    } else {
+      // Find by slug
+      product = await Product.findOne({ slug, isActive: true })
+        .populate('category')
+        .populate('brand');
+    }
+
+    // eslint-disable-next-line no-console
+    console.debug('[getProductBySlug] found:', !!product, product?._id);
 
     if (!product) {
       return sendError(res, 404, 'Sản phẩm không tìm thấy');
@@ -92,7 +122,24 @@ export const getRelatedProducts = async (req, res, next) => {
     const { slug } = req.params;
     const { limit = 4 } = req.query;
 
-    const product = await Product.findOne({ slug });
+    // debug logging
+    // eslint-disable-next-line no-console
+    console.debug('[getRelatedProducts] param:', slug);
+    let product;
+    // support being called with either slug or ObjectId
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
+    // eslint-disable-next-line no-console
+    console.debug('[getRelatedProducts] isObjectId:', isObjectId);
+    if (isObjectId) {
+      product = await Product.findById(slug);
+      if (!product) {
+        // if not found by id, maybe the param is actually a slug that
+        // happens to look like an ObjectId
+        product = await Product.findOne({ slug });
+      }
+    } else {
+      product = await Product.findOne({ slug });
+    }
 
     if (!product) {
       return sendError(res, 404, 'Sản phẩm không tìm thấy');

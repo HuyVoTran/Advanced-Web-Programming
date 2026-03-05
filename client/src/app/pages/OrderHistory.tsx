@@ -52,11 +52,13 @@ export const OrderHistory: React.FC = () => {
               </div>
 
               <div className="mt-4 text-sm text-gray-600">
-                <p>Giao đến: {order.shippingAddress.fullName}</p>
-                <p>{order.shippingAddress.phone}</p>
+                <p>Giao đến: {order.shippingAddress.fullName || order.guestInfo?.name}</p>
+                <p>{order.shippingAddress.phone || order.guestInfo?.phone}</p>
                 <p>
-                  {order.shippingAddress.address}, {order.shippingAddress.ward},{' '}
-                  {order.shippingAddress.district}, {order.shippingAddress.city}
+                  {order.shippingAddress.address || ''}
+                  {order.shippingAddress.ward ? `, ${order.shippingAddress.ward}` : ''}
+                  {order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}
+                  {order.shippingAddress.city ? `, ${order.shippingAddress.city}` : ''}
                 </p>
               </div>
             </div>

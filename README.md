@@ -1,7 +1,7 @@
 <!-- 
 
 git add .
-git commit -m "Fix design, update mock data, add quick view, improve performance"
+git commit -m "Update"
 git push 
 
 cd server
@@ -28,6 +28,9 @@ Website thương mại điện tử bán trang sức cao cấp với phong cách
 - 👤 Dashboard cá nhân
 - 📍 Quản lý địa chỉ giao hàng
 - ⚙️ Cài đặt tài khoản
+- 📰 Trang tin tức/blog (Masonry layout)
+- 🧭 Trang danh mục/brands/legal
+- 📩 Form liên hệ gửi đến admin
 
 ### Admin Features
 - 📊 Dashboard tổng quan với biểu đồ
@@ -35,6 +38,9 @@ Website thương mại điện tử bán trang sức cao cấp với phong cách
 - 📁 Quản lý danh mục
 - 🚚 Quản lý đơn hàng và cập nhật trạng thái
 - 👥 Quản lý người dùng và phân quyền
+- 📰 Quản lý tin tức (CRUD + publish)
+- 📣 Gửi thông báo newsletter
+- 📬 Quản lý liên hệ từ khách hàng
 
 ## 🎨 Thiết Kế
 
@@ -59,11 +65,13 @@ Website thương mại điện tử bán trang sức cao cấp với phong cách
 - **Sonner** - Toast notifications
 - **React Slick** - Carousel
 
-### Kiến Trúc Backend (Mô phỏng)
-- **NestJS** - Framework
+### Backend
+- **Express** - Framework
 - **MongoDB** - Database
 - **Mongoose** - ODM
 - **JWT** - Authentication
+- **Nodemailer** - Email
+- **Multer** - Upload
 
 ## 📂 Cấu Trúc Dự Án
 
@@ -101,7 +109,9 @@ src/
 │   │       ├── AdminOrders.tsx
 │   │       ├── AdminOrderDetail.tsx
 │   │       ├── AdminUsers.tsx
-│   │       └── AdminLogin.tsx
+│   │       ├── AdminNews.tsx
+│   │       ├── AdminNewsletter.tsx
+│   │       └── AdminContacts.tsx
 │   └── App.tsx
 ├── contexts/
 │   ├── AuthContext.tsx
@@ -128,6 +138,13 @@ src/
 - `/forgot-password` - Quên mật khẩu
 - `/about` - Giới thiệu
 - `/contact` - Liên hệ
+- `/categories` - Danh mục
+- `/brands` - Thương hiệu
+- `/blog` - Tin tức
+- `/legal/terms` - Điều khoản
+- `/legal/privacy` - Chính sách
+- `/legal/return` - Đổi trả
+- `/legal/shipping` - Vận chuyển
 
 ### User Routes (Cần đăng nhập)
 - `/dashboard` - Dashboard người dùng
@@ -138,24 +155,22 @@ src/
 - `/order-success/:orderId` - Xác nhận đơn hàng
 
 ### Admin Routes
-- `/admin/login` - Đăng nhập Admin
 - `/admin` - Dashboard Admin
 - `/admin/products` - Quản lý sản phẩm
+- `/admin/products/new` - Thêm sản phẩm
 - `/admin/products/:id` - Thêm/Sửa sản phẩm
 - `/admin/categories` - Quản lý danh mục
 - `/admin/orders` - Quản lý đơn hàng
 - `/admin/orders/:id` - Chi tiết đơn hàng
 - `/admin/users` - Quản lý người dùng
+- `/admin/news` - Quản lý tin tức
+- `/admin/newsletter` - Gửi newsletter
+- `/admin/contacts` - Quản lý liên hệ
 
-## 📊 Mock Data
+## 📊 Dữ Liệu
 
-Dự án sử dụng mock data trong `/src/data/mockData.ts` bao gồm:
-- 12 sản phẩm trang sức cao cấp
-- 4 danh mục chính
-- 5 thương hiệu
-- 4 người dùng (bao gồm admin)
-- 5 đơn hàng mẫu
-- Blog posts
+- Backend Express trong thư mục `/server` xử lý dữ liệu thật.
+- Mock data cũ vẫn có trong `/src/data/mockData.ts` (phục vụ demo UI khi cần).
 
 ## 🎯 Điểm Nổi Bật
 
@@ -164,7 +179,7 @@ Dự án sử dụng mock data trong `/src/data/mockData.ts` bao gồm:
 3. **Component-Based**: Dễ maintain và scale
 4. **Type-Safe**: TypeScript cho toàn bộ dự án
 5. **Best Practices**: Clean code, folder structure rõ ràng
-6. **Ready for Backend**: Dễ dàng tích hợp với NestJS backend
+6. **Backend sẵn sàng**: Express + MongoDB đã tích hợp
 
 ## 🔐 Demo Accounts
 
@@ -203,10 +218,8 @@ Dễ dàng tùy chỉnh:
 
 ## 📝 Notes
 
-- Đây là frontend mockup với mock data
-- Để triển khai production, cần tích hợp với backend NestJS thật
-- MongoDB schema đã được thiết kế sẵn trong interfaces
-- JWT authentication flow đã được mô phỏng
+- Backend Express đã được tích hợp trong thư mục `/server`
+- JWT authentication đang được sử dụng
 
 ## 🎓 Dành Cho Đồ Án Sinh Viên
 

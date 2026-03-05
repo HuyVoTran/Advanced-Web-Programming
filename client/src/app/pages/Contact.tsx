@@ -4,6 +4,7 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { toast } from 'sonner';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { contactAPI } from '@/services/api';
 
 export const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -12,15 +13,30 @@ export const Contact: React.FC = () => {
     phone: '',
     message: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Cảm ơn bạn! Chúng tôi sẽ liên hệ lại sớm.');
-    setFormData({ name: '', email: '', phone: '', message: '' });
+    try {
+      setIsSubmitting(true);
+      await contactAPI.submit({
+        fullName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        message: formData.message,
+      });
+      toast.success('Cảm ơn bạn! Chúng tôi sẽ liên hệ lại sớm.');
+      setFormData({ name: '', email: '', phone: '', message: '' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gửi liên hệ thất bại';
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -64,12 +80,13 @@ export const Contact: React.FC = () => {
               </div>
 
               <div>
-                <Label htmlFor="phone">Số điện thoại</Label>
+                <Label htmlFor="phone">Số điện thoại *</Label>
                 <Input
                   id="phone"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  required
                   className="mt-2"
                 />
               </div>
@@ -89,9 +106,10 @@ export const Contact: React.FC = () => {
 
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full bg-[#C9A24D] text-white py-4 text-sm tracking-wider uppercase hover:bg-[#b8923f] transition-colors duration-300"
               >
-                Gửi tin nhắn
+                {isSubmitting ? 'Đang gửi...' : 'Gửi tin nhắn'}
               </button>
             </form>
           </div>
@@ -129,7 +147,7 @@ export const Contact: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-lg mb-2">Email</h3>
-                  <p className="text-gray-600">info@Salvioroyale.vn</p>
+                  <p className="text-gray-600">info@salvioroyale.vn</p>
                   <p className="text-gray-600">support@Salvioroyale.vn</p>
                 </div>
               </div>

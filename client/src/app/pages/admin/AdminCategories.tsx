@@ -2,20 +2,24 @@ import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, FolderOpen, AlertCircle } from 'lucide-react';
 import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
+import { ImageUpload } from '@/app/components/admin/ImageUpload';
 import { toast } from 'sonner';
 
 interface Category {
   _id: string;
   name: string;
   description: string;
+  image?: string;
 }
 
 export const AdminCategories: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    image: '',
   });
 
   // Fetch categories
@@ -48,8 +52,8 @@ export const AdminCategories: React.FC = () => {
     }
   };
 
-  const handleEdit = (id: string, name: string, description: string) => {
-    setFormData({ name, description });
+  const handleEdit = (id: string, name: string, description: string, image?: string) => {
+    setFormData({ name, description, image: image || '' });
     setEditingId(id);
     setShowForm(true);
   };
@@ -67,13 +71,32 @@ export const AdminCategories: React.FC = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '' });
+    setFormData({ name: '', description: '', image: '' });
     setEditingId(null);
     setShowForm(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!editingId) {
+      toast.error('Vui lòng tạo danh mục trước khi upload ảnh');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const result = await adminApi.uploadCategoryImage(editingId, file);
+      setFormData({ ...formData, image: result.path });
+      toast.success('Upload ảnh thành công!');
+    } catch (err) {
+      toast.error('Lỗi khi upload ảnh');
+      console.error(err);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   if (loading) {
@@ -150,6 +173,22 @@ export const AdminCategories: React.FC = () => {
                   disabled={savingLoading}
                 />
               </div>
+
+              <div>
+                <label className="block text-sm mb-2 text-gray-700">Ảnh danh mục</label>
+                {!editingId && (
+                  <p className="text-sm text-gray-500 mb-4">
+                    Lưu ý: Tạo danh mục trước, sau đó upload ảnh
+                  </p>
+                )}
+                {editingId && (
+                  <ImageUpload
+                    onUpload={handleImageUpload}
+                    currentImage={formData.image}
+                    loading={uploadingImage}
+                  />
+                )}
+              </div>
             </div>
 
             <div className="flex gap-4 mt-6">
@@ -178,37 +217,48 @@ export const AdminCategories: React.FC = () => {
           (categories || []).map((category) => (
             <div
               key={category._id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-[#C9A24D]/10 rounded-lg flex items-center justify-center">
-                  <FolderOpen className="w-6 h-6 text-[#C9A24D]" />
+              {category.image && (
+                <img
+                  src={category.image}
+                  alt={category.name}
+                  className="w-full h-48 object-cover"
+                />
+              )}
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  {!category.image && (
+                    <div className="w-12 h-12 bg-[#C9A24D]/10 rounded-lg flex items-center justify-center">
+                      <FolderOpen className="w-6 h-6 text-[#C9A24D]" />
+                    </div>
+                  )}
+                  <div className="flex gap-2 ml-auto">
+                    <button
+                      onClick={() => handleEdit(category._id, category.name, category.description, category.image)}
+                      className="text-[#C9A24D] hover:text-[#B8923D]"
+                      title="Chỉnh sửa"
+                      disabled={deletingLoading}
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(category._id, category.name)}
+                      className="text-red-600 hover:text-red-700"
+                      title="Xóa"
+                      disabled={deletingLoading}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(category._id, category.name, category.description)}
-                    className="text-[#C9A24D] hover:text-[#B8923D]"
-                    title="Chỉnh sửa"
-                    disabled={deletingLoading}
-                  >
-                    <Edit2 className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(category._id, category.name)}
-                    className="text-red-600 hover:text-red-700"
-                    title="Xóa"
-                    disabled={deletingLoading}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
 
-              <h3 className="text-lg mb-2">{category.name}</h3>
-              <p className="text-sm text-gray-600 mb-4">{category.description}</p>
-              
-              <div className="pt-4 border-t border-gray-200">
-                <span className="text-xs text-gray-500">ID: {category._id}</span>
+                <h3 className="text-lg mb-2">{category.name}</h3>
+                <p className="text-sm text-gray-600 mb-4">{category.description}</p>
+                
+                <div className="pt-4 border-t border-gray-200">
+                  <span className="text-xs text-gray-500">ID: {category._id}</span>
+                </div>
               </div>
             </div>
           ))

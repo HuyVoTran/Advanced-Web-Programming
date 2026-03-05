@@ -7,24 +7,11 @@ interface CategoryCardProps {
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
-  // Xử lý hình ảnh từ API
-  let imageUrl = '';
-  
-  if (category.image) {
-    if (category.image.startsWith('http')) {
-      imageUrl = category.image;
-    } else {
-      imageUrl = `https://source.unsplash.com/800x1000/?${encodeURIComponent(category.image)}`;
-    }
-  } else {
-    imageUrl = `https://source.unsplash.com/800x1000/?${encodeURIComponent(category.name || 'jewelry')}`;
-  }
-
   return (
     <Link to={`/products?category=${category._id || category.id}`} className="group block">
       <div className="relative overflow-hidden bg-gray-100 aspect-square rounded-sm">
         <ImageWithFallback
-          src={imageUrl}
+          src={category.image || 'https://source.unsplash.com/800x1000/?jewelry'}
           alt={category.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />

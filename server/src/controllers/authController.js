@@ -1,7 +1,9 @@
 import User from '../models/User.js';
+import crypto from 'crypto';
 import { generateToken } from '../utils/jwt.js';
 import { sendResponse, sendError } from '../utils/response.js';
 import { validateEmail, validatePassword } from '../utils/validators.js';
+import sendEmail from '../utils/sendEmail.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -254,6 +256,90 @@ export const deleteAddress = async (req, res, next) => {
     await user.save();
 
     return sendResponse(res, 200, 'Xóa địa chỉ thành công', { addresses: user.addresses });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return sendError(res, 400, 'Vui lòng cung cấp email');
+    }
+
+    if (!validateEmail(email)) {
+      return sendError(res, 400, 'Vui lòng cung cấp email hợp lệ');
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return sendResponse(res, 200, 'Nếu email tồn tại, liên kết khôi phục đã được gửi');
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000;
+    await user.save();
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetLink = `${clientUrl}/reset-password?token=${resetToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Khôi phục mật khẩu',
+      html: `
+        <p>Xin chào ${user.fullName || 'bạn'},</p>
+        <p>Vui lòng nhấn vào liên kết bên dưới để đặt lại mật khẩu. Liên kết có hiệu lực trong 1 giờ.</p>
+        <p><a href="${resetLink}">${resetLink}</a></p>
+        <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
+      `,
+      text: `Khôi phục mật khẩu: ${resetLink}`,
+    });
+
+    return sendResponse(res, 200, 'Nếu email tồn tại, liên kết khôi phục đã được gửi');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token || !password || !confirmPassword) {
+      return sendError(res, 400, 'Vui lòng cung cấp đầy đủ thông tin');
+    }
+
+    if (password !== confirmPassword) {
+      return sendError(res, 400, 'Mật khẩu không khớp');
+    }
+
+    if (!validatePassword(password)) {
+      return sendError(res, 400, 'Mật khẩu phải ít nhất 6 ký tự');
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    }).select('+password');
+
+    if (!user) {
+      return sendError(res, 400, 'Liên kết khôi phục không hợp lệ hoặc đã hết hạn');
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return sendResponse(res, 200, 'Đặt lại mật khẩu thành công');
   } catch (error) {
     next(error);
   }

@@ -1,15 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import { LayoutDashboard, Package, ShoppingCart, Users, List, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, List, LogOut, Newspaper, Mail, MessageSquare } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  useEffect(() => {
+    if (!user || !user.isAdmin) {
+      navigate('/404', { replace: true });
+    }
+  }, [user, navigate]);
+
   if (!user || !user.isAdmin) {
-    navigate('/login');
     return null;
   }
 
@@ -17,6 +22,9 @@ export const AdminLayout: React.FC = () => {
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Danh mục', path: '/admin/categories', icon: List },
     { name: 'Sản phẩm', path: '/admin/products', icon: Package },
+    { name: 'Tin tức', path: '/admin/news', icon: Newspaper },
+    { name: 'Thông báo', path: '/admin/newsletter', icon: Mail },
+    { name: 'Liên hệ', path: '/admin/contacts', icon: MessageSquare },
     { name: 'Đơn hàng', path: '/admin/orders', icon: ShoppingCart },
     { name: 'Người dùng', path: '/admin/users', icon: Users },
   ];

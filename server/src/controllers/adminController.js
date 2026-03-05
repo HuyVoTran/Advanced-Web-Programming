@@ -5,6 +5,9 @@ import Brand from '../models/Brand.js';
 import Category from '../models/Category.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination, validateProductData } from '../utils/validators.js';
+import News from '../models/News.js'; // Giả định model này tồn tại
+import NewsletterSubscription from '../models/NewsletterSubscription.js'; // Giả định model này tồn tại
+import sendEmail from '../utils/sendEmail.js'; // Giả định utility này tồn tại
 
 // Bảng điều khiển
 export const getDashboard = async (req, res, next) => {
@@ -48,6 +51,52 @@ export const getDashboard = async (req, res, next) => {
       recentOrders,
       orderStats,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Quản lý tin tức
+export const createNews = async (req, res, next) => {
+  try {
+    const { title, content, image, isPublished } = req.body;
+    const author = req.user.id; // Lấy từ auth middleware
+
+    const newNews = new News({
+      title,
+      content,
+      image,
+      author,
+      isPublished,
+      publishedAt: isPublished ? new Date() : null,
+    });
+
+    await newNews.save();
+
+    // Nếu tin tức được xuất bản ngay, gửi email cho người đăng ký
+    if (isPublished) {
+      try {
+        const subscribers = await NewsletterSubscription.find({}, 'email');
+        const emails = subscribers.map(sub => sub.email);
+
+        if (emails.length > 0) {
+          const subject = `Bài viết mới: ${title}`;
+          const newsUrl = `${process.env.CLIENT_URL}/blog/${newNews._id}`; // URL ví dụ
+          const html = `
+            <h1>Bài viết mới từ Salvio Royale!</h1>
+            <p>Chúng tôi vừa đăng một bài viết mới mà bạn có thể quan tâm:</p>
+            <h2>${title}</h2>
+            <p>${content.substring(0, 200)}...</p>
+            <a href="${newsUrl}">Đọc thêm</a>
+          `;
+          // Gửi email cho tất cả người đăng ký. Trong ứng dụng thực tế, đây nên là một background job.
+          await sendEmail({ to: emails.join(','), subject, html });
+        }
+      } catch (emailError) {
+        console.error("Lỗi khi gửi email tin tức:", emailError);
+      }
+    }
+    return sendResponse(res, 201, 'Tạo tin tức thành công', newNews);
   } catch (error) {
     next(error);
   }

@@ -154,7 +154,7 @@ export const adminApi = {
 
   // ============ NEWS ============
   getAllNews: async (page = 1, limit = 20) => {
-    const response = await apiClient.get('/news', { params: { page, limit } });
+    const response = await apiClient.get('/admin/news', { params: { page, limit } });
     return response.data.data;
   },
 
@@ -175,6 +175,59 @@ export const adminApi = {
 
   deleteNews: async (id: string) => {
     const response = await apiClient.delete(`/admin/news/${id}`);
+    return response.data.data;
+  },
+
+  // ============ NEWSLETTER ============
+  getNewsletterSubscribers: async () => {
+    const response = await apiClient.get('/admin/newsletter/subscribers');
+    return response.data.data;
+  },
+
+  getNewsletterUsers: async () => {
+    const response = await apiClient.get('/admin/newsletter/users');
+    return response.data.data;
+  },
+
+  sendNewsletter: async (payload: { subject: string; content: string; audience: 'all' | 'users' | 'subscribers' }) => {
+    const response = await apiClient.post('/admin/newsletter/send', payload);
+    return response.data.data;
+  },
+
+  // ============ CONTACTS ============
+  getContacts: async (page = 1, limit = 20) => {
+    const response = await apiClient.get('/contact', { params: { page, limit } });
+    return response.data.data;
+  },
+
+  getContactById: async (id: string) => {
+    const response = await apiClient.get(`/contact/${id}`);
+    return response.data.data;
+  },
+
+  deleteContact: async (id: string) => {
+    const response = await apiClient.delete(`/contact/${id}`);
+    return response.data.data;
+  },
+
+  // ============ UPLOADS ============
+  uploadCategoryImage: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await apiClient.post(`/upload/category/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+
+  uploadProductImages: async (id: string, files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('images', file);
+    });
+    const response = await apiClient.post(`/upload/products/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data.data;
   },
 };

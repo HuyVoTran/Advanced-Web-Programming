@@ -33,10 +33,17 @@ export const AdminUsers: React.FC = () => {
   );
 
   const filteredUsers = (allUsers || []).filter(user => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm);
+    // some user entries can be incomplete when the API is still populating;
+    // protect against undefined before calling string methods
+    const name = user.name || '';
+    const email = user.email || '';
+    const phone = user.phone || '';
+
+    const lowerTerm = searchTerm.toLowerCase();
+    const matchesSearch =
+      name.toLowerCase().includes(lowerTerm) ||
+      email.toLowerCase().includes(lowerTerm) ||
+      phone.includes(searchTerm);
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
