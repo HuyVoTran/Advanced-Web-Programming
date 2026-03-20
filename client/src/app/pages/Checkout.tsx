@@ -25,15 +25,24 @@ export const Checkout: React.FC = () => {
     district: user?.addresses[0]?.district || '',
     ward: user?.addresses[0]?.ward || '',
     notes: '',
+    paymentMethod: 'cod',
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.address) {
+      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const orderId = await addOrder({
         userId: user?.id || 'guest',
@@ -46,6 +55,7 @@ export const Checkout: React.FC = () => {
         })),
         total,
         status: 'pending',
+        paymentMethod: formData.paymentMethod,
         shippingAddress: {
           id: 'checkout',
           fullName: formData.fullName,
@@ -70,6 +80,8 @@ export const Checkout: React.FC = () => {
       navigate(`/order-success/${orderId}`);
     } catch (err) {
       toast.error('Đặt hàng thất bại, vui lòng thử lại');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -189,11 +201,50 @@ export const Checkout: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Payment Method Section */}
+              <div className="mt-6">
+                <h2 className="text-2xl font-light mb-6">Phương thức thanh toán</h2>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={formData.paymentMethod === 'cod'}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                    />
+                    <div>
+                      <p className="font-medium">Thanh toán khi nhận hàng (COD)</p>
+                      <p className="text-sm text-gray-600">Bạn sẽ thanh toán khi nhận được đơn hàng</p>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-center gap-3 cursor-pointer opacity-50 pointer-events-none">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="card"
+                      disabled
+                      className="w-4 h-4"
+                    />
+                    <div>
+                      <p className="font-medium">Thẻ tín dụng/ghi nợ (Sắp có)</p>
+                      <p className="text-sm text-gray-600">Chưa khả dụng</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-2"></div>
 
             {/* Order Summary */}
             <div className="lg:col-span-1">
-              <div className="bg-gray-50 p-8 rounded-sm sticky top-28">
+              <div className="bg-gray-50 p-8 rounded-sm">
                 <h2 className="text-2xl font-light mb-6">Đơn hàng của bạn</h2>
 
                 <div className="space-y-4 mb-6">
@@ -239,9 +290,10 @@ export const Checkout: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full bg-[#C9A24D] text-white py-4 text-sm tracking-wider uppercase hover:bg-[#b8923f] transition-colors duration-300"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#C9A24D] text-white py-4 text-sm tracking-wider uppercase hover:bg-[#b8923f] disabled:bg-gray-400 transition-colors duration-300"
                 >
-                  Đặt hàng
+                  {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng'}
                 </button>
               </div>
             </div>

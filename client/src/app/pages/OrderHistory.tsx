@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
 import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
@@ -60,6 +60,15 @@ export const OrderHistory: React.FC = () => {
                   {order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}
                   {order.shippingAddress.city ? `, ${order.shippingAddress.city}` : ''}
                 </p>
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-gray-200 flex justify-end">
+                <Link
+                  to={`/orders/${order.id}`}
+                  className="inline-block bg-[#C9A24D] text-white px-4 py-2 text-sm tracking-wide uppercase hover:bg-[#b8923f] transition-colors duration-300 rounded"
+                >
+                  Xem chi tiết
+                </Link>
               </div>
             </div>
           ))}

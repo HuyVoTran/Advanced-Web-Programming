@@ -7,6 +7,7 @@ import {
   getAllProducts,
   getAllOrders,
   updateOrderStatus,
+  rejectOrder,
   getAllUsers,
   updateUserStatus,
   updateUserRole,
@@ -54,6 +55,7 @@ router.delete('/brands/:id', deleteBrand);
 // Order Management
 router.get('/orders', getAllOrders);
 router.put('/orders/:id/status', updateOrderStatus);
+router.post('/orders/:id/reject', rejectOrder);
 
 // User Management
 router.get('/users', getAllUsers);

@@ -124,6 +124,11 @@ export const adminApi = {
     return response.data.data;
   },
 
+  rejectOrder: async (id: string, rejectionReason: string) => {
+    const response = await apiClient.post(`/admin/orders/${id}/reject`, { rejectionReason });
+    return response.data.data;
+  },
+
   // ============ USERS ============
   getAllUsers: async (page = 1, limit = 20, filters?: any) => {
     const response = await apiClient.get('/admin/users', {

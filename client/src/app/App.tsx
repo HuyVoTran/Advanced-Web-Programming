@@ -25,10 +25,12 @@ import { UserProfile } from '@/app/pages/UserProfile';
 import { AddressManagement } from '@/app/pages/AddressManagement';
 import { UserSettings } from '@/app/pages/UserSettings';
 import { OrderHistory } from '@/app/pages/OrderHistory';
+import { OrderDetail } from '@/app/pages/OrderDetail';
 import { About } from '@/app/pages/About';
 import { Contact } from '@/app/pages/Contact';
 import { Categories } from '@/app/pages/Categories';
 import { Blog } from '@/app/pages/Blog';
+import { BlogDetail } from '@/app/pages/BlogDetail';
 import { LegalTerms } from '@/app/pages/LegalTerms';
 import { LegalPrivacy } from '@/app/pages/LegalPrivacy';
 import { LegalReturn } from '@/app/pages/LegalReturn';
@@ -97,6 +99,7 @@ function App() {
                 <Route path="/addresses" element={<AddressManagement />} />
                 <Route path="/settings" element={<UserSettings />} />
                 <Route path="/orders" element={<OrderHistory />} />
+                <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 
@@ -104,6 +107,7 @@ function App() {
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/brands" element={<Brands />} />
                 <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogDetail />} />
                 <Route path="/legal/terms" element={<LegalTerms />} />
                 <Route path="/legal/privacy" element={<LegalPrivacy />} />
                 <Route path="/legal/return" element={<LegalReturn />} />

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Package, MapPin, CreditCard, User, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Package, MapPin, CreditCard, User, AlertCircle, X } from 'lucide-react';
 import { useAdminFetch, useAdminMutation } from '../../../hooks/useCustomHooks';
 import { adminApi } from '../../../services/adminApi';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { Textarea } from '../../components/ui/textarea';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -67,6 +68,8 @@ function formatAddress(addr: any): string {
 export const AdminOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [newStatus, setNewStatus] = useState<string>('');
+  const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [showRejectForm, setShowRejectForm] = useState<boolean>(false);
 
   const { data: order, loading, error } = useAdminFetch<OrderDetail>(
     () => adminApi.getOrderById(id!),
@@ -94,6 +97,33 @@ export const AdminOrderDetail: React.FC = () => {
       toast.success('Cập nhật trạng thái đơn hàng thành công!');
     } catch (err) {
       toast.error('Cập nhật trạng thái thất bại');
+    }
+  };
+
+  const handleApproveOrder = async () => {
+    try {
+      await updateStatus('confirmed');
+      toast.success('Đơn hàng đã được phê duyệt!');
+      setShowRejectForm(false);
+    } catch (err) {
+      toast.error('Phê duyệt đơn hàng thất bại');
+    }
+  };
+
+  const handleRejectOrder = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error('Vui lòng nhập lý do từ chối');
+      return;
+    }
+
+    try {
+      // Call a reject endpoint with reason
+      await adminApi.rejectOrder(id!, rejectionReason);
+      toast.success('Đơn hàng đã bị từ chối!');
+      setShowRejectForm(false);
+      setRejectionReason('');
+    } catch (err) {
+      toast.error('Từ chối đơn hàng thất bại');
     }
   };
 
@@ -183,6 +213,58 @@ export const AdminOrderDetail: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl mb-4">Cập Nhật Trạng Thái</h2>
             
+            {order.status === 'pending' && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800 text-sm mb-4">
+                  Đơn hàng này chưa được phê duyệt. Vui lòng chọn hành động:
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleApproveOrder}
+                    disabled={updateLoading}
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm font-medium"
+                  >
+                    {updateLoading ? 'Đang xử lý...' : 'Phê duyệt đơn hàng'}
+                  </button>
+                  <button
+                    onClick={() => setShowRejectForm(!showRejectForm)}
+                    disabled={updateLoading}
+                    className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 text-sm font-medium"
+                  >
+                    Từ chối
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showRejectForm && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-medium text-red-800">Từ chối đơn hàng</h3>
+                  <button
+                    onClick={() => setShowRejectForm(false)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <Textarea
+                  placeholder="Nhập lý do từ chối đơn hàng..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  rows={3}
+                  className="mb-3"
+                />
+                <button
+                  onClick={handleRejectOrder}
+                  disabled={updateLoading || !rejectionReason.trim()}
+                  className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 text-sm font-medium"
+                >
+                  {updateLoading ? 'Đang xử lý...' : 'Xác nhận từ chối'}
+                </button>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm mb-2 text-gray-700">

@@ -315,18 +315,39 @@ export const useNews = (params?: Record<string, any>) => {
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<{
+    currentPage: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  } | null>(null);
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
         setLoading(true);
-        const { newsAPI } = await import('@/services/api');
-        const result = await newsAPI.getAll(params);
-        setNews(Array.isArray(result) ? result : result.news || result.data || []);
+        const { API_CONFIG } = await import('@/config/api');
+        const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+        const response = await fetch(`${API_CONFIG.BASE_URL}/news${queryString}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const newsData = Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+            ? payload
+            : payload?.news || [];
+
+        setNews(newsData);
+        setPagination(payload?.pagination || null);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Lỗi tải tin tức');
         setNews([]);
+        setPagination(null);
       } finally {
         setLoading(false);
       }
@@ -335,7 +356,7 @@ export const useNews = (params?: Record<string, any>) => {
     fetchNews();
   }, [JSON.stringify(params)]);
 
-  return { news, loading, error };
+  return { news, loading, error, pagination };
 };
 
 /**

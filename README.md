@@ -1,7 +1,7 @@
 <!-- 
 
 git add .
-git commit -m "Update"
+git commit -m "Update features"
 git push 
 
 cd server
@@ -147,6 +147,62 @@ src/
 - `/legal/shipping` - Vận chuyển
 
 ### User Routes (Cần đăng nhập)
+## 🚀 Quy Trình Thanh Toán (COD Flow)
+
+### User Side
+1. **Tạo tài khoản**: User đăng ký hoặc tiếp tục là guest
+2. **Thêm vào giỏ hàng**: Chọn sản phẩm, điều chỉnh số lượng
+3. **Thanh toán**: 
+   - Điền form thông tin giao hàng (tên, số điện thoại, địa chỉ...)
+   - Chọn phương thức: **COD (Thanh toán khi nhận hàng)**
+   - Nhấn "Đặt hàng" → Đơn hàng được tạo với trạng thái **pending**
+4. **Chờ xác nhận**: Hiển thị trang "Đặt hàng thành công" với thông báo chờ admin xác nhận trong 24h
+5. **Nhận email**: Nhận email xác nhận đơn hàng
+6. **Theo dõi**: Xem trạng thái đơn hàng trong `/orders`
+
+### Admin Side
+1. **Xem danh sách**: Admin vào `/admin/orders` xem tất cả đơn hàng
+2. **Xem chi tiết**: Click để xem đơn hàng ở trạng thái **pending**
+3. **Phê duyệt hoặc Từ chối**:
+   - **Phê duyệt**: Nhấn nút "Phê duyệt đơn hàng" → Status chuyển thành **confirmed**
+   - **Từ chối**: Nhấn "Từ chối", nhập lý do → Status chuyển thành **cancelled**, kho hàng được khôi phục
+4. **Cập nhật trạng thái**:
+   - **confirmed** → **shipping** (đang giao hàng)
+   - **shipping** → **completed** (đã giao hàng)
+
+### Status Flow
+```
+pending (chờ xác nhận) 
+  ├─→ confirmed (admin phê duyệt)
+  │    ├─→ shipping (đang giao)
+  │    └─→ completed (đã giao)
+  └─→ cancelled (admin từ chối, user hủy)
+```
+
+## 🚀 Routes
+
+### Public Routes
+- `/` - Trang chủ
+- `/products` - Danh sách sản phẩm
+- `/product/:id` - Chi tiết sản phẩm
+- `/cart` - Giỏ hàng
+- `/checkout` - Thanh toán (COD)
+- `/order-success/:orderId` - Xác nhận đặt hàng
+- `/login` - Đăng nhập
+- `/register` - Đăng ký
+- `/forgot-password` - Quên mật khẩu
+- `/reset-password` - Đặt lại mật khẩu
+- `/about` - Giới thiệu
+- `/contact` - Liên hệ
+- `/categories` - Danh mục
+- `/brands` - Thương hiệu
+- `/blog` - Tin tức
+- `/legal/terms` - Điều khoản
+- `/legal/privacy` - Chính sách
+- `/legal/return` - Đổi trả
+- `/legal/shipping` - Vận chuyển
+
+### User Routes (Cần đăng nhập)
 - `/dashboard` - Dashboard người dùng
 - `/profile` - Thông tin cá nhân
 - `/addresses` - Sổ địa chỉ
@@ -160,8 +216,8 @@ src/
 - `/admin/products/new` - Thêm sản phẩm
 - `/admin/products/:id` - Thêm/Sửa sản phẩm
 - `/admin/categories` - Quản lý danh mục
-- `/admin/orders` - Quản lý đơn hàng
-- `/admin/orders/:id` - Chi tiết đơn hàng
+- `/admin/orders` - Quản lý đơn hàng (COD approval)
+- `/admin/orders/:id` - Chi tiết đơn hàng + approve/reject
 - `/admin/users` - Quản lý người dùng
 - `/admin/news` - Quản lý tin tức
 - `/admin/newsletter` - Gửi newsletter
@@ -216,19 +272,39 @@ Dễ dàng tùy chỉnh:
 - Typography trong `/src/styles/index.css`
 - Components trong `/src/app/components/`
 
-## 📝 Notes
+## 📝 Ghi chú Kỹ Thuật
 
-- Backend Express đã được tích hợp trong thư mục `/server`
-- JWT authentication đang được sử dụng
+### Payment & Order Management
+- **COD (Cash on Delivery)**: Hỗ trợ thanh toán khi nhận hàng
+- **Order Status Flow**: pending → confirmed → shipping → completed
+- **Admin Approval**: Admin phải phê duyệt đơn hàng trước khi chuyển sang shipping
+- **Order Rejection**: Admin có thể từ chối đơn hàng và tự động khôi phục kho hàng
+- **JWT Authentication**: Token-based auth với 24h refresh
+
+### Backend Integration
+- **Express.js** trong `/server` xử lý API
+- **MongoDB** lưu trữ dữ liệu
+- **Nodemailer** gửi email xác nhận đơn hàng
+- **Multer** xử lý upload file
+- **CORS** cho cross-origin requests
+
+### Frontend Architecture
+- **Context API**: AuthContext, CartContext, OrderContext
+- **Custom Hooks**: useCustomHooks cho reusable logic
+- **React Router**: Client-side routing
+- **Tailwind CSS v4**: Styling
+- **Sonner**: Toast notifications
+- **Type-safe**: Toàn bộ TypeScript
 
 ## 🎓 Dành Cho Đồ Án Sinh Viên
 
 Dự án này được thiết kế đặc biệt cho đồ án sinh viên với:
-- ✅ Đầy đủ tính năng e-commerce thực tế
+- ✅ Đầy đủ tính năng e-commerce thực tế (COD payment flow hoàn chỉnh)
 - ✅ Code structure chuyên nghiệp
 - ✅ UI/UX đẹp, sang trọng
 - ✅ Dễ demo và trình bày
 - ✅ Dễ mở rộng và tích hợp backend
+- ✅ Admin panel đầy đủ để quản lý đơn hàng
 
 ---
 

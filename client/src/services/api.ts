@@ -196,6 +196,8 @@ export const newsAPI = {
 
   getById: (id: string) => apiCall(`/news/${id}`),
 
+  getBySlug: (slug: string) => apiCall(`/news/${slug}`),
+
   create: (data: any, token: string) =>
     apiCall('/news', {
       method: 'POST',

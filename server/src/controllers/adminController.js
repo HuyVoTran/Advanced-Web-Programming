@@ -246,7 +246,7 @@ export const updateOrderStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status, notes } = req.body;
 
-    if (!['pending', 'processing', 'shipping', 'completed', 'cancelled'].includes(status)) {
+    if (!['pending', 'confirmed', 'shipping', 'completed', 'cancelled'].includes(status)) {
       return sendError(res, 400, 'Trạng thái không hợp lệ');
     }
 
@@ -261,6 +261,44 @@ export const updateOrderStatus = async (req, res, next) => {
     }
 
     return sendResponse(res, 200, 'Trạng thái đơn hàng được cập nhật thành công', order);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+
+    if (!rejectionReason || rejectionReason.trim() === '') {
+      return sendError(res, 400, 'Vui lòng cung cấp lý do từ chối');
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return sendError(res, 404, 'Đơn hàng không tìm thấy');
+    }
+
+    if (order.status !== 'pending') {
+      return sendError(res, 400, 'Chỉ có thể từ chối đơn hàng đang chờ xác nhận');
+    }
+
+    // Khôi phục kho hàng sản phẩm
+    for (const item of order.items) {
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.stock += item.quantity;
+        await product.save();
+      }
+    }
+
+    order.status = 'cancelled';
+    order.rejectionReason = rejectionReason;
+    await order.save();
+
+    return sendResponse(res, 200, 'Đơn hàng đã bị từ chối thành công', order);
   } catch (error) {
     next(error);
   }

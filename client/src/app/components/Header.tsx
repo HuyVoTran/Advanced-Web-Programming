@@ -147,9 +147,9 @@ export const Header: React.FC = () => {
                           <div className="space-y-2">
                             {searchResults.posts.map((post) => (
                               <button
-                                key={post.title}
+                                key={post._id || post.slug || post.title}
                                 onClick={() => {
-                                  navigate(`/blog?search=${encodeURIComponent(searchQuery.trim())}`);
+                                  navigate(`/blog/${post.slug || post._id}`);
                                   setSearchOpen(false);
                                 }}
                                 className="w-full text-left text-sm text-gray-700 hover:text-[#C9A24D] transition-colors"

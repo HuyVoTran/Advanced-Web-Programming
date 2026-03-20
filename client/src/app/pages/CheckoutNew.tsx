@@ -40,6 +40,7 @@ export const CheckoutNew: React.FC = () => {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasPlacedOrder, setHasPlacedOrder] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
@@ -54,10 +55,10 @@ export const CheckoutNew: React.FC = () => {
   });
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (items.length === 0 && !hasPlacedOrder) {
       navigate('/cart');
     }
-  }, [items, navigate]);
+  }, [items, navigate, hasPlacedOrder]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -119,6 +120,7 @@ export const CheckoutNew: React.FC = () => {
         })),
         total,
         status: 'pending',
+        paymentMethod: formData.paymentMethod,
         shippingAddress: {
           id: 'checkout',
           fullName: formData.fullName,
@@ -138,6 +140,7 @@ export const CheckoutNew: React.FC = () => {
           : undefined,
       });
 
+      setHasPlacedOrder(true);
       clearCart();
       toast.success('Đặt hàng thành công!', {
         description: `Mã đơn hàng: ${orderId}`,

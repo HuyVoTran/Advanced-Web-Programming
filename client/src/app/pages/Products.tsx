@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProductCard } from '@/app/components/ProductCard';
@@ -42,9 +42,96 @@ export const Products: React.FC = () => {
   );
   const MAX_PRICE = 500000000;
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
+  const [priceRangeDraft, setPriceRangeDraft] = useState<[number, number]>([0, MAX_PRICE]);
+  const sliderRafRef = useRef<number | null>(null);
+  const pendingPriceRangeRef = useRef<[number, number]>([0, MAX_PRICE]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  useEffect(() => {
+    setPriceRangeDraft(priceRange);
+  }, [priceRange]);
+
+  useEffect(() => {
+    return () => {
+      if (sliderRafRef.current !== null) {
+        cancelAnimationFrame(sliderRafRef.current);
+      }
+    };
+  }, []);
+
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }),
+    []
+  );
+
+  const formattedMinPrice = useMemo(
+    () => currencyFormatter.format(priceRangeDraft[0]),
+    [currencyFormatter, priceRangeDraft]
+  );
+
+  const formattedMaxPrice = useMemo(
+    () =>
+      priceRangeDraft[1] === MAX_PRICE
+        ? '500.000.000+ VND'
+        : currencyFormatter.format(priceRangeDraft[1]),
+    [currencyFormatter, priceRangeDraft, MAX_PRICE]
+  );
+
+  const handlePriceRangeChange = useCallback((value: number[]) => {
+    pendingPriceRangeRef.current = value as [number, number];
+
+    if (sliderRafRef.current !== null) {
+      return;
+    }
+
+    sliderRafRef.current = requestAnimationFrame(() => {
+      setPriceRangeDraft(pendingPriceRangeRef.current);
+      sliderRafRef.current = null;
+    });
+  }, []);
+
+  const handlePriceRangeCommit = useCallback((value: number[]) => {
+    const committedValue = value as [number, number];
+
+    if (sliderRafRef.current !== null) {
+      cancelAnimationFrame(sliderRafRef.current);
+      sliderRafRef.current = null;
+    }
+
+    setPriceRangeDraft(committedValue);
+    setPriceRange(committedValue);
+  }, []);
+
+  const normalizePriceRange = useCallback((min: number, max: number): [number, number] => {
+    const safeMin = Number.isFinite(min) ? Math.max(0, min) : 0;
+    const safeMax = Number.isFinite(max) ? Math.min(MAX_PRICE, max) : MAX_PRICE;
+
+    if (safeMin > safeMax) {
+      return [safeMax, safeMax];
+    }
+
+    return [safeMin, safeMax];
+  }, [MAX_PRICE]);
+
+  const handlePriceInputChange = useCallback((field: 'min' | 'max', value: string) => {
+    const parsed = value === '' ? 0 : Number(value);
+    const numericValue = Number.isFinite(parsed) ? parsed : 0;
+
+    setPriceRangeDraft((prev) => {
+      if (field === 'min') {
+        return [numericValue, prev[1]];
+      }
+      return [prev[0], numericValue];
+    });
+  }, []);
+
+  const applyPriceRangeFromInputs = useCallback(() => {
+    const [nextMin, nextMax] = normalizePriceRange(priceRangeDraft[0], priceRangeDraft[1]);
+    setPriceRangeDraft([nextMin, nextMax]);
+    setPriceRange([nextMin, nextMax]);
+  }, [normalizePriceRange, priceRangeDraft]);
 
   const materials = Array.from(new Set(apiProducts.map((p: any) => {
     const mat = p.material || p.category || '';
@@ -119,36 +206,36 @@ export const Products: React.FC = () => {
     return filtered;
   }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, sortBy, apiProducts, categories]);
 
-  const toggleCategory = (categoryId: string) => {
+  const toggleCategory = useCallback((categoryId: string) => {
     setSelectedCategories(prev =>
       prev.includes(categoryId)
         ? prev.filter(id => id !== categoryId)
         : [...prev, categoryId]
     );
-  };
+  }, []);
 
-  const toggleBrand = (brandId: string) => {
+  const toggleBrand = useCallback((brandId: string) => {
     setSelectedBrands(prev =>
       prev.includes(brandId)
         ? prev.filter(id => id !== brandId)
         : [...prev, brandId]
     );
-  };
+  }, []);
 
-  const toggleMaterial = (material: string) => {
+  const toggleMaterial = useCallback((material: string) => {
     setSelectedMaterials(prev =>
       prev.includes(material)
         ? prev.filter(m => m !== material)
         : [...prev, material]
     );
-  };
+  }, []);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSelectedCategories([]);
     setSelectedBrands([]);
     setPriceRange([0, MAX_PRICE]);
     setSelectedMaterials([]);
-  };
+  }, [MAX_PRICE]);
 
   const FilterPanel = () => (
     <div className="space-y-8">
@@ -201,21 +288,58 @@ export const Products: React.FC = () => {
         <h3 className="text-lg mb-4">Khoảng giá</h3>
         <div className="px-2">
           <Slider
-            value={priceRange}
-            onValueChange={(value) => setPriceRange(value as [number, number])}
+            value={priceRangeDraft}
+            onValueChange={handlePriceRangeChange}
+            onValueCommit={handlePriceRangeCommit}
             max={MAX_PRICE}
             min={0}
             step={1000000}
             className="mb-4"
           />
           <p className="text-sm text-gray-600">
-            Từ: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceRange[0])}
+            Từ: {formattedMinPrice}
           </p>
           <p className="text-sm text-gray-600">
-            Đến: {priceRange[1] === MAX_PRICE
-              ? '500.000.000+ VND'
-              : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceRange[1])}
+            Đến: {formattedMaxPrice}
           </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={MAX_PRICE}
+              step={1000000}
+              value={priceRangeDraft[0]}
+              onChange={(e) => handlePriceInputChange('min', e.target.value)}
+              onBlur={applyPriceRangeFromInputs}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  applyPriceRangeFromInputs();
+                }
+              }}
+              className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm"
+              placeholder="Giá từ"
+            />
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={MAX_PRICE}
+              step={1000000}
+              value={priceRangeDraft[1]}
+              onChange={(e) => handlePriceInputChange('max', e.target.value)}
+              onBlur={applyPriceRangeFromInputs}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  applyPriceRangeFromInputs();
+                }
+              }}
+              className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm"
+              placeholder="Giá đến"
+            />
+          </div>
+
         </div>
       </div>
 
@@ -240,6 +364,14 @@ export const Products: React.FC = () => {
           ))}
         </div>
       </div>
+
+      <Button
+        type="button"
+        onClick={applyPriceRangeFromInputs}
+        className="w-full"
+      >
+        Áp dụng bộ lọc
+      </Button>
 
       {/* Clear Filters */}
       <button
@@ -377,7 +509,7 @@ export const Products: React.FC = () => {
         <div className="flex gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-28">
+            <div>
               <FilterPanel />
             </div>
           </aside>

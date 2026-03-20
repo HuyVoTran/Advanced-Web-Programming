@@ -1,12 +1,13 @@
 import News from '../models/News.js';
 import NewsletterSubscription from '../models/NewsletterSubscription.js';
+import mongoose from 'mongoose';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination } from '../utils/validators.js';
 import sendEmail from '../utils/sendEmail.js';
 
 export const getNews = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
+    const { page = 1, limit = 10, search, author, sort = 'newest' } = req.query;
     const { page: pageNum, limit: limitNum } = validatePagination(page, limit);
 
     const filter = { status: 'published' };
@@ -18,11 +19,17 @@ export const getNews = async (req, res, next) => {
       ];
     }
 
+    if (author) {
+      filter.author = { $regex: `^${author}$`, $options: 'i' };
+    }
+
+    const sortConfig = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
+
     const total = await News.countDocuments(filter);
     const news = await News.find(filter)
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
-      .sort({ createdAt: -1 });
+      .sort(sortConfig);
 
     return sendPaginatedResponse(
       res,
@@ -79,7 +86,11 @@ export const getNewsBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
 
-    const newsItem = await News.findOne({ slug, status: 'published' });
+    let newsItem = await News.findOne({ slug, status: 'published' });
+
+    if (!newsItem && mongoose.Types.ObjectId.isValid(slug)) {
+      newsItem = await News.findOne({ _id: slug, status: 'published' });
+    }
 
     if (!newsItem) {
       return sendError(res, 404, 'Tin tức không tìm thấy');
@@ -152,7 +163,8 @@ export const publishNews = async (req, res, next) => {
 
       if (emails.length > 0) {
         const subject = `Bài viết mới: ${newsItem.title}`;
-        const newsUrl = `${process.env.CLIENT_URL || ''}/blog?search=${encodeURIComponent(newsItem.title)}`;
+        const detailKey = newsItem.slug || newsItem._id;
+        const newsUrl = `${process.env.CLIENT_URL || ''}/blog/${detailKey}`;
         const html = `
           <h1>Bài viết mới từ Salvio Royale!</h1>
           <p>Chúng tôi vừa đăng một bài viết mới mà bạn có thể quan tâm:</p>

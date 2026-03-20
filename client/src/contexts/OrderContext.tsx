@@ -50,6 +50,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       items,
       total: raw?.totalPrice ?? raw?.total ?? 0,
       status: raw?.status || 'pending',
+      paymentMethod: raw?.paymentMethod || 'cod',
       shippingAddress: {
         id: 'server',
         fullName: customerInfo.fullName || raw?.customerName || '',
@@ -98,6 +99,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           productId: item.productId,
           quantity: item.quantity,
         })),
+        paymentMethod: order.paymentMethod || 'cod',
         notes: '',
       };
 

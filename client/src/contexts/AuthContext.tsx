@@ -36,7 +36,8 @@ export interface Order {
     image: string;
   }>;
   total: number;
-  status: 'pending' | 'processing' | 'shipping' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipping' | 'completed' | 'cancelled';
+  paymentMethod?: 'cod' | 'card' | 'bank_transfer';
   shippingAddress: Address;
   createdAt: string;
   guestInfo?: {
