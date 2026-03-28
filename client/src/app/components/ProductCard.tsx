@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { useCart } from '../../contexts/CartContext';
 import { toast } from 'sonner';
 import { formatPrice } from '@/utils/constants';
+import { getPrimaryProductImage } from '@/utils/image';
 
 interface ProductCardProps {
   product: any;
@@ -19,7 +20,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const cardRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
 
-  const imageUrl = product.image || 'https://source.unsplash.com/600x800/?jewelry';
+  const imageUrl = getPrimaryProductImage(product) || 'https://source.unsplash.com/600x800/?jewelry';
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -48,7 +49,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
       productId: product._id || product.id,
       name: product.name,
       price: product.price,
-      image: product.image || 'https://source.unsplash.com/600x800/?jewelry',
+      image: imageUrl,
       quantity: 1,
     });
     toast.success('Đã thêm vào giỏ hàng', {

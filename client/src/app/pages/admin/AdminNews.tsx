@@ -4,6 +4,7 @@ import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
+import { ImageUpload } from '@/app/components/admin/ImageUpload';
 import { toast } from 'sonner';
 
 interface NewsItem {
@@ -19,6 +20,8 @@ interface NewsItem {
 export const AdminNews: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingThumbnail, setPendingThumbnail] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -61,12 +64,21 @@ export const AdminNews: React.FC = () => {
     }
 
     try {
-      await saveNews(formData);
+      const savedNews = await saveNews(formData);
+      const newsId = savedNews?._id || editingId;
+
+      if (pendingThumbnail && newsId) {
+        setUploadingImage(true);
+        await adminApi.uploadNewsThumbnail(newsId, pendingThumbnail);
+      }
+
       toast.success(editingId ? 'Cập nhật tin tức thành công!' : 'Tạo tin tức thành công!');
       resetForm();
       refetch();
     } catch (err) {
       toast.error('Lỗi khi lưu tin tức');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -78,6 +90,7 @@ export const AdminNews: React.FC = () => {
       author: item.author || 'Admin',
       status: item.status,
     });
+    setPendingThumbnail(null);
     setEditingId(item._id);
     setShowForm(true);
   };
@@ -112,6 +125,7 @@ export const AdminNews: React.FC = () => {
       author: 'Admin',
       status: 'draft',
     });
+    setPendingThumbnail(null);
     setEditingId(null);
     setShowForm(false);
   };
@@ -189,6 +203,9 @@ export const AdminNews: React.FC = () => {
                 <CKEditor
                   editor={ClassicEditor as any}
                   data={formData.content}
+                  config={{
+                    licenseKey: 'GPL',
+                  }}
                   disabled={savingLoading}
                   onChange={(_event: any, editor: any) => {
                     const data = editor.getData();
@@ -203,14 +220,21 @@ export const AdminNews: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm mb-2 text-gray-700">Ảnh thumbnail (URL)</label>
-                <input
-                  type="text"
-                  name="thumbnail"
-                  value={formData.thumbnail}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
-                  disabled={savingLoading}
+                <label className="block text-sm mb-2 text-gray-700">Ảnh thumbnail</label>
+                <p className="text-sm text-gray-500 mb-4">
+                  Ảnh sẽ được lưu khi bạn bấm tạo/cập nhật bài viết.
+                </p>
+                <ImageUpload
+                  onUpload={(file) => {
+                    setPendingThumbnail(file);
+                    toast.info('Ảnh thumbnail sẽ được lưu khi bạn bấm tạo/cập nhật');
+                  }}
+                  onClear={() => {
+                    setPendingThumbnail(null);
+                    setFormData((prev) => ({ ...prev, thumbnail: '' }));
+                  }}
+                  currentImage={formData.thumbnail}
+                  loading={uploadingImage || savingLoading}
                 />
               </div>
               <div>

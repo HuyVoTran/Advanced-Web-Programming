@@ -14,6 +14,17 @@ export const About: React.FC = () => {
           ]}
         />
 
+        {/* Image Section */}
+        <div className="mb-20">
+          <div className="relative h-[500px] rounded-sm overflow-hidden">
+            <ImageWithFallback
+              src="/images/SalvioRoyale-About.png"
+              alt="About Salvio Royale"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+
         {/* Hero */}
         <div className="text-center mb-20">
           <h1 className="text-5xl md:text-6xl font-light mb-6 tracking-wide">
@@ -22,17 +33,6 @@ export const About: React.FC = () => {
           <p className="text-xl text-gray-600 font-light max-w-3xl mx-auto">
             Salvio Royale - Nơi nghệ thuật chế tác trang sức gặp gỡ di sản văn hóa
           </p>
-        </div>
-
-        {/* Image Section */}
-        <div className="mb-20">
-          <div className="relative h-[500px] rounded-sm overflow-hidden">
-            <ImageWithFallback
-              src="https://images.unsplash.com/photo-1758631279366-8e8aeaf94082?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5JTIwc3RvcmUlMjBpbnRlcmlvcnxlbnwxfHx8fDE3Njk4NTkxOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="About Salvio Royale"
-              className="w-full h-full object-cover"
-            />
-          </div>
         </div>
 
         {/* Story */}

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
 import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { Package } from 'lucide-react';
+import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
 
 export const OrderHistory: React.FC = () => {
   const { user } = useAuth();
@@ -18,11 +19,14 @@ export const OrderHistory: React.FC = () => {
   const orders = getUserOrders(user.id);
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-16">
-      <div className="container mx-auto px-4 lg:px-8">
-        <h1 className="text-4xl font-light mb-12 tracking-wide">Lịch sử đơn hàng</h1>
-
-        <div className="space-y-6 max-w-4xl">
+    <UserDashboardLayout
+      title="Lịch sử đơn hàng"
+      subtitle="Theo dõi toàn bộ đơn hàng của bạn"
+      icon={Package}
+      backTo="/dashboard"
+      backLabel="Quay lại Dashboard"
+    >
+        <div className="space-y-6">
           {orders.map((order) => (
             <div key={order.id} className="border border-gray-200 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
@@ -73,7 +77,6 @@ export const OrderHistory: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
-    </div>
+    </UserDashboardLayout>
   );
 };

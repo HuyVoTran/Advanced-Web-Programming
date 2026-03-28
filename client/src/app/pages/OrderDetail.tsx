@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
 import { formatPrice, getStatusColor, getStatusText } from '@/utils/constants';
 import { ArrowLeft, Package } from 'lucide-react';
+import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,8 +26,13 @@ export const OrderDetail: React.FC = () => {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-white pt-24 pb-16">
-        <div className="container mx-auto px-4 lg:px-8 max-w-3xl">
+      <UserDashboardLayout
+        title="Chi tiết đơn hàng"
+        subtitle="Thông tin đơn hàng bạn đã đặt"
+        icon={Package}
+        backTo="/orders"
+        backLabel="Quay lại lịch sử đơn hàng"
+      >
           <div className="border border-gray-200 rounded-lg p-8 text-center">
             <p className="text-xl mb-2">Không tìm thấy đơn hàng</p>
             <p className="text-gray-600 mb-6">Đơn hàng có thể chưa được tải hoặc không tồn tại.</p>
@@ -37,14 +43,18 @@ export const OrderDetail: React.FC = () => {
               Quay lại lịch sử đơn hàng
             </Link>
           </div>
-        </div>
-      </div>
+      </UserDashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-16">
-      <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
+    <UserDashboardLayout
+      title="Chi tiết đơn hàng"
+      subtitle="Thông tin đơn hàng bạn đã đặt"
+      icon={Package}
+      backTo="/orders"
+      backLabel="Quay lại lịch sử đơn hàng"
+    >
         <div className="mb-8">
           <Link to="/orders" className="inline-flex items-center gap-2 text-[#C9A24D] hover:underline mb-4">
             <ArrowLeft className="w-4 h-4" />
@@ -106,7 +116,6 @@ export const OrderDetail: React.FC = () => {
             <p>{order.paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : order.paymentMethod || 'N/A'}</p>
           </div>
         </div>
-      </div>
-    </div>
+    </UserDashboardLayout>
   );
 };

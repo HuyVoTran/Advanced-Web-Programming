@@ -14,11 +14,46 @@ const addressSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  city: {
+    type: String,
+    default: '',
+  },
+  district: {
+    type: String,
+    default: '',
+  },
+  ward: {
+    type: String,
+    default: '',
+  },
   isDefault: {
     type: Boolean,
     default: false,
   },
 });
+
+const userSettingsSchema = new mongoose.Schema(
+  {
+    notifications: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false },
+      promotions: { type: Boolean, default: true },
+    },
+    language: {
+      type: String,
+      default: 'vi',
+    },
+    timezone: {
+      type: String,
+      default: 'asia/saigon',
+    },
+    currency: {
+      type: String,
+      default: 'vnd',
+    },
+  },
+  { _id: false }
+);
 
 const userSchema = new mongoose.Schema(
   {
@@ -53,6 +88,19 @@ const userSchema = new mongoose.Schema(
       default: 'user',
     },
     addresses: [addressSchema],
+    settings: {
+      type: userSettingsSchema,
+      default: () => ({
+        notifications: {
+          email: true,
+          sms: false,
+          promotions: true,
+        },
+        language: 'vi',
+        timezone: 'asia/saigon',
+        currency: 'vnd',
+      }),
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -51,7 +51,7 @@ export const CheckoutNew: React.FC = () => {
     city: user?.addresses?.[0]?.city || '',
     district: user?.addresses?.[0]?.district || '',
     notes: '',
-    paymentMethod: 'cod' as 'cod' | 'bank_transfer' | 'credit_card',
+    paymentMethod: 'cod' as 'cod' | 'bank_transfer' | 'card',
   });
 
   useEffect(() => {
@@ -409,12 +409,12 @@ export const CheckoutNew: React.FC = () => {
                     </div>
 
                     <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      formData.paymentMethod === 'credit_card' 
+                      formData.paymentMethod === 'card' 
                         ? 'border-primary bg-primary/5' 
                         : 'border-gray-200 hover:border-gray-300'
                     }`}>
                       <Label htmlFor="card" className="flex items-start gap-3 cursor-pointer">
-                        <RadioGroupItem value="credit_card" id="card" className="mt-1" />
+                        <RadioGroupItem value="card" id="card" className="mt-1" />
                         <div className="flex-1">
                           <p className="font-medium mb-1">Thẻ tín dụng/ghi nợ</p>
                           <p className="text-sm text-muted-foreground">
@@ -496,7 +496,7 @@ export const CheckoutNew: React.FC = () => {
                     <p className="text-sm">
                       {formData.paymentMethod === 'cod' && 'Thanh toán khi nhận hàng (COD)'}
                       {formData.paymentMethod === 'bank_transfer' && 'Chuyển khoản ngân hàng'}
-                      {formData.paymentMethod === 'credit_card' && 'Thẻ tín dụng/ghi nợ'}
+                      {formData.paymentMethod === 'card' && 'Thẻ tín dụng/ghi nợ'}
                     </p>
                   </div>
 

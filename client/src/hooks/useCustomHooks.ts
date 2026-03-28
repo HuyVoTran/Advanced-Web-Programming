@@ -327,7 +327,15 @@ export const useNews = (params?: Record<string, any>) => {
       try {
         setLoading(true);
         const { API_CONFIG } = await import('@/config/api');
-        const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+        let queryString = '';
+        if (params) {
+          const cleanedParams: Record<string, string> = {};
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) cleanedParams[k] = String(v);
+          });
+          const qs = new URLSearchParams(cleanedParams).toString();
+          if (qs) queryString = `?${qs}`;
+        }
         const response = await fetch(`${API_CONFIG.BASE_URL}/news${queryString}`);
 
         if (!response.ok) {

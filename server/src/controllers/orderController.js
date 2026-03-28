@@ -6,7 +6,7 @@ import { validatePagination } from '../utils/validators.js';
 
 export const createOrder = async (req, res, next) => {
   try {
-    const { customerInfo, items } = req.body;
+    const { customerInfo, items, paymentMethod, notes } = req.body;
 
     // Xác thực
     if (!customerInfo || !items || items.length === 0) {
@@ -51,6 +51,8 @@ export const createOrder = async (req, res, next) => {
       customerInfo,
       items: orderItems,
       totalPrice,
+      paymentMethod: paymentMethod || 'cod',
+      notes: notes || '',
     });
 
     await order.save();

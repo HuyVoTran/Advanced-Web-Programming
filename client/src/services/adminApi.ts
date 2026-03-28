@@ -225,12 +225,22 @@ export const adminApi = {
     return response.data.data;
   },
 
-  uploadProductImages: async (id: string, files: File[]) => {
+  uploadProductImages: async (id: string, files: File[], retainedImages: string[] = []) => {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append('images', file);
     });
+    formData.append('retainedImages', JSON.stringify(retainedImages));
     const response = await apiClient.post(`/upload/products/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+
+  uploadNewsThumbnail: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await apiClient.post(`/upload/news/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data.data;

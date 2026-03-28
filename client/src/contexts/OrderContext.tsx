@@ -87,6 +87,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchOrders]);
 
   const addOrder = async (order: Omit<Order, 'id' | 'createdAt'>): Promise<string> => {
+    const normalizedPaymentMethod =
+      order.paymentMethod === 'credit_card'
+        ? 'card'
+        : order.paymentMethod || 'cod';
+
     try {
       const payload = {
         customerInfo: {
@@ -94,12 +99,15 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           email: order.guestInfo?.email || user?.email || '',
           phone: order.shippingAddress.phone,
           address: order.shippingAddress.address,
+          city: order.shippingAddress.city || '',
+          district: order.shippingAddress.district || '',
+          ward: order.shippingAddress.ward || '',
         },
         items: order.items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
         })),
-        paymentMethod: order.paymentMethod || 'cod',
+        paymentMethod: normalizedPaymentMethod,
         notes: '',
       };
 
@@ -112,16 +120,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.debug('[OrderContext] create order failed, saving locally', err);
+      console.debug('[OrderContext] create order failed', err);
+      throw err;
     }
 
-    const newOrder: Order = {
-      ...order,
-      id: `ORD${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    setOrders(prev => [...prev, newOrder]);
-    return newOrder.id;
+    throw new Error('Tạo đơn hàng thất bại');
   };
 
   const updateOrderStatus = (orderId: string, status: Order['status']) => {

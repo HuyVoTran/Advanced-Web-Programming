@@ -1,311 +1,219 @@
 <!-- 
 
 git add .
-git commit -m "Update features"
+git commit -m "Update"
 git push 
 
 cd server
 npm start
 
 cd client
-npm run dev
+npm run dev 
 
 -->
+# SALVIO ROYALE
 
-# SALVIO ROYALE - Hệ Thống Thương Mại Điện Tử Trang Sức Cao Cấp
+## 1. Giới thiệu
 
-Website thương mại điện tử bán trang sức cao cấp với phong cách luxury - sang trọng - tinh tế.
+### 1.1 Tên đề tài
+Hệ thống thương mại điện tử trang sức cao cấp SALVIO ROYALE.
 
-## 🌟 Tính Năng
+### 1.2 Bối cảnh
+Dự án được xây dựng theo định hướng đồ án học thuật trong lĩnh vực phát triển ứng dụng web full-stack. Hệ thống mô phỏng quy trình vận hành của một website thương mại điện tử thực tế, bao gồm quản lý sản phẩm, đặt hàng, theo dõi đơn hàng, quản trị nội dung và vận hành quản trị viên.
 
-### User Features
-- ✨ Trang chủ với Hero Carousel tự động
-- 🛍️ Danh sách sản phẩm với filter, sort, pagination
-- 🔍 Chi tiết sản phẩm với gallery ảnh
-- 🛒 Giỏ hàng với update số lượng
-- 💳 Thanh toán (hỗ trợ cả user đăng nhập và guest)
-- 📦 Lịch sử đơn hàng và theo dõi trạng thái
-- 👤 Dashboard cá nhân
-- 📍 Quản lý địa chỉ giao hàng
-- ⚙️ Cài đặt tài khoản
-- 📰 Trang tin tức/blog (Masonry layout)
-- 🧭 Trang danh mục/brands/legal
-- 📩 Form liên hệ gửi đến admin
+### 1.3 Mục tiêu của tác giả
+Mục tiêu chính của tác giả khi thực hiện hệ thống này:
+- Xây dựng một kiến trúc full-stack rõ ràng, có khả năng mở rộng.
+- Áp dụng quy trình phát triển phần mềm từ phân tích yêu cầu đến triển khai tính năng.
+- Rèn luyện năng lực thiết kế cơ sở dữ liệu, API REST, xác thực người dùng và quản trị hệ thống.
+- Hoàn thiện một sản phẩm có thể trình bày học thuật và demo nghiệp vụ thực tế.
 
-### Admin Features
-- 📊 Dashboard tổng quan với biểu đồ
-- 📦 Quản lý sản phẩm (CRUD)
-- 📁 Quản lý danh mục
-- 🚚 Quản lý đơn hàng và cập nhật trạng thái
-- 👥 Quản lý người dùng và phân quyền
-- 📰 Quản lý tin tức (CRUD + publish)
-- 📣 Gửi thông báo newsletter
-- 📬 Quản lý liên hệ từ khách hàng
+## 2. Mục tiêu và phạm vi nghiên cứu
 
-## 🎨 Thiết Kế
+### 2.1 Mục tiêu kỹ thuật
+- Thiết kế frontend hiện đại, responsive, tách lớp component rõ ràng.
+- Xây dựng backend Express.js theo mô hình controller-route-model.
+- Lưu trữ dữ liệu bằng MongoDB, hỗ trợ nghiệp vụ người dùng và quản trị.
+- Tích hợp xác thực JWT và phân quyền user/admin.
+- Triển khai luồng đặt hàng và quản lý trạng thái đơn hàng theo quy trình.
 
-- **Font**: Montserrat (Google Fonts)
-- **Màu sắc chính**: 
-  - Gold: #C9A24D
-  - White: #FFFFFF
-  - Black/Dark Gray
-- **Framework**: React + Tailwind CSS v4
-- **Responsive**: Desktop-first với mobile support
+### 2.2 Phạm vi chức năng
+Hệ thống tập trung vào nghiệp vụ cốt lõi của thương mại điện tử:
+- Quản lý danh mục, thương hiệu, sản phẩm.
+- Giỏ hàng, thanh toán COD, lịch sử đơn hàng.
+- Quản lý địa chỉ giao hàng và thông tin tài khoản.
+- Quản trị đơn hàng, người dùng, tin tức, liên hệ và newsletter.
 
-## 🛠️ Công Nghệ
+Không nằm trong phạm vi hiện tại:
+- Tích hợp cổng thanh toán trực tuyến thực tế.
+- Tối ưu hạ tầng production quy mô lớn (microservices, CI/CD nâng cao, autoscaling).
 
-### Frontend
-- **React 18.3.1** - UI Library
-- **React Router** - Routing
-- **Context API** - State Management
-- **Tailwind CSS v4** - Styling
-- **Lucide React** - Icons
-- **Recharts** - Charts & Graphs
-- **Date-fns** - Date formatting
-- **Sonner** - Toast notifications
-- **React Slick** - Carousel
+## 3. Kiến trúc hệ thống
 
-### Backend
-- **Express** - Framework
-- **MongoDB** - Database
-- **Mongoose** - ODM
-- **JWT** - Authentication
-- **Nodemailer** - Email
-- **Multer** - Upload
+### 3.1 Kiến trúc tổng quan
+- Frontend: React + TypeScript, chạy theo mô hình SPA.
+- Backend: Express.js cung cấp REST API.
+- Database: MongoDB với Mongoose ODM.
+- Authentication: JWT bearer token.
 
-## 📂 Cấu Trúc Dự Án
+### 3.2 Cấu trúc thư mục chính
+- `client/`: mã nguồn giao diện người dùng.
+- `server/`: mã nguồn API, model dữ liệu và nghiệp vụ backend.
 
-```
-src/
-├── app/
-│   ├── components/
-│   │   ├── Header.tsx
-│   │   ├── Footer.tsx
-│   │   ├── ProductCard.tsx
-│   │   ├── HeroCarousel.tsx
-│   │   └── ui/ (shadcn components)
-│   ├── pages/
-│   │   ├── Home.tsx
-│   │   ├── Products.tsx
-│   │   ├── ProductDetail.tsx
-│   │   ├── Cart.tsx
-│   │   ├── Checkout.tsx
-│   │   ├── OrderSuccess.tsx
-│   │   ├── Login.tsx
-│   │   ├── Register.tsx
-│   │   ├── ForgotPassword.tsx
-│   │   ├── UserDashboard.tsx
-│   │   ├── UserProfile.tsx
-│   │   ├── AddressManagement.tsx
-│   │   ├── UserSettings.tsx
-│   │   ├── OrderHistory.tsx
-│   │   ├── About.tsx
-│   │   ├── Contact.tsx
-│   │   └── admin/
-│   │       ├── AdminDashboard.tsx
-│   │       ├── AdminProducts.tsx
-│   │       ├── AdminProductForm.tsx
-│   │       ├── AdminCategories.tsx
-│   │       ├── AdminOrders.tsx
-│   │       ├── AdminOrderDetail.tsx
-│   │       ├── AdminUsers.tsx
-│   │       ├── AdminNews.tsx
-│   │       ├── AdminNewsletter.tsx
-│   │       └── AdminContacts.tsx
-│   └── App.tsx
-├── contexts/
-│   ├── AuthContext.tsx
-│   ├── CartContext.tsx
-│   └── OrderContext.tsx
-├── data/
-│   └── mockData.ts (Mock database)
-└── styles/
-    ├── fonts.css
-    ├── theme.css
-    └── index.css
-```
+## 4. Công nghệ sử dụng
 
-## 🚀 Routes
+### 4.1 Frontend
+- React 18
+- TypeScript
+- React Router
+- Tailwind CSS
+- Context API
+- Sonner (toast)
+- Date-fns
+- Recharts
+- React Slick
 
-### Public Routes
-- `/` - Trang chủ
-- `/products` - Danh sách sản phẩm
-- `/product/:id` - Chi tiết sản phẩm
-- `/cart` - Giỏ hàng
-- `/checkout` - Thanh toán
-- `/login` - Đăng nhập
-- `/register` - Đăng ký
-- `/forgot-password` - Quên mật khẩu
-- `/about` - Giới thiệu
-- `/contact` - Liên hệ
-- `/categories` - Danh mục
-- `/brands` - Thương hiệu
-- `/blog` - Tin tức
-- `/legal/terms` - Điều khoản
-- `/legal/privacy` - Chính sách
-- `/legal/return` - Đổi trả
-- `/legal/shipping` - Vận chuyển
+### 4.2 Backend
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- JWT
+- Multer
+- Nodemailer
 
-### User Routes (Cần đăng nhập)
-## 🚀 Quy Trình Thanh Toán (COD Flow)
+## 5. Chức năng hệ thống
 
-### User Side
-1. **Tạo tài khoản**: User đăng ký hoặc tiếp tục là guest
-2. **Thêm vào giỏ hàng**: Chọn sản phẩm, điều chỉnh số lượng
-3. **Thanh toán**: 
-   - Điền form thông tin giao hàng (tên, số điện thoại, địa chỉ...)
-   - Chọn phương thức: **COD (Thanh toán khi nhận hàng)**
-   - Nhấn "Đặt hàng" → Đơn hàng được tạo với trạng thái **pending**
-4. **Chờ xác nhận**: Hiển thị trang "Đặt hàng thành công" với thông báo chờ admin xác nhận trong 24h
-5. **Nhận email**: Nhận email xác nhận đơn hàng
-6. **Theo dõi**: Xem trạng thái đơn hàng trong `/orders`
+### 5.1 Chức năng người dùng
+- Đăng ký, đăng nhập, quên mật khẩu, đặt lại mật khẩu.
+- Xem sản phẩm, lọc/sắp xếp/tìm kiếm, xem chi tiết.
+- Quản lý giỏ hàng, cập nhật số lượng, xóa sản phẩm.
+- Thanh toán theo hình thức COD.
+- Theo dõi lịch sử đơn hàng và chi tiết đơn hàng.
+- Cập nhật hồ sơ cá nhân.
+- Quản lý sổ địa chỉ (thêm, sửa, xóa, đặt mặc định).
+- Cập nhật cài đặt tài khoản (notifications, ngôn ngữ, múi giờ, tiền tệ).
+- Xem tin tức, danh mục, thương hiệu, chính sách.
 
-### Admin Side
-1. **Xem danh sách**: Admin vào `/admin/orders` xem tất cả đơn hàng
-2. **Xem chi tiết**: Click để xem đơn hàng ở trạng thái **pending**
-3. **Phê duyệt hoặc Từ chối**:
-   - **Phê duyệt**: Nhấn nút "Phê duyệt đơn hàng" → Status chuyển thành **confirmed**
-   - **Từ chối**: Nhấn "Từ chối", nhập lý do → Status chuyển thành **cancelled**, kho hàng được khôi phục
-4. **Cập nhật trạng thái**:
-   - **confirmed** → **shipping** (đang giao hàng)
-   - **shipping** → **completed** (đã giao hàng)
+### 5.2 Chức năng quản trị viên
+- Dashboard tổng quan.
+- Quản lý sản phẩm (CRUD) và ảnh sản phẩm.
+- Quản lý danh mục và ảnh danh mục.
+- Quản lý đơn hàng và cập nhật trạng thái.
+- Quản lý người dùng và vai trò.
+- Quản lý tin tức (CRUD, publish, thumbnail).
+- Gửi newsletter.
+- Quản lý liên hệ từ người dùng.
 
-### Status Flow
-```
-pending (chờ xác nhận) 
-  ├─→ confirmed (admin phê duyệt)
-  │    ├─→ shipping (đang giao)
-  │    └─→ completed (đã giao)
-  └─→ cancelled (admin từ chối, user hủy)
-```
+## 6. Luồng nghiệp vụ đơn hàng
 
-## 🚀 Routes
+### 6.1 Luồng người dùng
+1. Người dùng thêm sản phẩm vào giỏ hàng.
+2. Người dùng nhập thông tin nhận hàng tại trang checkout.
+3. Hệ thống tạo đơn hàng với trạng thái ban đầu `pending`.
+4. Người dùng theo dõi tiến trình tại trang lịch sử đơn hàng.
 
-### Public Routes
-- `/` - Trang chủ
-- `/products` - Danh sách sản phẩm
-- `/product/:id` - Chi tiết sản phẩm
-- `/cart` - Giỏ hàng
-- `/checkout` - Thanh toán (COD)
-- `/order-success/:orderId` - Xác nhận đặt hàng
-- `/login` - Đăng nhập
-- `/register` - Đăng ký
-- `/forgot-password` - Quên mật khẩu
-- `/reset-password` - Đặt lại mật khẩu
-- `/about` - Giới thiệu
-- `/contact` - Liên hệ
-- `/categories` - Danh mục
-- `/brands` - Thương hiệu
-- `/blog` - Tin tức
-- `/legal/terms` - Điều khoản
-- `/legal/privacy` - Chính sách
-- `/legal/return` - Đổi trả
-- `/legal/shipping` - Vận chuyển
+### 6.2 Luồng quản trị
+1. Quản trị viên nhận đơn hàng ở trạng thái `pending`.
+2. Cập nhật sang `confirmed` khi phê duyệt.
+3. Cập nhật sang `shipping` khi đang giao.
+4. Cập nhật sang `completed` khi giao thành công.
+5. Có thể chuyển sang `cancelled` nếu từ chối/hủy đơn phù hợp nghiệp vụ.
 
-### User Routes (Cần đăng nhập)
-- `/dashboard` - Dashboard người dùng
-- `/profile` - Thông tin cá nhân
-- `/addresses` - Sổ địa chỉ
-- `/settings` - Cài đặt
-- `/orders` - Lịch sử đơn hàng
-- `/order-success/:orderId` - Xác nhận đơn hàng
+## 7. Các route chính
 
-### Admin Routes
-- `/admin` - Dashboard Admin
-- `/admin/products` - Quản lý sản phẩm
-- `/admin/products/new` - Thêm sản phẩm
-- `/admin/products/:id` - Thêm/Sửa sản phẩm
-- `/admin/categories` - Quản lý danh mục
-- `/admin/orders` - Quản lý đơn hàng (COD approval)
-- `/admin/orders/:id` - Chi tiết đơn hàng + approve/reject
-- `/admin/users` - Quản lý người dùng
-- `/admin/news` - Quản lý tin tức
-- `/admin/newsletter` - Gửi newsletter
-- `/admin/contacts` - Quản lý liên hệ
+### 7.1 Public routes
+- `/`
+- `/products`
+- `/product/:id`
+- `/cart`
+- `/checkout`
+- `/order-success/:orderId`
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/reset-password`
+- `/about`
+- `/contact`
+- `/categories`
+- `/brands`
+- `/blog`
+- `/blog/:slug`
+- `/legal/terms`
+- `/legal/privacy`
+- `/legal/return`
+- `/legal/shipping`
 
-## 📊 Dữ Liệu
+### 7.2 User routes
+- `/dashboard`
+- `/profile`
+- `/addresses`
+- `/settings`
+- `/orders`
+- `/orders/:id`
 
-- Backend Express trong thư mục `/server` xử lý dữ liệu thật.
-- Mock data cũ vẫn có trong `/src/data/mockData.ts` (phục vụ demo UI khi cần).
+### 7.3 Admin routes
+- `/admin`
+- `/admin/products`
+- `/admin/products/new`
+- `/admin/products/:id`
+- `/admin/categories`
+- `/admin/orders`
+- `/admin/orders/:id`
+- `/admin/users`
+- `/admin/news`
+- `/admin/newsletter`
+- `/admin/contacts`
 
-## 🎯 Điểm Nổi Bật
+## 8. Cài đặt và chạy dự án
 
-1. **UI/UX Chất Lượng Cao**: Thiết kế luxury theo chuẩn thương hiệu cao cấp
-2. **Responsive Design**: Hoạt động mượt mà trên mọi thiết bị
-3. **Component-Based**: Dễ maintain và scale
-4. **Type-Safe**: TypeScript cho toàn bộ dự án
-5. **Best Practices**: Clean code, folder structure rõ ràng
-6. **Backend sẵn sàng**: Express + MongoDB đã tích hợp
+### 8.1 Yêu cầu môi trường
+- Node.js LTS
+- npm
+- MongoDB
 
-## 🔐 Demo Accounts
-
-Demo accounts and credentials have been removed from this repository. Use real backend credentials or create accounts via the registration flow when integrating with a backend.
-
-## 📱 Responsive Breakpoints
-
-- Mobile: < 768px
-- Tablet: 768px - 1024px
-- Desktop: > 1024px
-
-## 🎨 Color Palette
-
-```css
---gold: #C9A24D;
---gold-dark: #B8923D;
---white: #FFFFFF;
---black: #1A1A1A;
---gray-50: #F9FAFB;
---gray-100: #F3F4F6;
+### 8.2 Cài đặt backend
+```powershell
+cd server
+npm install
+npm start
 ```
 
-## ⚡ Performance
+### 8.3 Cài đặt frontend
+```powershell
+cd client
+npm install
+npm run dev
+```
 
-- Lazy loading images
-- Optimized bundle size
-- Smooth animations với Motion
-- Fast page transitions
+### 8.4 Build frontend
+```powershell
+cd client
+npm run build
+```
 
-## 🔧 Customization
+## 9. Trạng thái kiểm thử smoke (user flow)
 
-Dễ dàng tùy chỉnh:
-- Màu sắc trong `/src/styles/theme.css`
-- Typography trong `/src/styles/index.css`
-- Components trong `/src/app/components/`
+Vòng smoke checklist nhanh cho luồng:
+- `profile`
+- `addresses CRUD`
+- `checkout`
+- `orders`
+- `settings`
 
-## 📝 Ghi chú Kỹ Thuật
+Kết quả kiểm tra kỹ thuật đã thực hiện:
+- Frontend build thành công (`vite build`).
+- Kiểm tra syntax backend thành công cho các file `auth`, `order`, `User model`, `Order model`, `authRoutes`, `orderRoutes`.
+- Route người dùng trong `App.tsx` đã map đầy đủ cho các trang thuộc luồng trên.
 
-### Payment & Order Management
-- **COD (Cash on Delivery)**: Hỗ trợ thanh toán khi nhận hàng
-- **Order Status Flow**: pending → confirmed → shipping → completed
-- **Admin Approval**: Admin phải phê duyệt đơn hàng trước khi chuyển sang shipping
-- **Order Rejection**: Admin có thể từ chối đơn hàng và tự động khôi phục kho hàng
-- **JWT Authentication**: Token-based auth với 24h refresh
+Lưu ý:
+- Để xác nhận đầy đủ end-to-end ở mức runtime, cần chạy đồng thời frontend + backend + MongoDB, sau đó thao tác trực tiếp trên trình duyệt với tài khoản test.
 
-### Backend Integration
-- **Express.js** trong `/server` xử lý API
-- **MongoDB** lưu trữ dữ liệu
-- **Nodemailer** gửi email xác nhận đơn hàng
-- **Multer** xử lý upload file
-- **CORS** cho cross-origin requests
+## 10. Định hướng mở rộng
+- Tích hợp cổng thanh toán trực tuyến thực tế.
+- Bổ sung test tự động (unit/integration/e2e).
+- Hoàn thiện logging, audit và monitoring cho môi trường production.
+- Tối ưu hiệu năng truy vấn và tách service khi mở rộng quy mô.
 
-### Frontend Architecture
-- **Context API**: AuthContext, CartContext, OrderContext
-- **Custom Hooks**: useCustomHooks cho reusable logic
-- **React Router**: Client-side routing
-- **Tailwind CSS v4**: Styling
-- **Sonner**: Toast notifications
-- **Type-safe**: Toàn bộ TypeScript
-
-## 🎓 Dành Cho Đồ Án Sinh Viên
-
-Dự án này được thiết kế đặc biệt cho đồ án sinh viên với:
-- ✅ Đầy đủ tính năng e-commerce thực tế (COD payment flow hoàn chỉnh)
-- ✅ Code structure chuyên nghiệp
-- ✅ UI/UX đẹp, sang trọng
-- ✅ Dễ demo và trình bày
-- ✅ Dễ mở rộng và tích hợp backend
-- ✅ Admin panel đầy đủ để quản lý đơn hàng
-
----
-
-**Developed with ❤️ for Academic Project**
+## 11. Kết luận
+Dự án SALVIO ROYALE đáp ứng mục tiêu xây dựng một hệ thống thương mại điện tử học thuật có tính ứng dụng thực tế, với đầy đủ thành phần từ frontend, backend, cơ sở dữ liệu đến các quy trình nghiệp vụ chính. Hệ thống hiện phù hợp cho mục đích báo cáo đồ án, demo chức năng và tiếp tục mở rộng trong các giai đoạn phát triển tiếp theo.

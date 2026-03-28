@@ -1,31 +1,71 @@
 import React from 'react';
 import { Settings, Bell, Lock, Globe } from 'lucide-react';
 import { toast } from 'sonner';
+import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import { authAPI } from '@/services/api';
 
 export const UserSettings: React.FC = () => {
+  const { user, token, updateUser } = useAuth();
   const [notifications, setNotifications] = React.useState({
-    email: true,
-    sms: false,
-    promotions: true,
+    email: user?.settings?.notifications?.email ?? true,
+    sms: user?.settings?.notifications?.sms ?? false,
+    promotions: user?.settings?.notifications?.promotions ?? true,
   });
+  const [language, setLanguage] = React.useState(user?.settings?.language || 'vi');
+  const [timezone, setTimezone] = React.useState(user?.settings?.timezone || 'asia/saigon');
+  const [currency, setCurrency] = React.useState(user?.settings?.currency || 'vnd');
+  const [saving, setSaving] = React.useState(false);
 
-  const handleSave = () => {
-    toast.success('Cài đặt đã được lưu!');
+  React.useEffect(() => {
+    setNotifications({
+      email: user?.settings?.notifications?.email ?? true,
+      sms: user?.settings?.notifications?.sms ?? false,
+      promotions: user?.settings?.notifications?.promotions ?? true,
+    });
+    setLanguage(user?.settings?.language || 'vi');
+    setTimezone(user?.settings?.timezone || 'asia/saigon');
+    setCurrency(user?.settings?.currency || 'vnd');
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!token) {
+      toast.error('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const settingsPayload = {
+        notifications,
+        language,
+        timezone,
+        currency,
+      };
+
+      const result: any = await authAPI.updateProfile({ settings: settingsPayload }, token);
+      const updatedUser = result?.user || result;
+
+      updateUser({
+        settings: updatedUser?.settings || settingsPayload,
+      });
+
+      toast.success('Cài đặt đã được lưu!');
+    } catch (error: any) {
+      toast.error(error?.message || 'Lưu cài đặt thất bại');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-16">
-      <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-[#C9A24D] rounded-full flex items-center justify-center">
-            <Settings className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl tracking-wide">Cài Đặt</h1>
-            <p className="text-gray-600">Tùy chỉnh trải nghiệm của bạn</p>
-          </div>
-        </div>
-
+    <UserDashboardLayout
+      title="Cài Đặt"
+      subtitle="Tùy chỉnh trải nghiệm của bạn"
+      icon={Settings}
+      backTo="/dashboard"
+      backLabel="Quay lại Dashboard"
+    >
         <div className="space-y-6">
           {/* Notifications */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -135,7 +175,11 @@ export const UserSettings: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm mb-2 text-gray-700">Ngôn ngữ</label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]">
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                >
                   <option value="vi">Tiếng Việt</option>
                   <option value="en">English</option>
                 </select>
@@ -143,7 +187,11 @@ export const UserSettings: React.FC = () => {
 
               <div>
                 <label className="block text-sm mb-2 text-gray-700">Múi giờ</label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]">
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                >
                   <option value="asia/saigon">Asia/Ho Chi Minh (GMT+7)</option>
                   <option value="asia/bangkok">Asia/Bangkok (GMT+7)</option>
                 </select>
@@ -151,7 +199,11 @@ export const UserSettings: React.FC = () => {
 
               <div>
                 <label className="block text-sm mb-2 text-gray-700">Tiền tệ</label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]">
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                >
                   <option value="vnd">VNĐ - Đồng Việt Nam</option>
                   <option value="usd">USD - US Dollar</option>
                 </select>
@@ -163,13 +215,13 @@ export const UserSettings: React.FC = () => {
           <div className="flex gap-4">
             <button
               onClick={handleSave}
+              disabled={saving}
               className="flex-1 bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors"
             >
-              Lưu Thay Đổi
+              {saving ? 'Đang lưu...' : 'Lưu Thay Đổi'}
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </UserDashboardLayout>
   );
 };

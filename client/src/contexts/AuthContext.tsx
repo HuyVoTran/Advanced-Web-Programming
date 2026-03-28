@@ -12,6 +12,7 @@ export interface User {
   isAdmin: boolean;
   /** original role string returned by the server ("user" | "admin") */
   role?: string;
+  settings?: UserSettings;
 }
 
 export interface Address {
@@ -21,8 +22,19 @@ export interface Address {
   address: string;
   city: string;
   district: string;
-  ward: string;
+  ward?: string;
   isDefault: boolean;
+}
+
+export interface UserSettings {
+  notifications: {
+    email: boolean;
+    sms: boolean;
+    promotions: boolean;
+  };
+  language: string;
+  timezone: string;
+  currency: string;
 }
 
 export interface Order {
@@ -62,6 +74,48 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const DEFAULT_USER_SETTINGS: UserSettings = {
+  notifications: {
+    email: true,
+    sms: false,
+    promotions: true,
+  },
+  language: 'vi',
+  timezone: 'asia/saigon',
+  currency: 'vnd',
+};
+
+const normalizeAddress = (address: any): Address => ({
+  id: address?.id || address?._id || '',
+  fullName: address?.fullName || '',
+  phone: address?.phone || '',
+  address: address?.address || '',
+  city: address?.city || '',
+  district: address?.district || '',
+  ward: address?.ward || '',
+  isDefault: Boolean(address?.isDefault),
+});
+
+const normalizeSettings = (settings: any): UserSettings => ({
+  notifications: {
+    email:
+      typeof settings?.notifications?.email === 'boolean'
+        ? settings.notifications.email
+        : DEFAULT_USER_SETTINGS.notifications.email,
+    sms:
+      typeof settings?.notifications?.sms === 'boolean'
+        ? settings.notifications.sms
+        : DEFAULT_USER_SETTINGS.notifications.sms,
+    promotions:
+      typeof settings?.notifications?.promotions === 'boolean'
+        ? settings.notifications.promotions
+        : DEFAULT_USER_SETTINGS.notifications.promotions,
+  },
+  language: settings?.language || DEFAULT_USER_SETTINGS.language,
+  timezone: settings?.timezone || DEFAULT_USER_SETTINGS.timezone,
+  currency: settings?.currency || DEFAULT_USER_SETTINGS.currency,
+});
+
 // No local mock users: use real backend for auth
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,14 +125,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const role = u.role ?? u?.user?.role ?? undefined;
     // some responses come with fullName, some with name
     const name = u.name || u.fullName || u.user?.fullName || u.user?.name || '';
+    const rawAddresses = u.addresses || u.user?.addresses || [];
     return {
       id: u.id || u._id || u.user?._id || '',
       name,
       fullName: u.fullName || u.user?.fullName,
       email: u.email || u.user?.email || '',
       phone: u.phone || u.user?.phone || '',
-      addresses: u.addresses || u.user?.addresses || [],
+      addresses: Array.isArray(rawAddresses) ? rawAddresses.map(normalizeAddress) : [],
       role,
+      settings: normalizeSettings(u.settings || u.user?.settings),
       // server may already include isAdmin; fallback to checking role
       isAdmin: typeof u.isAdmin === 'boolean' ? u.isAdmin : role === 'admin',
     };
@@ -115,6 +171,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       localStorage.removeItem('token');
     }
+  }, [token]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.PROFILE}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) return;
+
+        const payload = await res.json();
+        const profile = payload?.data?.user || payload?.user || payload?.data || null;
+
+        if (profile) {
+          setUser(normalizeUser(profile));
+        }
+      } catch {
+        // ignore profile refresh failures
+      }
+    };
+
+    fetchProfile();
   }, [token]);
 
   const login = async (email: string, password: string): Promise<User | null> => {

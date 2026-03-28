@@ -2,6 +2,7 @@ import { sendResponse, sendError } from '../utils/response.js';
 import path from 'path';
 import Category from '../models/Category.js';
 import Product from '../models/Product.js';
+import News from '../models/News.js';
 
 /**
  * Handle category image upload
@@ -15,7 +16,7 @@ export const uploadCategoryImage = async (req, res, next) => {
     const categoryId = req.params.id;
 
     // Construct relative path for database storage
-    const imagePath = `/client/public/images/categories/${req.file.filename}`;
+    const imagePath = `/images/categories/${req.file.filename}`;
 
     // Update category with new image path
     const updatedCategory = await Category.findByIdAndUpdate(
@@ -55,7 +56,7 @@ export const uploadProductImages = async (req, res, next) => {
     const productId = req.params.id;
 
     // Construct relative paths for database storage
-    const imagePaths = req.files.map((file) => `/client/public/images/products/${file.filename}`);
+    const imagePaths = req.files.map((file) => `/images/products/${file.filename}`);
 
     // Get current product to handle image updates
     const product = await Product.findById(productId);
@@ -63,11 +64,23 @@ export const uploadProductImages = async (req, res, next) => {
       return sendError(res, 404, 'Sản phẩm không tìm thấy');
     }
 
-    // Update images array - if it's a new upload session, replace; otherwise append
-    // For simplicity, we replace all images with new ones (as per typical upload behavior)
+    let retainedImages = [];
+    if (req.body.retainedImages) {
+      try {
+        const parsed = JSON.parse(req.body.retainedImages);
+        retainedImages = Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        retainedImages = [];
+      }
+    } else {
+      retainedImages = Array.isArray(product.images) ? product.images : [];
+    }
+
+    const mergedImages = [...retainedImages, ...imagePaths].slice(0, 4);
+
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
-      { images: imagePaths },
+      { images: mergedImages },
       { new: true }
     );
 
@@ -76,8 +89,41 @@ export const uploadProductImages = async (req, res, next) => {
         filename: file.filename,
         size: file.size,
       })),
-      paths: imagePaths,
+      paths: mergedImages,
       product: updatedProduct,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Handle news thumbnail upload
+ */
+export const uploadNewsImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return sendError(res, 400, 'Vui lòng chọn ảnh để tải lên');
+    }
+
+    const newsId = req.params.id;
+    const imagePath = `/images/news/${req.file.filename}`;
+
+    const updatedNews = await News.findByIdAndUpdate(
+      newsId,
+      { thumbnail: imagePath },
+      { new: true }
+    );
+
+    if (!updatedNews) {
+      return sendError(res, 404, 'Tin tức không tìm thấy');
+    }
+
+    return sendResponse(res, 200, 'Tải ảnh thành công', {
+      filename: req.file.filename,
+      path: imagePath,
+      size: req.file.size,
+      news: updatedNews,
     });
   } catch (error) {
     next(error);

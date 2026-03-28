@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageUploadProps {
   onUpload: (file: File) => void;
+  onClear?: () => void;
   currentImage?: string;
   loading?: boolean;
   maxSize?: number; // in MB
@@ -11,12 +12,26 @@ interface ImageUploadProps {
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   onUpload,
+  onClear,
   currentImage,
   loading = false,
   maxSize = 5,
 }) => {
   const [preview, setPreview] = useState<string | null>(currentImage || null);
   const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    setPreview(currentImage || null);
+  }, [currentImage]);
+
+  const resolvePreviewSrc = (src: string | null): string | undefined => {
+    if (!src) return undefined;
+    if (src.startsWith('http') || src.startsWith('data:')) return src;
+    if (src.startsWith('/client/public/')) {
+      return src.replace('/client/public', '');
+    }
+    return src;
+  };
 
   const handleFile = (file: File) => {
     // Validate file type
@@ -69,6 +84,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const clearImage = () => {
     setPreview(null);
+    onClear?.();
   };
 
   return (
@@ -106,7 +122,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
       {preview && (
         <div className="relative rounded-lg overflow-hidden bg-gray-100 aspect-square max-w-xs">
-          <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+          <img src={resolvePreviewSrc(preview)} alt="Preview" className="w-full h-full object-cover" />
           <button
             onClick={clearImage}
             disabled={loading}

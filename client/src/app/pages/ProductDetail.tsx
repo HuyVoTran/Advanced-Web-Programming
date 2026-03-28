@@ -108,15 +108,26 @@ export const ProductDetail: React.FC = () => {
   };
 
   const imageUrls = (product.images || []).map((img: string) => {
+    if (!img) return img;
     if (img.startsWith('http')) {
       return img;
     }
-    return `https://source.unsplash.com/800x1000/?${encodeURIComponent(img)}`;
+    if (img.startsWith('/client/public/')) {
+      return img.replace('/client/public', '');
+    }
+    if (img.startsWith('/')) {
+      return img;
+    }
+    return `/images/products/${img}`;
   });
 
   if (imageUrls.length === 0) {
     imageUrls.push('https://source.unsplash.com/800x1000/?jewelry');
   }
+
+  const materialLabel = typeof product.material === 'string' && product.material.length > 0
+    ? `${product.material.charAt(0).toUpperCase()}${product.material.slice(1)}`
+    : product.material;
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
@@ -190,7 +201,7 @@ export const ProductDetail: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Chất liệu</p>
-                <p className="text-base">{product.material}</p>
+                <p className="text-base">{materialLabel}</p>
               </div>
             </div>
 

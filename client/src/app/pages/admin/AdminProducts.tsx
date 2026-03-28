@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Search, Package, AlertCircle } from 'lucide-react'
 import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
 import { toast } from 'sonner';
+import { getPrimaryProductImage } from '@/utils/image';
 
 interface Product {
   _id: string;
@@ -17,6 +18,8 @@ interface Product {
   stock: number;
   isFeatured: boolean;
   isActive: boolean;
+  image?: string;
+  images?: string[];
 }
 
 const formatPrice = (value: number) => {
@@ -171,7 +174,15 @@ export const AdminProducts: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                          <Package className="w-8 h-8 text-gray-400" />
+                          {getPrimaryProductImage(product) ? (
+                            <img
+                              src={getPrimaryProductImage(product)}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Package className="w-8 h-8 text-gray-400" />
+                          )}
                         </div>
                         <div>
                           <div className="text-sm">{product.name}</div>

@@ -1,22 +1,64 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from 'lucide-react';
 import { toast } from 'sonner';
+import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
+import { authAPI } from '@/services/api';
 
 export const UserProfile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.fullName || user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    setFormData({
+      fullName: user?.fullName || user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+    });
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API call
-    toast.success('Cập nhật thông tin thành công!');
-    setIsEditing(false);
+
+    if (!token) {
+      toast.error('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const result: any = await authAPI.updateProfile(
+        {
+          fullName: formData.fullName,
+          phone: formData.phone,
+        },
+        token
+      );
+
+      const updatedUser = result?.user || result;
+      if (updatedUser) {
+        updateUser({
+          fullName: updatedUser.fullName,
+          name: updatedUser.fullName,
+          phone: updatedUser.phone,
+          addresses: updatedUser.addresses || user?.addresses || [],
+          settings: updatedUser.settings || user?.settings,
+        });
+      }
+
+      toast.success('Cập nhật thông tin thành công!');
+      setIsEditing(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Lỗi khi cập nhật thông tin');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,18 +66,13 @@ export const UserProfile: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-16">
-      <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-[#C9A24D] rounded-full flex items-center justify-center">
-            <User className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl tracking-wide">Thông Tin Cá Nhân</h1>
-            <p className="text-gray-600">Quản lý thông tin tài khoản của bạn</p>
-          </div>
-        </div>
-
+    <UserDashboardLayout
+      title="Thông Tin Cá Nhân"
+      subtitle="Quản lý thông tin tài khoản của bạn"
+      icon={User}
+      backTo="/dashboard"
+      backLabel="Quay lại Dashboard"
+    >
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           <form onSubmit={handleSubmit}>
             <div className="space-y-6">
@@ -63,10 +100,11 @@ export const UserProfile: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  disabled={!isEditing}
+                  disabled
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:bg-gray-50 disabled:cursor-not-allowed"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">Email không thể thay đổi tại đây</p>
               </div>
 
               <div>
@@ -89,9 +127,10 @@ export const UserProfile: React.FC = () => {
                   <>
                     <button
                       type="submit"
+                      disabled={saving}
                       className="flex-1 bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors"
                     >
-                      Lưu Thay Đổi
+                      {saving ? 'Đang lưu...' : 'Lưu Thay Đổi'}
                     </button>
                     <button
                       type="button"
@@ -103,6 +142,7 @@ export const UserProfile: React.FC = () => {
                           phone: user?.phone || '',
                         });
                       }}
+                      disabled={saving}
                       className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 transition-colors"
                     >
                       Hủy
@@ -131,7 +171,6 @@ export const UserProfile: React.FC = () => {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </UserDashboardLayout>
   );
 };

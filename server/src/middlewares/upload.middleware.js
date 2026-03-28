@@ -51,6 +51,24 @@ const productStorage = multer.diskStorage({
 });
 
 /**
+ * Setup storage for news images
+ */
+const newsStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(rootDir, 'client/public/images/news');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const newsId = req.params.id || 'new';
+    const ext = path.extname(file.originalname);
+    cb(null, `${newsId}${ext}`);
+  },
+});
+
+/**
  * File filter - only allow images
  */
 const fileFilter = (req, file, cb) => {
@@ -75,4 +93,10 @@ export const uploadProduct = multer({
   storage: productStorage,
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per image
+});
+
+export const uploadNews = multer({
+  storage: newsStorage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });

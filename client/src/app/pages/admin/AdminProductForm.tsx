@@ -36,6 +36,7 @@ export const AdminProductForm: React.FC = () => {
   });
 
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
 
   // Fetch product if editing
   const { data: product, loading: productLoading } = useAdminFetch(
@@ -82,21 +83,33 @@ export const AdminProductForm: React.FC = () => {
         stock: product.stock?.toString() || '0',
         images: product.images || [],
       });
+      setPendingImages([]);
     }
   }, [product]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await saveProduct({
+      const savedProduct = await saveProduct({
         ...formData,
-        price: parseInt(formData.price),
-        stock: parseInt(formData.stock),
+        images: formData.images || [],
+        price: Number(formData.price),
+        stock: Number(formData.stock),
       });
+
+      const productId = savedProduct?._id || savedProduct?.id || id;
+
+      if (pendingImages.length > 0 && productId) {
+        setUploadingImages(true);
+        await adminApi.uploadProductImages(productId, pendingImages, formData.images || []);
+      }
+
       toast.success(isEditing ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm mới thành công!');
       navigate('/admin/products');
     } catch (err) {
       toast.error('Lỗi khi lưu sản phẩm');
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -110,27 +123,13 @@ export const AdminProductForm: React.FC = () => {
     }
   };
 
-  const handleImageUpload = async (files: File[]) => {
-    if (!id || id === 'new') {
-      toast.error('Vui lòng tạo sản phẩm trước khi upload ảnh');
-      return;
-    }
-
-    setUploadingImages(true);
-    try {
-      const result = await adminApi.uploadProductImages(id, files);
-      // Replace images with new ones from upload (don't append)
-      setFormData({
-        ...formData,
-        images: result.paths,
-      });
-      toast.success('Upload ảnh thành công!');
-    } catch (err) {
-      toast.error('Lỗi khi upload ảnh');
-      console.error(err);
-    } finally {
-      setUploadingImages(false);
-    }
+  const handleImageUpload = (files: File[]) => {
+    setPendingImages((prev) => {
+      const merged = [...prev, ...files];
+      const availableSlots = 4 - (formData.images?.length || 0);
+      return merged.slice(0, Math.max(availableSlots, 0));
+    });
+    toast.info('Ảnh sẽ được lưu khi bạn bấm thêm/cập nhật sản phẩm');
   };
 
   if (productLoading) {
@@ -184,17 +183,25 @@ export const AdminProductForm: React.FC = () => {
                   </label>
                   {!isEditing && (
                     <p className="text-sm text-gray-500 mb-4">
-                      Lưu ý: Tạo sản phẩm trước, sau đó upload ảnh
+                      Bạn có thể chọn ảnh ngay bây giờ, hệ thống sẽ tự upload sau khi lưu.
                     </p>
                   )}
-                  {isEditing && (
-                    <MultiImageUpload
-                      onUpload={handleImageUpload}
-                      currentImages={formData.images || []}
-                      loading={uploadingImages}
-                      maxFiles={4}
-                    />
-                  )}
+                  <MultiImageUpload
+                    onUpload={handleImageUpload}
+                    onRemoveExisting={(index) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        images: (prev.images || []).filter((_, i) => i !== index),
+                      }));
+                    }}
+                    onRemovePending={(index) => {
+                      setPendingImages((prev) => prev.filter((_, i) => i !== index));
+                    }}
+                    currentImages={formData.images || []}
+                    pendingImages={pendingImages}
+                    loading={uploadingImages || savingLoading}
+                    maxFiles={4}
+                  />
                 </div>
 
                 <div>

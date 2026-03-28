@@ -62,11 +62,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addToCart = (product: Product, quantity: number = 1) => {
+    const productId = product._id || product.id || '';
+    const primaryImage = Array.isArray(product.images) && product.images.length > 0
+      ? product.images[0]
+      : product.image || '';
+
+    if (!productId) {
+      return;
+    }
+
     addItem({
-      productId: product.id,
+      productId,
       name: product.name,
       price: product.price,
-      image: product.images[0],
+      image: primaryImage,
       quantity,
     });
   };

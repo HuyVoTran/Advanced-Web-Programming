@@ -125,6 +125,7 @@ export const getProfile = async (req, res, next) => {
         role: user.role,
         isAdmin: user.role === 'admin',
         addresses: user.addresses,
+        settings: user.settings,
         createdAt: user.createdAt,
       },
     });
@@ -135,14 +136,58 @@ export const getProfile = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    const { fullName, phone } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { fullName, phone },
-      { new: true, runValidators: true }
-    );
+    const { fullName, phone, settings } = req.body;
+    const updatePayload = {};
 
-    return sendResponse(res, 200, 'Cập nhật hồ sơ thành công', { user });
+    if (typeof fullName === 'string') {
+      updatePayload.fullName = fullName;
+    }
+    if (typeof phone === 'string') {
+      updatePayload.phone = phone;
+    }
+
+    if (settings && typeof settings === 'object') {
+      if (settings.notifications && typeof settings.notifications === 'object') {
+        if (typeof settings.notifications.email === 'boolean') {
+          updatePayload['settings.notifications.email'] = settings.notifications.email;
+        }
+        if (typeof settings.notifications.sms === 'boolean') {
+          updatePayload['settings.notifications.sms'] = settings.notifications.sms;
+        }
+        if (typeof settings.notifications.promotions === 'boolean') {
+          updatePayload['settings.notifications.promotions'] = settings.notifications.promotions;
+        }
+      }
+
+      if (typeof settings.language === 'string') {
+        updatePayload['settings.language'] = settings.language;
+      }
+      if (typeof settings.timezone === 'string') {
+        updatePayload['settings.timezone'] = settings.timezone;
+      }
+      if (typeof settings.currency === 'string') {
+        updatePayload['settings.currency'] = settings.currency;
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updatePayload, {
+      new: true,
+      runValidators: true,
+    });
+
+    return sendResponse(res, 200, 'Cập nhật hồ sơ thành công', {
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isAdmin: user.role === 'admin',
+        addresses: user.addresses,
+        settings: user.settings,
+        createdAt: user.createdAt,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -183,9 +228,9 @@ export const changePassword = async (req, res, next) => {
 // Quản lý địa chỉ
 export const addAddress = async (req, res, next) => {
   try {
-    const { fullName, phone, address, isDefault } = req.body;
+    const { fullName, phone, address, city, district, ward, isDefault } = req.body;
 
-    if (!fullName || !phone || !address) {
+    if (!fullName || !phone || !address || !city || !district) {
       return sendError(res, 400, 'Vui lòng cung cấp tất cả các trường bắt buộc');
     }
 
@@ -199,6 +244,9 @@ export const addAddress = async (req, res, next) => {
       fullName,
       phone,
       address,
+      city,
+      district,
+      ward: ward || '',
       isDefault: isDefault || user.addresses.length === 0,
     });
 
@@ -213,7 +261,7 @@ export const addAddress = async (req, res, next) => {
 export const updateAddress = async (req, res, next) => {
   try {
     const { addressId } = req.params;
-    const { fullName, phone, address, isDefault } = req.body;
+    const { fullName, phone, address, city, district, ward, isDefault } = req.body;
 
     const user = await User.findById(req.user.id);
     const addressIndex = user.addresses.findIndex((addr) => addr._id.toString() === addressId);
@@ -231,6 +279,9 @@ export const updateAddress = async (req, res, next) => {
       fullName: fullName || user.addresses[addressIndex].fullName,
       phone: phone || user.addresses[addressIndex].phone,
       address: address || user.addresses[addressIndex].address,
+      city: city || user.addresses[addressIndex].city,
+      district: district || user.addresses[addressIndex].district,
+      ward: ward !== undefined ? ward : user.addresses[addressIndex].ward,
       isDefault: isDefault !== undefined ? isDefault : user.addresses[addressIndex].isDefault,
     };
 

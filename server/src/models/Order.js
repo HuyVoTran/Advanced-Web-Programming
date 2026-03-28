@@ -34,6 +34,18 @@ const customerInfoSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  city: {
+    type: String,
+    default: '',
+  },
+  district: {
+    type: String,
+    default: '',
+  },
+  ward: {
+    type: String,
+    default: '',
+  },
 });
 
 const orderSchema = new mongoose.Schema(

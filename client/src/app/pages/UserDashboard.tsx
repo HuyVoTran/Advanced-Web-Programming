@@ -1,39 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, MapPin, ShoppingBag, Settings, LogOut } from 'lucide-react';
+import { User, MapPin, ShoppingBag, Settings, LogOut, ArrowLeft } from 'lucide-react';
 import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { ordersAPI } from '@/services/api';
+import { useOrders } from '@/contexts/OrderContext';
 
 export const UserDashboard: React.FC = () => {
-  const { user, logout, token } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [userOrders, setUserOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { getUserOrders } = useOrders();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
+  }, [user, navigate]);
 
-    const fetchOrders = async () => {
-      try {
-        if (token) {
-          const response = await ordersAPI.getUserOrders(token);
-          setUserOrders(response?.data?.orders || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch orders:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, [user, token, navigate]);
+  const userOrders = user ? getUserOrders(user.id) : [];
 
   const menuItems = [
     { icon: User, label: 'Thông tin cá nhân', path: '/profile', description: 'Cập nhật thông tin tài khoản' },
@@ -45,6 +32,11 @@ export const UserDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
+        <Link to="/" className="inline-flex items-center gap-2 text-[#C9A24D] hover:underline mb-6">
+          <ArrowLeft className="w-4 h-4" />
+          Quay lại trang chủ
+        </Link>
+
         <div className="mb-8">
           <h1 className="text-3xl mb-2 tracking-wide">Xin chào, {user?.fullName || 'Khách hàng'}!</h1>
           <p className="text-gray-600">Quản lý thông tin cá nhân và đơn hàng của bạn</p>

@@ -16,6 +16,7 @@ export const AdminCategories: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -43,17 +44,27 @@ export const AdminCategories: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await saveCategory(formData);
+      const savedCategory = await saveCategory(formData);
+      const categoryId = savedCategory?._id || editingId;
+
+      if (pendingImage && categoryId) {
+        setUploadingImage(true);
+        await adminApi.uploadCategoryImage(categoryId, pendingImage);
+      }
+
       toast.success(editingId ? 'Cập nhật danh mục thành công!' : 'Thêm danh mục mới thành công!');
       resetForm();
       refetch();
     } catch (err) {
       toast.error('Lỗi khi lưu danh mục');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
   const handleEdit = (id: string, name: string, description: string, image?: string) => {
     setFormData({ name, description, image: image || '' });
+    setPendingImage(null);
     setEditingId(id);
     setShowForm(true);
   };
@@ -72,6 +83,7 @@ export const AdminCategories: React.FC = () => {
 
   const resetForm = () => {
     setFormData({ name: '', description: '', image: '' });
+    setPendingImage(null);
     setEditingId(null);
     setShowForm(false);
   };
@@ -80,23 +92,9 @@ export const AdminCategories: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!editingId) {
-      toast.error('Vui lòng tạo danh mục trước khi upload ảnh');
-      return;
-    }
-
-    setUploadingImage(true);
-    try {
-      const result = await adminApi.uploadCategoryImage(editingId, file);
-      setFormData({ ...formData, image: result.path });
-      toast.success('Upload ảnh thành công!');
-    } catch (err) {
-      toast.error('Lỗi khi upload ảnh');
-      console.error(err);
-    } finally {
-      setUploadingImage(false);
-    }
+  const handleImageUpload = (file: File) => {
+    setPendingImage(file);
+    toast.info('Ảnh sẽ được lưu khi bạn bấm thêm/cập nhật danh mục');
   };
 
   if (loading) {
@@ -176,18 +174,18 @@ export const AdminCategories: React.FC = () => {
 
               <div>
                 <label className="block text-sm mb-2 text-gray-700">Ảnh danh mục</label>
-                {!editingId && (
-                  <p className="text-sm text-gray-500 mb-4">
-                    Lưu ý: Tạo danh mục trước, sau đó upload ảnh
-                  </p>
-                )}
-                {editingId && (
-                  <ImageUpload
-                    onUpload={handleImageUpload}
-                    currentImage={formData.image}
-                    loading={uploadingImage}
-                  />
-                )}
+                <p className="text-sm text-gray-500 mb-4">
+                  Ảnh sẽ được lưu vào hệ thống khi bạn bấm thêm/cập nhật danh mục.
+                </p>
+                <ImageUpload
+                  onUpload={handleImageUpload}
+                  onClear={() => {
+                    setPendingImage(null);
+                    setFormData((prev) => ({ ...prev, image: '' }));
+                  }}
+                  currentImage={formData.image}
+                  loading={uploadingImage}
+                />
               </div>
             </div>
 
