@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Lock, ArrowLeft } from 'lucide-react';
+import { Lock, ArrowLeft, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { authAPI } from '@/services/api';
 
 export const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const token = useMemo(() => searchParams.get('token') || '', [searchParams]);
+  const initialEmail = useMemo(() => searchParams.get('email') || '', [searchParams]);
+  const [email, setEmail] = useState(initialEmail);
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,13 +16,13 @@ export const ResetPassword: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) {
-      toast.error('Liên kết khôi phục không hợp lệ');
+    if (!email || !otp) {
+      toast.error('Vui lòng nhập email và mã OTP');
       return;
     }
     try {
       setIsSubmitting(true);
-      await authAPI.resetPassword(token, password, confirmPassword);
+      await authAPI.resetPassword(email, otp, password, confirmPassword);
       toast.success('Đặt lại mật khẩu thành công');
       setIsSuccess(true);
     } catch (error) {
@@ -41,11 +43,46 @@ export const ResetPassword: React.FC = () => {
                 <Lock className="w-8 h-8 text-white" />
               </div>
               <h1 className="text-3xl mb-2 tracking-wide">Đặt Lại Mật Khẩu</h1>
-              <p className="text-gray-600">Nhập mật khẩu mới cho tài khoản của bạn</p>
+              <p className="text-gray-600">Nhập email, mã OTP và mật khẩu mới</p>
             </div>
 
             {!isSuccess ? (
               <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-sm mb-2 text-gray-700">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 text-gray-700">
+                    Mã OTP (6 số) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                      required
+                      disabled={isSubmitting}
+                      placeholder="Nhập 6 chữ số"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm mb-2 text-gray-700">
                     Mật khẩu mới <span className="text-red-500">*</span>

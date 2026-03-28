@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, AlertCircle, FileText, CheckCircle } from 'lucide-react';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
 import { toast } from 'sonner';
@@ -44,8 +46,20 @@ export const AdminNews: React.FC = () => {
     (id) => adminApi.publishNews(id)
   );
 
+  const stripHtml = (value: string) =>
+    value
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title.trim() || !stripHtml(formData.content)) {
+      toast.error('Vui lòng nhập tiêu đề và nội dung tin tức');
+      return;
+    }
+
     try {
       await saveNews(formData);
       toast.success(editingId ? 'Cập nhật tin tức thành công!' : 'Tạo tin tức thành công!');
@@ -171,15 +185,20 @@ export const AdminNews: React.FC = () => {
               <label className="block text-sm mb-2 text-gray-700">
                 Nội dung <span className="text-red-500">*</span>
               </label>
-              <textarea
-                name="content"
-                value={formData.content}
-                onChange={handleChange}
-                rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
-                required
-                disabled={savingLoading}
-              />
+              <div className="rounded-lg border border-gray-300 overflow-hidden [&_.ck-editor__editable_inline]:min-h-[260px]">
+                <CKEditor
+                  editor={ClassicEditor as any}
+                  data={formData.content}
+                  disabled={savingLoading}
+                  onChange={(_event: any, editor: any) => {
+                    const data = editor.getData();
+                    setFormData((prev) => ({ ...prev, content: data }));
+                  }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Bạn có thể định dạng nội dung (đậm, nghiêng, heading, liên kết, danh sách...).
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

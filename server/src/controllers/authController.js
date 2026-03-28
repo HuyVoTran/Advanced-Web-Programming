@@ -276,32 +276,32 @@ export const forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return sendResponse(res, 200, 'Nếu email tồn tại, liên kết khôi phục đã được gửi');
+      return sendResponse(res, 200, 'Nếu email tồn tại, mã OTP đã được gửi');
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
 
-    user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000;
+    user.resetPasswordOtp = hashedOtp;
+    user.resetPasswordOtpExpires = Date.now() + 10 * 60 * 1000;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
     await user.save();
-
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-    const resetLink = `${clientUrl}/reset-password?token=${resetToken}`;
 
     await sendEmail({
       to: user.email,
-      subject: 'Khôi phục mật khẩu',
+      subject: 'Mã OTP khôi phục mật khẩu',
       html: `
         <p>Xin chào ${user.fullName || 'bạn'},</p>
-        <p>Vui lòng nhấn vào liên kết bên dưới để đặt lại mật khẩu. Liên kết có hiệu lực trong 1 giờ.</p>
-        <p><a href="${resetLink}">${resetLink}</a></p>
+        <p>Mã OTP để đặt lại mật khẩu của bạn là:</p>
+        <h2 style="letter-spacing: 4px;">${otp}</h2>
+        <p>Mã có hiệu lực trong 10 phút.</p>
         <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
       `,
-      text: `Khôi phục mật khẩu: ${resetLink}`,
+      text: `Mã OTP khôi phục mật khẩu: ${otp}. Mã có hiệu lực trong 10 phút.`,
     });
 
-    return sendResponse(res, 200, 'Nếu email tồn tại, liên kết khôi phục đã được gửi');
+    return sendResponse(res, 200, 'Nếu email tồn tại, mã OTP đã được gửi');
   } catch (error) {
     next(error);
   }
@@ -309,10 +309,18 @@ export const forgotPassword = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token, password, confirmPassword } = req.body;
+    const { email, otp, password, confirmPassword } = req.body;
 
-    if (!token || !password || !confirmPassword) {
+    if (!email || !otp || !password || !confirmPassword) {
       return sendError(res, 400, 'Vui lòng cung cấp đầy đủ thông tin');
+    }
+
+    if (!validateEmail(email)) {
+      return sendError(res, 400, 'Vui lòng cung cấp email hợp lệ');
+    }
+
+    if (!/^\d{6}$/.test(String(otp))) {
+      return sendError(res, 400, 'Mã OTP không hợp lệ');
     }
 
     if (password !== confirmPassword) {
@@ -323,20 +331,23 @@ export const resetPassword = async (req, res, next) => {
       return sendError(res, 400, 'Mật khẩu phải ít nhất 6 ký tự');
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
 
     const user = await User.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpires: { $gt: Date.now() },
+      email,
+      resetPasswordOtp: hashedOtp,
+      resetPasswordOtpExpires: { $gt: Date.now() },
     }).select('+password');
 
     if (!user) {
-      return sendError(res, 400, 'Liên kết khôi phục không hợp lệ hoặc đã hết hạn');
+      return sendError(res, 400, 'Mã OTP không hợp lệ hoặc đã hết hạn');
     }
 
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordOtpExpires = undefined;
     await user.save();
 
     return sendResponse(res, 200, 'Đặt lại mật khẩu thành công');

@@ -1,16 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalendarDays, ArrowLeft } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { newsAPI } from '@/services/api';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { Skeleton } from '@/app/components/shared/Skeleton';
 import { ErrorState } from '@/app/components/shared/ErrorState';
+import { PageBreadcrumb } from '@/app/components/shared/PageBreadcrumb';
 
 export const BlogDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const sanitizedContent = useMemo(
+    () => DOMPurify.sanitize(post?.content || ''),
+    [post?.content]
+  );
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -66,6 +73,15 @@ export const BlogDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
+        <PageBreadcrumb
+          className="mb-6"
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Tin tức', href: '/blog' },
+            { label: post.title },
+          ]}
+        />
+
         <Link to="/blog" className="inline-flex items-center gap-2 text-[#C9A24D] hover:underline mb-6">
           <ArrowLeft className="w-4 h-4" />
           Quay lại trang tin tức
@@ -92,9 +108,10 @@ export const BlogDetail: React.FC = () => {
           </div>
         )}
 
-        <article className="prose prose-lg max-w-none whitespace-pre-wrap text-gray-800 leading-8">
-          {post.content}
-        </article>
+        <article
+          className="prose prose-lg max-w-none text-gray-800 leading-8"
+          dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+        />
       </div>
     </div>
   );

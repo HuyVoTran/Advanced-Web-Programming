@@ -37,11 +37,18 @@ export const AdminOrders: React.FC = () => {
     []
   );
 
+  const normalizedSearchTerm = searchTerm.toLowerCase().trim();
+
   const filteredOrders = (allOrders || []).filter(order => {
-    const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.user?.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const orderNumber = (order.orderNumber || '').toLowerCase();
+    const userName = (order.user?.name || '').toLowerCase();
+    const userEmail = (order.user?.email || '').toLowerCase();
+
+    const matchesSearch =
+      normalizedSearchTerm === '' ||
+      orderNumber.includes(normalizedSearchTerm) ||
+      userName.includes(normalizedSearchTerm) ||
+      userEmail.includes(normalizedSearchTerm);
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

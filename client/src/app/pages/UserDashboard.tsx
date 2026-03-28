@@ -55,6 +55,11 @@ export const UserDashboard: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="bg-gradient-to-r from-[#C9A24D] to-[#B8923D] p-6 text-white">
+                <img
+                  src="/images/SalvioRoyale-Logo.png"
+                  alt="Salvio Royale"
+                  className="h-10 w-auto object-contain mb-4"
+                />
                 <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
                   <User className="w-8 h-8" />
                 </div>

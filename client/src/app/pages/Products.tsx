@@ -1,8 +1,7 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProductCard } from '@/app/components/ProductCard';
-import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
 import { Label } from '@/app/components/ui/label';
 import { SlidersHorizontal, Grid3x3, List, ArrowUpDown } from 'lucide-react';
@@ -10,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/app/components/ui/sheet';
 import { SearchBar } from '@/app/components/shared/SearchBar';
 import { EmptyState } from '@/app/components/shared/EmptyState';
 import { ActiveFilterTag } from '@/app/components/shared/FilterComponents';
+import { PageBreadcrumb } from '@/app/components/shared/PageBreadcrumb';
 import { Button } from '@/app/components/ui/button';
 import { Skeleton } from '@/app/components/shared/Skeleton';
 import { ErrorState } from '@/app/components/shared/ErrorState';
@@ -34,6 +34,7 @@ export const Products: React.FC = () => {
   const { brands: apiBrands } = useBrands();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     categoryParam ? [categoryParam] : []
   );
@@ -43,8 +44,6 @@ export const Products: React.FC = () => {
   const MAX_PRICE = 500000000;
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   const [priceRangeDraft, setPriceRangeDraft] = useState<[number, number]>([0, MAX_PRICE]);
-  const sliderRafRef = useRef<number | null>(null);
-  const pendingPriceRangeRef = useRef<[number, number]>([0, MAX_PRICE]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -52,14 +51,6 @@ export const Products: React.FC = () => {
   useEffect(() => {
     setPriceRangeDraft(priceRange);
   }, [priceRange]);
-
-  useEffect(() => {
-    return () => {
-      if (sliderRafRef.current !== null) {
-        cancelAnimationFrame(sliderRafRef.current);
-      }
-    };
-  }, []);
 
   const currencyFormatter = useMemo(
     () => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }),
@@ -79,30 +70,50 @@ export const Products: React.FC = () => {
     [currencyFormatter, priceRangeDraft, MAX_PRICE]
   );
 
-  const handlePriceRangeChange = useCallback((value: number[]) => {
-    pendingPriceRangeRef.current = value as [number, number];
+  const activeFilterBreadcrumbs = useMemo(() => {
+    const items: string[] = [];
 
-    if (sliderRafRef.current !== null) {
-      return;
-    }
-
-    sliderRafRef.current = requestAnimationFrame(() => {
-      setPriceRangeDraft(pendingPriceRangeRef.current);
-      sliderRafRef.current = null;
+    selectedCategories.forEach((catId) => {
+      const category = categories.find((c) => (c._id || c.id) === catId);
+      if (category?.name) {
+        items.push(category.name);
+      }
     });
-  }, []);
 
-  const handlePriceRangeCommit = useCallback((value: number[]) => {
-    const committedValue = value as [number, number];
+    selectedBrands.forEach((brandId) => {
+      const brand = apiBrands.find((b) => (b._id || b.id) === brandId);
+      if (brand?.name) {
+        items.push(brand.name);
+      }
+    });
 
-    if (sliderRafRef.current !== null) {
-      cancelAnimationFrame(sliderRafRef.current);
-      sliderRafRef.current = null;
+    selectedMaterials.forEach((material) => {
+      items.push(material);
+    });
+
+    if (priceRange[0] > 0 || priceRange[1] < MAX_PRICE) {
+      const minPrice = priceRange[0].toLocaleString('vi-VN');
+      const maxPrice = priceRange[1] === MAX_PRICE ? '500.000.000+' : priceRange[1].toLocaleString('vi-VN');
+      items.push(`Giá từ ${minPrice} - ${maxPrice}`);
     }
 
-    setPriceRangeDraft(committedValue);
-    setPriceRange(committedValue);
-  }, []);
+    if (searchQuery.trim()) {
+      items.push(`Từ khóa: ${searchQuery.trim()}`);
+    }
+
+    if (sortBy !== 'featured') {
+      const sortLabels: Record<string, string> = {
+        newest: 'Mới nhất',
+        'price-asc': 'Giá tăng dần',
+        'price-desc': 'Giá giảm dần',
+        'name-asc': 'Tên A-Z',
+        'name-desc': 'Tên Z-A',
+      };
+      items.push(`Sắp xếp: ${sortLabels[sortBy] || sortBy}`);
+    }
+
+    return items;
+  }, [selectedCategories, selectedBrands, selectedMaterials, priceRange, MAX_PRICE, searchQuery, sortBy, categories, apiBrands]);
 
   const normalizePriceRange = useCallback((min: number, max: number): [number, number] => {
     const safeMin = Number.isFinite(min) ? Math.max(0, min) : 0;
@@ -135,7 +146,8 @@ export const Products: React.FC = () => {
 
   const materials = Array.from(new Set(apiProducts.map((p: any) => {
     const mat = p.material || p.category || '';
-    return typeof mat === 'string' ? mat.split(',')[0].trim() : mat;
+    const raw = typeof mat === 'string' ? mat.split(',')[0].trim() : String(mat);
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
   })));
 
   const filteredProducts = useMemo(() => {
@@ -175,7 +187,7 @@ export const Products: React.FC = () => {
       const priceMatch = priceValue >= minPrice && (maxPrice === MAX_PRICE ? true : priceValue <= maxPrice);
       
       const materialMatch = selectedMaterials.length === 0 || 
-        selectedMaterials.some(mat => (product.material || '').includes(mat));
+        selectedMaterials.some(mat => (product.material || '').toLowerCase().includes(mat.toLowerCase()));
 
       return searchMatch && categoryMatch && brandMatch && priceMatch && materialMatch;
     });
@@ -286,60 +298,59 @@ export const Products: React.FC = () => {
       {/* Price Range */}
       <div>
         <h3 className="text-lg mb-4">Khoảng giá</h3>
-        <div className="px-2">
-          <Slider
-            value={priceRangeDraft}
-            onValueChange={handlePriceRangeChange}
-            onValueCommit={handlePriceRangeCommit}
-            max={MAX_PRICE}
-            min={0}
-            step={1000000}
-            className="mb-4"
-          />
-          <p className="text-sm text-gray-600">
-            Từ: {formattedMinPrice}
-          </p>
-          <p className="text-sm text-gray-600">
-            Đến: {formattedMaxPrice}
-          </p>
+        <div className="rounded-lg border border-gray-200 p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-gray-500 mb-2 block">
+                Giá từ
+              </Label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={MAX_PRICE}
+                step={1000000}
+                value={priceRangeDraft[0]}
+                onChange={(e) => handlePriceInputChange('min', e.target.value)}
+                onBlur={applyPriceRangeFromInputs}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyPriceRangeFromInputs();
+                  }
+                }}
+                className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm"
+                placeholder="0"
+              />
+            </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={MAX_PRICE}
-              step={1000000}
-              value={priceRangeDraft[0]}
-              onChange={(e) => handlePriceInputChange('min', e.target.value)}
-              onBlur={applyPriceRangeFromInputs}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  applyPriceRangeFromInputs();
-                }
-              }}
-              className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm"
-              placeholder="Giá từ"
-            />
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={MAX_PRICE}
-              step={1000000}
-              value={priceRangeDraft[1]}
-              onChange={(e) => handlePriceInputChange('max', e.target.value)}
-              onBlur={applyPriceRangeFromInputs}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  applyPriceRangeFromInputs();
-                }
-              }}
-              className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm"
-              placeholder="Giá đến"
-            />
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-gray-500 mb-2 block">
+                Giá đến
+              </Label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={MAX_PRICE}
+                step={1000000}
+                value={priceRangeDraft[1]}
+                onChange={(e) => handlePriceInputChange('max', e.target.value)}
+                onBlur={applyPriceRangeFromInputs}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyPriceRangeFromInputs();
+                  }
+                }}
+                className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm"
+                placeholder={MAX_PRICE.toString()}
+              />
+            </div>
           </div>
 
+          <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600 space-y-1">
+            <p>Từ: {formattedMinPrice}</p>
+            <p>Đến: {formattedMaxPrice}</p>
+          </div>
         </div>
       </div>
 
@@ -391,6 +402,17 @@ export const Products: React.FC = () => {
           <h1 className="text-4xl md:text-5xl font-light mb-6 tracking-wide">
             Sản phẩm
           </h1>
+
+          <PageBreadcrumb
+            className="mb-4"
+            items={[
+              { label: 'Trang chủ', href: '/' },
+              { label: 'Sản phẩm', href: '/products' },
+              ...(activeFilterBreadcrumbs.length > 0
+                ? activeFilterBreadcrumbs.map((item) => ({ label: item }))
+                : [{ label: 'Tất cả sản phẩm' }]),
+            ]}
+          />
 
           {/* Active Filters & Controls */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -480,6 +502,16 @@ export const Products: React.FC = () => {
                 </SelectContent>
               </Select>
 
+              {/* Desktop Filter Toggle */}
+              <Button
+                variant="outline"
+                className="hidden lg:flex"
+                onClick={() => setFilterOpen((v) => !v)}
+              >
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                {filterOpen ? 'Ẩn bộ lọc' : 'Mở bộ lọc'}
+              </Button>
+
               {/* Mobile Filter Button */}
               <Sheet>
                 <SheetTrigger asChild>
@@ -508,11 +540,13 @@ export const Products: React.FC = () => {
 
         <div className="flex gap-8">
           {/* Desktop Sidebar */}
-          <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div>
-              <FilterPanel />
-            </div>
-          </aside>
+          {filterOpen && (
+            <aside className="hidden lg:block w-64 flex-shrink-0">
+              <div>
+                <FilterPanel />
+              </div>
+            </aside>
+          )}
 
           {/* Products Grid/List */}
           <div className="flex-1">
@@ -522,7 +556,7 @@ export const Products: React.FC = () => {
                 onRetry={() => window.location.reload()} 
               />
             ) : loadingProducts ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[...Array(6)].map((_, i) => (
                   <Skeleton key={i} className="aspect-square rounded" />
                 ))}
@@ -532,7 +566,7 @@ export const Products: React.FC = () => {
                 layout
                 className={
                   viewMode === 'grid'
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'
+                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'
                     : 'flex flex-col gap-6'
                 }
               >

@@ -108,21 +108,15 @@ export const Home: React.FC = () => {
         <div className="container mx-auto px-4 lg:px-8">
           <div className="relative h-[500px] overflow-hidden rounded-sm">
             <ImageWithFallback
-              src="https://images.unsplash.com/photo-1758631279366-8e8aeaf94082?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5JTIwc3RvcmUlMjBpbnRlcmlvcnxlbnwxfHx8fDE3Njk4NTkxOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              src="/images/SalvioRoyale-NewCollection.png"
               alt="Featured Collection"
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-black/50" />
+            <div className="absolute inset-0 bg-black/5" />
             <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
-              <h2 className="text-4xl md:text-6xl font-light mb-4 tracking-wider">
-                Bộ Sưu Tập Xuân 2026
-              </h2>
-              <p className="text-xl md:text-2xl font-light mb-8 max-w-2xl">
-                Sự kết hợp hoàn hảo giữa truyền thống và hiện đại
-              </p>
               <Link
                 to="/products"
-                className="inline-block bg-white text-gray-900 px-10 py-4 text-sm tracking-wider uppercase hover:bg-[#C9A24D] hover:text-white transition-all duration-300"
+                className="inline-block bg-white text-gray-900 mt-50 px-8 py-4 text-sm tracking-wider uppercase hover:bg-[#C9A24D] hover:text-white transition-all duration-300"
               >
                 Khám phá ngay
               </Link>

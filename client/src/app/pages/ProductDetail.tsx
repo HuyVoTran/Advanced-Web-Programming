@@ -9,6 +9,7 @@ import { ShoppingBag, Heart, Share2 } from 'lucide-react';
 import { Skeleton } from '@/app/components/shared/Skeleton';
 import { ErrorState } from '@/app/components/shared/ErrorState';
 import { productsAPI } from '@/services/api';
+import { PageBreadcrumb } from '@/app/components/shared/PageBreadcrumb';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -120,6 +121,15 @@ export const ProductDetail: React.FC = () => {
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8">
+        <PageBreadcrumb
+          className="mb-6"
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Sản phẩm', href: '/products' },
+            { label: product.name },
+          ]}
+        />
+
         {/* Product Details */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-24">
           {/* Images */}

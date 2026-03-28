@@ -10,10 +10,11 @@ export const Footer: React.FC = () => {
           {/* Logo & About */}
           <div>
             <Link to="/" className="inline-block mb-6">
-              <span className="text-2xl font-light tracking-wider">
-                <span className="text-[#C9A24D]">SALVIO</span>
-                <span className="text-white"> ROYALE</span>
-              </span>
+              <img
+                src="/images/SalvioRoyale-Logo.png"
+                alt="Salvio Royale"
+                className="h-14 w-auto object-contain"
+              />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
               Trang sức cao cấp dành cho những người sành điệu. Chúng tôi mang đến những thiết kế tinh tế, sang trọng và đẳng cấp.
@@ -109,7 +110,9 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center">
           <p className="text-gray-500 text-sm">
-            &copy; 2026 Salvio Royale. Bảo lưu mọi quyền.
+            &copy; 2026 Salvio Royale.
+            <br />
+            Đây là trang web giả lập cho mục đích học tập và không đại diện cho bất kỳ thương hiệu thực tế nào.
           </p>
         </div>
       </div>

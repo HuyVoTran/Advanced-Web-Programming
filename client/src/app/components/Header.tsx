@@ -1,32 +1,36 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, ShoppingBag, User, Search } from 'lucide-react';
+import { Menu, ShoppingBag, User, Search, ChevronDown } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { SearchBar } from './shared/SearchBar';
-import { useProducts, useClickOutside, useNews } from '@/hooks/useCustomHooks';
+import { useProducts, useClickOutside, useNews, useCategories } from '@/hooks/useCustomHooks';
 
 export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const searchRef = useRef<HTMLDivElement | null>(null);
+  const [mobileCatsOpen, setMobileCatsOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null!);
   const { itemCount } = useCart();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { products } = useProducts();
   const { news } = useNews();
+  const { categories } = useCategories();
 
   const menuItems = [
     { name: 'Trang chủ', path: '/' },
     { name: 'Sản phẩm', path: '/products' },
     { name: 'Danh mục', path: '/categories' },
-    { name: 'Thương hiệu', path: '/brands' },
     { name: 'Tin tức', path: '/blog' },
-    { name: 'Giới thiệu', path: '/about' },
+    { name: 'Thương hiệu', path: '/about' },
     { name: 'Liên hệ', path: '/contact' },
   ];
+
+  const iconButtonClass =
+    'relative flex h-10 w-10 items-center justify-center rounded-full text-gray-700 hover:text-[#C9A24D] hover:bg-gray-100 transition-colors duration-300';
 
   const handleLogout = () => {
     logout();
@@ -71,31 +75,62 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <span className="text-2xl font-light tracking-wider">
-              <span className="text-[#C9A24D]">SALVIO</span>
-              <span className="text-gray-900"> ROYALE</span>
-            </span>
+            <img
+              src="/images/SalvioRoyale-Logo.png"
+              alt="Salvio Royale"
+              className="h-12 w-auto object-contain"
+            />
           </Link>
 
           {/* Desktop Menu */}
           <nav className="hidden lg:flex items-center space-x-8">
-            {menuItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="text-sm tracking-wide text-gray-700 hover:text-[#C9A24D] transition-colors duration-300"
-              >
-                {item.name}
-              </Link>
-            ))}
+            {menuItems.map((item) =>
+              item.path === '/categories' ? (
+                <div key={item.path} className="relative group">
+                  <Link
+                    to={item.path}
+                    className="flex items-center gap-1 text-sm tracking-wide text-gray-700 hover:text-[#C9A24D] transition-colors duration-300"
+                  >
+                    {item.name}
+                    <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                  </Link>
+                  {/* Categories Dropdown */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-52 bg-white rounded-xl shadow-xl border border-gray-100 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2">
+                    <Link
+                      to="/categories"
+                      className="block px-4 py-2 text-sm text-[#C9A24D] font-medium hover:bg-gray-50 border-b border-gray-100 mb-1"
+                    >
+                      Tất cả danh mục
+                    </Link>
+                    {categories.map((cat: any) => (
+                      <Link
+                        key={cat._id || cat.id}
+                        to={`/products?category=${cat._id || cat.id}`}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#C9A24D] transition-colors"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="text-sm tracking-wide text-gray-700 hover:text-[#C9A24D] transition-colors duration-300"
+                >
+                  {item.name}
+                </Link>
+              )
+            )}
           </nav>
 
           {/* Right Icons */}
-          <div className="flex items-center space-x-6 relative">
-            <div ref={searchRef} className="relative">
+          <div className="flex items-center space-x-2 relative">
+            <div ref={searchRef} className="relative flex items-center">
               <button
                 onClick={() => setSearchOpen((prev) => !prev)}
-                className="text-gray-700 hover:text-[#C9A24D] transition-colors duration-300"
+                className={iconButtonClass}
                 aria-label="Mở tìm kiếm"
               >
                 <Search className="w-5 h-5" />
@@ -170,23 +205,23 @@ export const Header: React.FC = () => {
 
             <Link
               to="/cart"
-              className="relative text-gray-700 hover:text-[#C9A24D] transition-colors duration-300"
+              className={iconButtonClass}
             >
               <ShoppingBag className="w-5 h-5" />
               {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-[#C9A24D] text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 bg-[#C9A24D] text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
                   {itemCount}
                 </span>
               )}
             </Link>
 
-            <div className="relative group">
-              <button className="text-gray-700 hover:text-[#C9A24D] transition-colors duration-300">
+            <div className="relative group flex items-center">
+              <button className={iconButtonClass}>
                 <User className="w-5 h-5" />
               </button>
               
               {/* Dropdown Menu */}
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 py-2">
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 py-2">
                 {user ? (
                   <>
                     <div className="px-4 py-2 border-b border-gray-100">
@@ -251,16 +286,49 @@ export const Header: React.FC = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <nav className="flex flex-col space-y-4 mt-8">
-                  {menuItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-base text-gray-700 hover:text-[#C9A24D] transition-colors duration-300 py-2"
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
+                  {menuItems.map((item) =>
+                    item.path === '/categories' ? (
+                      <div key={item.path}>
+                        <button
+                          onClick={() => setMobileCatsOpen((v) => !v)}
+                          className="flex items-center justify-between w-full text-base text-gray-700 hover:text-[#C9A24D] transition-colors duration-300 py-2"
+                        >
+                          {item.name}
+                          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileCatsOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {mobileCatsOpen && (
+                          <div className="pl-4 flex flex-col space-y-2 mt-1">
+                            <Link
+                              to="/categories"
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="text-sm text-[#C9A24D] font-medium py-1"
+                            >
+                              Tất cả danh mục
+                            </Link>
+                            {categories.map((cat: any) => (
+                              <Link
+                                key={cat._id || cat.id}
+                                to={`/products?category=${cat._id || cat.id}`}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="text-sm text-gray-600 hover:text-[#C9A24D] transition-colors py-1"
+                              >
+                                {cat.name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-base text-gray-700 hover:text-[#C9A24D] transition-colors duration-300 py-2"
+                      >
+                        {item.name}
+                      </Link>
+                    )
+                  )}
                 </nav>
               </SheetContent>
             </Sheet>

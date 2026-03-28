@@ -165,11 +165,16 @@ export const publishNews = async (req, res, next) => {
         const subject = `Bài viết mới: ${newsItem.title}`;
         const detailKey = newsItem.slug || newsItem._id;
         const newsUrl = `${process.env.CLIENT_URL || ''}/blog/${detailKey}`;
+        const plainContent = (newsItem.content || '')
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
         const html = `
           <h1>Bài viết mới từ Salvio Royale!</h1>
           <p>Chúng tôi vừa đăng một bài viết mới mà bạn có thể quan tâm:</p>
           <h2>${newsItem.title}</h2>
-          <p>${newsItem.content.substring(0, 200)}...</p>
+          <p>${plainContent.substring(0, 200)}...</p>
           <a href="${newsUrl}">Đọc thêm</a>
         `;
 

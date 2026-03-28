@@ -10,7 +10,7 @@ export const AdminLayout: React.FC = () => {
 
   useEffect(() => {
     if (!user || !user.isAdmin) {
-      navigate('/404', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [user, navigate]);
 
@@ -31,7 +31,7 @@ export const AdminLayout: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -40,9 +40,12 @@ export const AdminLayout: React.FC = () => {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-3">
-            <span className="text-xl font-light">
-              <span className="text-[#C9A24D]">Salvio</span> Admin
-            </span>
+            <img
+              src="/images/SalvioRoyale-Logo.png"
+              alt="Salvio Royale Admin"
+              className="h-10 w-auto object-contain"
+            />
+            <span className="text-sm uppercase tracking-[0.25em] text-gray-500">Admin</span>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">{user.name}</span>

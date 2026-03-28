@@ -1,33 +1,95 @@
 import nodemailer from 'nodemailer';
 
-// A very basic email sender utility. In production you'd configure SMTP
-// credentials via environment variables and handle errors properly.
-// For development/testing it will log the message and resolve.
+const emailUser = process.env.EMAIL_USER || '';
+const emailPass = process.env.EMAIL_PASS || '';
 
 const transport = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.example.com',
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.EMAIL_PORT || '587', 10),
-  secure: false,
+  secure: process.env.EMAIL_SECURE === 'true',
   auth: {
-    user: process.env.EMAIL_USER || '',
-    pass: process.env.EMAIL_PASS || '',
+    user: emailUser,
+    pass: emailPass,
   },
 });
 
+const stripHtml = (value = '') =>
+  String(value)
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const buildBrandedHtml = ({ title, contentHtml }) => {
+  const siteUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const logoUrl = `${siteUrl.replace(/\/$/, '')}/images/SalvioRoyal-Logo.png`;
+  const year = new Date().getFullYear();
+
+  return `
+    <div style="margin:0;padding:0;background:#f6f4ef;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f4ef;padding:24px 12px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #ece7dd;border-radius:14px;overflow:hidden;">
+              <tr>
+                <td style="background:linear-gradient(135deg,#111827 0%,#1f2937 100%);padding:22px 28px;text-align:center;">
+                  <a href="${siteUrl}" style="text-decoration:none;display:inline-block;">
+                    <img src="${logoUrl}" alt="Salvio Royale" style="height:42px;max-width:220px;object-fit:contain;display:block;margin:0 auto 10px;" />
+                  </a>
+                  <p style="margin:0;color:#d4af37;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;">Luxury Jewelry House</p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:30px 28px 20px;">
+                  <h1 style="margin:0 0 14px;color:#111827;font-size:24px;font-weight:600;line-height:1.35;">${title}</h1>
+                  <div style="font-size:15px;line-height:1.7;color:#374151;">${contentHtml}</div>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:0 28px 26px;">
+                  <div style="padding:16px 18px;background:#faf8f3;border:1px solid #efe7d8;border-radius:10px;color:#6b7280;font-size:13px;line-height:1.6;">
+                    Nếu bạn cần hỗ trợ, vui lòng liên hệ đội ngũ Salvio Royale qua email phản hồi này.
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="background:#111827;padding:18px 28px;text-align:center;">
+                  <p style="margin:0 0 6px;color:#d1d5db;font-size:12px;">© ${year} Salvio Royale. All rights reserved.</p>
+                  <a href="${siteUrl}" style="color:#d4af37;font-size:12px;text-decoration:none;">Visit our website</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+};
+
 const sendEmail = async ({ to, subject, html, text }) => {
-  // fallback to console when transporter is not configured
-  if (!transport) {
-    // eslint-disable-next-line no-console
-    console.log('sendEmail:', { to, subject, html, text });
-    return;
+  if (!emailUser || !emailPass) {
+    throw new Error('EMAIL_USER hoặc EMAIL_PASS chưa được cấu hình trong môi trường');
   }
 
+  const baseHtml = html || `<p>${String(text || '').replace(/\n/g, '<br />')}</p>`;
+  const brandedHtml = buildBrandedHtml({
+    title: subject || 'Thông báo từ Salvio Royale',
+    contentHtml: baseHtml,
+  });
+
+  const fallbackText = text || stripHtml(baseHtml) || 'Thông báo từ Salvio Royale';
+
   const message = {
-    from: process.env.EMAIL_FROM || 'no-reply@example.com',
+    from: emailUser,
     to,
     subject,
-    html,
-    text,
+    html: brandedHtml,
+    text: fallbackText,
   };
 
   try {

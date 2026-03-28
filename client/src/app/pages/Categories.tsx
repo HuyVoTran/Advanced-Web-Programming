@@ -3,6 +3,7 @@ import Slider from 'react-slick';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { PageBreadcrumb } from '@/app/components/shared/PageBreadcrumb';
 import { useCategories } from '@/hooks/useCustomHooks';
 import { Skeleton } from '@/app/components/shared/Skeleton';
 import { ErrorState } from '@/app/components/shared/ErrorState';
@@ -58,6 +59,33 @@ export const Categories: React.FC = () => {
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8">
+        <PageBreadcrumb
+          className="mb-8"
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Danh mục' },
+          ]}
+        />
+
+        <section className="mb-16">
+          <div className="relative h-[380px] md:h-[460px] overflow-hidden rounded-sm">
+            <ImageWithFallback
+              src="/images/SalvioRoyale-NewCollection.png"
+              alt="New Collection"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/10" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
+              <Link
+                to="/products"
+                className="inline-block bg-white text-gray-900 mt-50 px-8 py-3 text-sm tracking-wider uppercase hover:bg-[#C9A24D] hover:text-white transition-all duration-300"
+              >
+                Khám phá ngay
+              </Link>
+            </div>
+          </div>
+        </section>
+
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-light mb-6 tracking-wide">Danh mục</h1>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">

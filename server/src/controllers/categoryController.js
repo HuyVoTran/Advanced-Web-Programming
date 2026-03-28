@@ -1,4 +1,5 @@
 import Category from '../models/Category.js';
+import Product from '../models/Product.js';
 import { sendResponse, sendError } from '../utils/response.js';
 
 export const getCategories = async (req, res, next) => {
@@ -85,7 +86,10 @@ export const deleteCategory = async (req, res, next) => {
       return sendError(res, 404, 'Danh mục không tìm thấy');
     }
 
-    return sendResponse(res, 200, 'Danh mục được xóa thành công');
+    // Xóa toàn bộ sản phẩm thuộc danh mục này
+    await Product.deleteMany({ category: id });
+
+    return sendResponse(res, 200, 'Danh mục và toàn bộ sản phẩm thuộc danh mục đã được xóa thành công');
   } catch (error) {
     next(error);
   }

@@ -1,10 +1,19 @@
 import React from 'react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { PageBreadcrumb } from '@/app/components/shared/PageBreadcrumb';
 
 export const About: React.FC = () => {
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8">
+        <PageBreadcrumb
+          className="mb-8"
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Thương hiệu' },
+          ]}
+        />
+
         {/* Hero */}
         <div className="text-center mb-20">
           <h1 className="text-5xl md:text-6xl font-light mb-6 tracking-wide">

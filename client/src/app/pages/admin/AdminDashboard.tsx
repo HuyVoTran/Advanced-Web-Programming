@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAdminFetch } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
 import { Package, ShoppingCart, Users, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardData {
   stats: {
@@ -30,6 +30,14 @@ export const AdminDashboard: React.FC = () => {
     () => adminApi.getDashboard(),
     []
   );
+
+  const orderStatusConfig: Record<string, { label: string }> = {
+    pending: { label: 'Chờ xác nhận' },
+    confirmed: { label: 'Đã xác nhận' },
+    shipping: { label: 'Đang giao' },
+    completed: { label: 'Hoàn thành' },
+    cancelled: { label: 'Đã hủy' },
+  };
 
   if (loading) {
     return (
@@ -58,6 +66,18 @@ export const AdminDashboard: React.FC = () => {
     { name: 'Người dùng', value: dashboardData.stats.totalUsers.toString(), icon: Users, color: 'bg-orange-500' },
   ];
 
+  const orderStatsChartData = Object.entries(orderStatusConfig).map(([status, config]) => {
+    const stat = (dashboardData.orderStats || []).find((item: any) => item?._id === status);
+    return {
+      status,
+      label: config.label,
+      count: Number(stat?.count || 0),
+      total: Number(stat?.total || 0),
+    };
+  });
+
+  const pendingOrders = orderStatsChartData.find((item) => item.status === 'pending')?.count || 0;
+
   return (
     <div className="space-y-8">
       <div>
@@ -83,14 +103,14 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Alert for pending orders */}
-      {dashboardData.orderStats && dashboardData.orderStats.some((s: any) => s._id === 'pending') && (
+      {pendingOrders > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <div className="flex items-center gap-3">
             <TrendingUp className="w-6 h-6 text-yellow-600" />
             <div>
               <h3 className="text-lg text-yellow-900 mb-1">Cần xử lý</h3>
               <p className="text-sm text-yellow-700">
-                Có <strong>{dashboardData.orderStats.find((s: any) => s._id === 'pending')?.count || 0} đơn hàng</strong> đang chờ xác nhận.{' '}
+                Có <strong>{pendingOrders} đơn hàng</strong> đang chờ xác nhận.{' '}
                 <Link to="/admin/orders" className="underline hover:text-yellow-900">
                   Xem ngay →
                 </Link>
@@ -102,15 +122,15 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Revenue Chart */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h2 className="text-xl mb-6">Thống kê đơn hàng theo trạng thái</h2>
-        {dashboardData.orderStats && dashboardData.orderStats.length > 0 ? (
+        <h2 className="text-xl mb-6">Thống kê số lượng đơn hàng theo trạng thái</h2>
+        {orderStatsChartData.some((item) => item.count > 0) ? (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dashboardData.orderStats}>
+            <BarChart data={orderStatsChartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="_id" />
+              <XAxis dataKey="label" />
               <YAxis />
-              <Tooltip formatter={(value) => formatPrice(Number(value))} />
-              <Bar dataKey="total" fill="#C9A24D" radius={[8, 8, 0, 0]} />
+              <Tooltip formatter={(value) => [Number(value), 'Số đơn']} />
+              <Bar dataKey="count" fill="#C9A24D" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

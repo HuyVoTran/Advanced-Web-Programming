@@ -14,7 +14,7 @@ export const ForgotPassword: React.FC = () => {
     try {
       setIsSubmitting(true);
       await authAPI.forgotPassword(email);
-      toast.success('Email khôi phục mật khẩu đã được gửi!');
+      toast.success('Mã OTP đã được gửi qua email!');
       setIsSubmitted(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gửi email thất bại';
@@ -35,7 +35,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
               <h1 className="text-3xl mb-2 tracking-wide">Quên Mật Khẩu</h1>
               <p className="text-gray-600">
-                Nhập email của bạn để nhận liên kết khôi phục mật khẩu
+                Nhập email của bạn để nhận mã OTP khôi phục mật khẩu
               </p>
             </div>
 
@@ -60,7 +60,7 @@ export const ForgotPassword: React.FC = () => {
                   disabled={isSubmitting}
                   className="w-full bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors mb-4 disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Đang gửi...' : 'Gửi Liên Kết Khôi Phục'}
+                  {isSubmitting ? 'Đang gửi...' : 'Gửi Mã OTP'}
                 </button>
 
                 <Link
@@ -75,12 +75,19 @@ export const ForgotPassword: React.FC = () => {
               <div className="text-center">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
                   <p className="text-green-800 mb-2">
-                    ✓ Email đã được gửi thành công!
+                    ✓ Mã OTP đã được gửi thành công!
                   </p>
                   <p className="text-sm text-green-700">
-                    Vui lòng kiểm tra hộp thư của bạn ({email}) và làm theo hướng dẫn để đặt lại mật khẩu.
+                    Vui lòng kiểm tra hộp thư của bạn ({email}) và nhập mã OTP ở bước đặt lại mật khẩu.
                   </p>
                 </div>
+
+                <Link
+                  to={`/reset-password?email=${encodeURIComponent(email)}`}
+                  className="inline-flex items-center justify-center w-full bg-[#C9A24D] text-white py-3 rounded-lg hover:bg-[#B8923D] transition-colors mb-4"
+                >
+                  Tiếp tục đặt lại mật khẩu
+                </Link>
 
                 <p className="text-sm text-gray-600 mb-4">
                   Không nhận được email?{' '}
@@ -89,7 +96,7 @@ export const ForgotPassword: React.FC = () => {
                       try {
                         setIsSubmitting(true);
                         await authAPI.forgotPassword(email);
-                        toast.success('Email đã được gửi lại!');
+                        toast.success('Mã OTP đã được gửi lại!');
                       } catch (error) {
                         const message = error instanceof Error ? error.message : 'Gửi lại thất bại';
                         toast.error(message);

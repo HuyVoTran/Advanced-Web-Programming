@@ -7,6 +7,7 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { Skeleton } from '@/app/components/shared/Skeleton';
 import { ErrorState } from '@/app/components/shared/ErrorState';
 import { SearchBar } from '@/app/components/shared/SearchBar';
+import { PageBreadcrumb } from '@/app/components/shared/PageBreadcrumb';
 
 export const Blog: React.FC = () => {
   const PAGE_SIZE = 9;
@@ -43,6 +44,13 @@ export const Blog: React.FC = () => {
 
   const posts = useMemo(() => news, [news]);
 
+  const getPlainText = (html = '') =>
+    html
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
   const totalPages = pagination?.totalPages || 1;
   const totalItems = pagination?.total || posts.length;
 
@@ -60,6 +68,14 @@ export const Blog: React.FC = () => {
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="max-w-6xl mx-auto">
+        <PageBreadcrumb
+          className="mb-8"
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Tin tức' },
+          ]}
+        />
+
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-light mb-6 tracking-wide">Tin tức</h1>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
@@ -142,7 +158,7 @@ export const Blog: React.FC = () => {
                         </div>
                         <h2 className="text-xl font-light mb-3">{post.title}</h2>
                         <p className="text-gray-600 mb-6 line-clamp-4">
-                          {post.content}
+                          {getPlainText(post.content || '')}
                         </p>
                         <Link
                           to={`/blog/${post.slug || post._id}`}

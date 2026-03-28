@@ -278,10 +278,10 @@ export const authAPI = {
       body: JSON.stringify({ email }),
     }),
 
-  resetPassword: (token: string, password: string, confirmPassword: string) =>
+  resetPassword: (email: string, otp: string, password: string, confirmPassword: string) =>
     apiCall('/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, password, confirmPassword }),
+      body: JSON.stringify({ email, otp, password, confirmPassword }),
     }),
 
   addAddress: (data: any, token: string) =>
