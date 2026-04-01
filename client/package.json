@@ -7,7 +7,7 @@
     "build": "vite build",
     "dev": "vite",
     "release": "standard-version",
-    "prepare": "husky install"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@ckeditor/ckeditor5-build-classic": "^44.3.0",
