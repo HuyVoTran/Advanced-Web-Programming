@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Input } from './ui/input';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
+import { API_CONFIG } from '@/config/api';
 
 export const Newsletter: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ export const Newsletter: React.FC = () => {
     }
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/newsletter/subscribe`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/newsletter/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
