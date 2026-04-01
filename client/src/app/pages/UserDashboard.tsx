@@ -151,7 +151,7 @@ export const UserDashboard: React.FC = () => {
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <div className="text-sm mb-1">Đơn hàng #{order.orderNumber}</div>
+                          <div className="text-sm mb-1 font-mono text-gray-600">{order._id || order.id}</div>
                           <div className="text-xs text-gray-500">
                             {format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
                           </div>

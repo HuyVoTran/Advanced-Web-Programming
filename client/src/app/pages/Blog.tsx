@@ -156,7 +156,7 @@ export const Blog: React.FC = () => {
                           <CalendarDays className="w-4 h-4" />
                           <span>{new Date(post.createdAt || Date.now()).toLocaleDateString('vi-VN')}</span>
                         </div>
-                        <h2 className="text-xl font-light mb-3">{post.title}</h2>
+                        <h2 className="text-xl font-light mb-3 line-clamp-2">{post.title}</h2>
                         <p className="text-gray-600 mb-6 line-clamp-4">
                           {getPlainText(post.content || '')}
                         </p>

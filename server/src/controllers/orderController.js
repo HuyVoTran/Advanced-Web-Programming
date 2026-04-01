@@ -30,7 +30,6 @@ const formatOrder = (order) => {
 
   return {
     ...o,
-    orderNumber: o.orderNumber || ('ORD-' + String(o._id).slice(-6).toUpperCase()),
     itemCount: items.length,
     items,
     shippingAddress,

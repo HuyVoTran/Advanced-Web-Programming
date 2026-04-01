@@ -8,7 +8,6 @@ import { vi } from 'date-fns/locale';
 
 interface Order {
   _id: string;
-  orderNumber?: string;
   user?: {
     _id: string;
     name: string;
@@ -46,13 +45,12 @@ export const AdminOrders: React.FC = () => {
   const normalizedSearchTerm = searchTerm.toLowerCase().trim();
 
   const filteredOrders = (allOrders || []).filter(order => {
-    const orderNumber = (order.orderNumber || order._id || '').toLowerCase();
     const userName = (order.user?.name || order.customerInfo?.fullName || '').toLowerCase();
     const userEmail = (order.user?.email || order.customerInfo?.email || '').toLowerCase();
 
     const matchesSearch =
       normalizedSearchTerm === '' ||
-      orderNumber.includes(normalizedSearchTerm) ||
+      (order._id || '').toLowerCase().includes(normalizedSearchTerm) ||
       userName.includes(normalizedSearchTerm) ||
       userEmail.includes(normalizedSearchTerm);
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
@@ -175,7 +173,7 @@ export const AdminOrders: React.FC = () => {
                 filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-mono">{order.orderNumber || ('ORD-' + order._id.slice(-6).toUpperCase())}</div>
+                      <div className="text-sm font-mono text-gray-600">{order._id}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">{order.user?.name || order.customerInfo?.fullName || 'Guest'}</div>

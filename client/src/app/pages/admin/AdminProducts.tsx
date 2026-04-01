@@ -184,9 +184,9 @@ export const AdminProducts: React.FC = () => {
                             <Package className="w-8 h-8 text-gray-400" />
                           )}
                         </div>
-                        <div>
-                          <div className="text-sm">{product.name}</div>
-                          <div className="text-xs text-gray-500">ID: {product._id}</div>
+                        <div className="max-w-[200px]">
+                          <div className="text-sm line-clamp-2">{product.name}</div>
+                          <div className="text-xs text-gray-500 truncate">ID: {product._id}</div>
                         </div>
                       </div>
                     </td>

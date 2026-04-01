@@ -192,7 +192,7 @@ export const AdminContacts: React.FC = () => {
               {selectedContact.phone}
             </div>
           </div>
-          <div className="mt-4 text-gray-700 leading-relaxed whitespace-pre-line">
+          <div className="mt-4 text-gray-700 leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">
             {selectedContact.message}
           </div>
         </div>
@@ -226,15 +226,15 @@ export const AdminContacts: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 max-w-[200px]">
                       <div className="space-y-1 text-sm">
                         <div className="flex items-center gap-2 text-gray-600">
-                          <Mail className="w-4 h-4" />
-                          {contact.email}
+                          <Mail className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{contact.email}</span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                          <Phone className="w-4 h-4" />
-                          {contact.phone}
+                          <Phone className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{contact.phone}</span>
                         </div>
                       </div>
                     </td>

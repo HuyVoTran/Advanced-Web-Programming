@@ -50,3 +50,46 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* ============================================================
+   WORD BREAK / OVERFLOW WRAP
+   Ngăn text dài không có khoảng trắng (spam, URL dài, v.v.)
+   làm vỡ layout ở mọi nơi trong app.
+   ============================================================ */
+
+/* Áp dụng toàn cục cho tất cả phần tử text */
+*,
+*::before,
+*::after {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Table cell cần min-width: 0 mới tôn trọng overflow-wrap */
+td,
+th {
+  min-width: 0;
+}
+
+/* Flex/Grid children hay bị tràn vì không có min-width */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* Các vùng nội dung dài như description, message, tin tức */
+p,
+span,
+li,
+h1, h2, h3, h4, h5, h6,
+a,
+label,
+div {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Whitespace pre-line (dùng ở AdminContacts message) vẫn wrap */
+.whitespace-pre-line {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}

@@ -137,7 +137,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
           <div className="flex-1 py-4 pr-4 flex flex-col justify-between">
             <div>
               <p className="text-xs text-muted-foreground tracking-wide uppercase mb-1">{typeof product.brand === 'object' ? product.brand.name : product.brand}</p>
-              <h3 className="text-lg font-light tracking-wide mb-2">{product.name}</h3>
+              <h3 className="text-lg font-light tracking-wide mb-2 line-clamp-1">{product.name}</h3>
               <p className="text-sm text-gray-600 line-clamp-2 mb-3">{product.description}</p>
               <p className="text-sm text-muted-foreground">{product.material}</p>
             </div>
@@ -207,7 +207,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
 
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white p-6">
-            <h3 className="text-xl mb-2 text-center">{product.name}</h3>
+            <h3 className="text-xl mb-2 text-center line-clamp-2">{product.name}</h3>
             <p className="text-sm text-white/80 mb-1">{categoryName}</p>
             <p className="text-lg text-[#C9A24D] font-light tracking-wide mb-4">
               {formatPrice(product.price)}
@@ -225,7 +225,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
 
         {/* Product Info (shown below image on desktop) */}
         <div className="mt-4 space-y-1">
-          <p className="text-xs text-gray-500 tracking-wide uppercase">{typeof product.brand === 'object' ? product.brand.name : product.brand}</p>
+          <p className="text-xs text-gray-500 tracking-wide uppercase truncate">{typeof product.brand === 'object' ? product.brand.name : product.brand}</p>
           <h3 className="text-sm text-gray-900 line-clamp-1">{product.name}</h3>
           <p className="text-base text-[#C9A24D]">{formatPrice(product.price)}</p>
         </div>

@@ -251,8 +251,8 @@ export const AdminCategories: React.FC = () => {
                   </div>
                 </div>
 
-                <h3 className="text-lg mb-2">{category.name}</h3>
-                <p className="text-sm text-gray-600 mb-4">{category.description}</p>
+                <h3 className="text-lg mb-2 line-clamp-2">{category.name}</h3>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-3">{category.description}</p>
                 
                 <div className="pt-4 border-t border-gray-200">
                   <span className="text-xs text-gray-500">ID: {category._id}</span>

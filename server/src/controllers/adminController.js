@@ -11,7 +11,6 @@ import sendEmail from '../utils/sendEmail.js'; // Giả định utility này t�
 
 /**
  * Chuẩn hoá một Order document thành format thống nhất cho admin frontend.
- * - orderNumber: virtual từ model (ORD-XXXXXX)
  * - itemCount: số lượng dòng sản phẩm
  * - items: mảng có productName, price, quantity, image
  * - shippingAddress: map từ customerInfo
@@ -40,7 +39,6 @@ const formatOrder = (order) => {
 
   return {
     ...o,
-    orderNumber: o.orderNumber || ('ORD-' + String(o._id).slice(-6).toUpperCase()),
     itemCount: items.length,
     items,
     shippingAddress,

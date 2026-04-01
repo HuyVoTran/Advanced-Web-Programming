@@ -297,7 +297,7 @@ export const AdminNews: React.FC = () => {
                   <FileText className="w-6 h-6 text-[#C9A24D]" />
                 </div>
                 <div>
-                  <h3 className="text-lg mb-1">{item.title}</h3>
+                  <h3 className="text-lg mb-1 line-clamp-2">{item.title}</h3>
                   <p className="text-sm text-gray-500">
                     {item.author || 'Admin'} · {new Date(item.createdAt).toLocaleDateString('vi-VN')}
                   </p>

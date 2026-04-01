@@ -26,7 +26,6 @@ const STATUS_TEXT: Record<string, string> = {
 
 interface OrderDetail {
   _id: string;
-  orderNumber: string;
   user?: {
     _id: string;
     name: string;
@@ -176,7 +175,7 @@ export const AdminOrderDetail: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl mb-2 tracking-wide">Chi Tiết Đơn Hàng</h1>
-            <p className="text-gray-600">Mã đơn: {order.orderNumber || order._id}</p>
+            <p className="text-gray-600">Mã đơn: {order._id}</p>
           </div>
           <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
             {STATUS_TEXT[order.status] || order.status}
