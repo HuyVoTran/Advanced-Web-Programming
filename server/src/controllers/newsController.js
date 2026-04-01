@@ -164,7 +164,7 @@ export const publishNews = async (req, res, next) => {
       if (emails.length > 0) {
         const subject = `Bài viết mới: ${newsItem.title}`;
         const detailKey = newsItem.slug || newsItem._id;
-        const newsUrl = `${process.env.CLIENT_URL || ''}/blog/${detailKey}`;
+        const newsUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/blog/${detailKey}`;
         const plainContent = (newsItem.content || '')
           .replace(/<[^>]*>/g, ' ')
           .replace(/&nbsp;/g, ' ')

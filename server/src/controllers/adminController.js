@@ -118,7 +118,7 @@ export const createNews = async (req, res, next) => {
 
         if (emails.length > 0) {
           const subject = `Bài viết mới: ${title}`;
-          const newsUrl = `${process.env.CLIENT_URL}/blog/${newNews._id}`; // URL ví dụ
+          const newsUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/blog/${newNews._id}`;
           const html = `
             <h1>Bài viết mới từ Salvio Royale!</h1>
             <p>Chúng tôi vừa đăng một bài viết mới mà bạn có thể quan tâm:</p>

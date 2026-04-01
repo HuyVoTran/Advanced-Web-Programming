@@ -11,10 +11,11 @@ const stripHtml = (value = '') =>
 
 const buildBrandedHtml = ({ title, contentHtml }) => {
   const siteUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  // Dùng raw GitHub URL để email client bên ngoài có thể tải được logo
+  // Serve logo từ server (luôn accessible với email client trong cùng mạng)
+  const serverUrl = process.env.SERVER_URL || 'http://localhost:5000';
   const logoUrl =
     process.env.EMAIL_LOGO_URL ||
-    'https://raw.githubusercontent.com/HuyVoTran/Advanced-Web-Programming/main/client/public/images/SalvioRoyale-Logo.png';
+    `${serverUrl}/client/public/images/SalvioRoyale-Logo.png`;
   const year = new Date().getFullYear();
 
   return `
