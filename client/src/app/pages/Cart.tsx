@@ -11,6 +11,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { PageBreadcrumb } from '../components/shared/PageBreadcrumb';
 import { toast } from 'sonner';
+import { resolveImageSrc } from '@/utils/image';
 
 export const Cart: React.FC = () => {
   const { items, removeFromCart, updateQuantity, total, clearCart } = useCart();
@@ -108,7 +109,7 @@ export const Cart: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence mode="popLayout">
               {items.map((item) => {
-                const imageUrl = `https://source.unsplash.com/400x500/?${encodeURIComponent(item.image || item.name)}`;
+                const imageUrl = resolveImageSrc(item.image, 'products') || `https://source.unsplash.com/400x500/?${encodeURIComponent(item.name)}`;
                 
                 return (
                   <motion.div

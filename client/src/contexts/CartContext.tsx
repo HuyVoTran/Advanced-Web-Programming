@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { resolveImageSrc } from '@/utils/image';
 
 export interface Product {
   _id?: string;
@@ -37,10 +38,25 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const normalizeCartItemImage = (image?: string) =>
+  resolveImageSrc(image, 'products') || 'https://source.unsplash.com/600x800/?jewelry';
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed)
+        ? parsed.map((item) => ({
+            ...item,
+            image: normalizeCartItemImage(item?.image),
+          }))
+        : [];
+    } catch {
+      return [];
+    }
   });
 
   useEffect(() => {
@@ -48,16 +64,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [items]);
 
   const addItem = (item: Omit<CartItem, 'id'>) => {
+    const normalizedItem = {
+      ...item,
+      image: normalizeCartItemImage(item.image),
+    };
+
     setItems(prevItems => {
-      const existingItem = prevItems.find(i => i.productId === item.productId);
+      const existingItem = prevItems.find(i => i.productId === normalizedItem.productId);
       if (existingItem) {
         return prevItems.map(i =>
-          i.productId === item.productId
-            ? { ...i, quantity: i.quantity + item.quantity }
+          i.productId === normalizedItem.productId
+            ? { ...i, quantity: i.quantity + normalizedItem.quantity, image: normalizedItem.image }
             : i
         );
       }
-      return [...prevItems, { ...item, id: Date.now().toString() }];
+      return [...prevItems, { ...normalizedItem, id: Date.now().toString() }];
     });
   };
 

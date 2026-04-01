@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { ShoppingCart } from 'lucide-react';
+import { Heart, ShoppingCart } from 'lucide-react';
 import { Button } from './ui/button';
 import { useCart } from '../../contexts/CartContext';
 import { toast } from 'sonner';
 import { formatPrice } from '@/utils/constants';
 import { getPrimaryProductImage } from '@/utils/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { notify } from '@/utils/notifications';
 
 interface ProductCardProps {
   product: any;
@@ -19,8 +21,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
+  const { user, isFavorite, toggleFavorite } = useAuth();
+  const navigate = useNavigate();
 
+  const productId = product._id || product.id;
   const imageUrl = getPrimaryProductImage(product) || 'https://source.unsplash.com/600x800/?jewelry';
+  const favorite = isFavorite(productId);
+  const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -46,7 +53,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     addItem({
-      productId: product._id || product.id,
+      productId,
       name: product.name,
       price: product.price,
       image: imageUrl,
@@ -55,6 +62,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
     toast.success('Đã thêm vào giỏ hàng', {
       description: product.name,
     });
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      notify.info('Vui lòng đăng nhập để lưu sản phẩm yêu thích');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const added = await toggleFavorite(productId);
+      if (added) {
+        notify.wishlistAdded(product.name);
+      } else {
+        notify.wishlistRemoved(product.name);
+      }
+    } catch (error) {
+      notify.error(
+        'Không thể cập nhật danh sách yêu thích',
+        error instanceof Error ? error.message : undefined
+      );
+    }
   };
 
   if (viewMode === 'list') {
@@ -87,6 +119,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
                 </span>
               )}
             </div>
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              className={`absolute top-2 right-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                favorite
+                  ? 'border-rose-200 bg-white text-rose-500'
+                  : 'border-white/60 bg-white/90 text-gray-600 hover:text-rose-500'
+              }`}
+              aria-label={favorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+            >
+              <Heart className={`h-4 w-4 ${favorite ? 'fill-current' : ''}`} />
+            </button>
           </div>
 
           {/* Info */}
@@ -148,10 +192,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
             )}
           </div>
 
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            className={`absolute top-4 right-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-sm transition-colors ${
+              favorite
+                ? 'border-rose-200 bg-white text-rose-500'
+                : 'border-white/60 bg-white/85 text-gray-700 hover:text-rose-500'
+            }`}
+            aria-label={favorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+          >
+            <Heart className={`h-4 w-4 ${favorite ? 'fill-current' : ''}`} />
+          </button>
+
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white p-6">
             <h3 className="text-xl mb-2 text-center">{product.name}</h3>
-            <p className="text-sm text-white/80 mb-1">{product.category.name}</p>
+            <p className="text-sm text-white/80 mb-1">{categoryName}</p>
             <p className="text-lg text-[#C9A24D] font-light tracking-wide mb-4">
               {formatPrice(product.price)}
             </p>

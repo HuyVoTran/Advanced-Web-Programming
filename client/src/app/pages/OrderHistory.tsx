@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
@@ -11,12 +11,18 @@ export const OrderHistory: React.FC = () => {
   const { getUserOrders } = useOrders();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
+
   if (!user) {
-    navigate('/login');
     return null;
   }
 
-  const orders = getUserOrders(user.id);
+  const userId = user.id || user._id;
+  const orders = userId ? getUserOrders(userId) : [];
 
   return (
     <UserDashboardLayout

@@ -26,6 +26,7 @@ import { AddressManagement } from '@/app/pages/AddressManagement';
 import { UserSettings } from '@/app/pages/UserSettings';
 import { OrderHistory } from '@/app/pages/OrderHistory';
 import { OrderDetail } from '@/app/pages/OrderDetail';
+import { FavoriteProducts } from '@/app/pages/FavoriteProducts';
 import { About } from '@/app/pages/About';
 import { Contact } from '@/app/pages/Contact';
 import { Categories } from '@/app/pages/Categories';
@@ -100,6 +101,7 @@ function App() {
                 <Route path="/settings" element={<UserSettings />} />
                 <Route path="/orders" element={<OrderHistory />} />
                 <Route path="/orders/:id" element={<OrderDetail />} />
+                <Route path="/favorites" element={<FavoriteProducts />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 

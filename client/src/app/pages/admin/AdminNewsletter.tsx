@@ -3,6 +3,7 @@ import { Mail, Users, Send, AlertCircle } from 'lucide-react';
 import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface Subscriber {
   _id: string;
@@ -45,7 +46,12 @@ export const AdminNewsletter: React.FC = () => {
       toast.success('Đã gửi thông báo thành công');
       setFormData({ ...formData, subject: '', content: '' });
     } catch (err) {
-      toast.error('Gửi thông báo thất bại');
+      const serverMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : null;
+      toast.error(serverMessage || 'Gửi thông báo thất bại');
     }
   };
 

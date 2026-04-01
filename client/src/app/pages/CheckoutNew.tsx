@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, type Address } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
 import { formatPrice } from '@/utils/constants';
 import { Input } from '@/app/components/ui/input';
@@ -14,6 +14,9 @@ import { LoadingSpinner } from '@/app/components/shared/LoadingSpinner';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import { Checkbox } from '@/app/components/ui/checkbox';
+import { authAPI } from '@/services/api';
+import { resolveImageSrc } from '@/utils/image';
 import { 
   CreditCard, 
   Truck, 
@@ -23,7 +26,9 @@ import {
   Phone, 
   FileText,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Home,
+  BookMarked
 } from 'lucide-react';
 
 const STEPS = [
@@ -35,30 +40,86 @@ const STEPS = [
 export const CheckoutNew: React.FC = () => {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const { addOrder } = useOrders();
+
+  const defaultAddress = user?.addresses?.find((address) => address.isDefault) || user?.addresses?.[0] || null;
+  const initialAddressMode = user?.addresses?.length ? 'saved' : 'new';
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasPlacedOrder, setHasPlacedOrder] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [addressMode, setAddressMode] = useState<'saved' | 'new'>(initialAddressMode);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddress?.id || '');
+  const [saveAddressForLater, setSaveAddressForLater] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: user?.name || '',
+    fullName: defaultAddress?.fullName || user?.fullName || user?.name || '',
     email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.addresses?.[0]?.address || '',
-    city: user?.addresses?.[0]?.city || '',
-    district: user?.addresses?.[0]?.district || '',
+    phone: defaultAddress?.phone || user?.phone || '',
+    address: defaultAddress?.address || '',
+    city: defaultAddress?.city || '',
+    district: defaultAddress?.district || '',
+    ward: defaultAddress?.ward || '',
     notes: '',
     paymentMethod: 'cod' as 'cod' | 'bank_transfer' | 'card',
   });
+
+  const applyAddressToForm = (address: Address) => {
+    setFormData((prev) => ({
+      ...prev,
+      fullName: address.fullName || prev.fullName,
+      phone: address.phone || prev.phone,
+      address: address.address || '',
+      city: address.city || '',
+      district: address.district || '',
+      ward: address.ward || '',
+    }));
+  };
+
+  const clearAddressFields = () => {
+    setFormData((prev) => ({
+      ...prev,
+      address: '',
+      city: '',
+      district: '',
+      ward: '',
+    }));
+  };
 
   useEffect(() => {
     if (items.length === 0 && !hasPlacedOrder) {
       navigate('/cart');
     }
   }, [items, navigate, hasPlacedOrder]);
+
+  useEffect(() => {
+    if (!user?.addresses?.length) {
+      setAddressMode('new');
+      setSelectedAddressId('');
+      return;
+    }
+
+    const nextDefaultAddress = user.addresses.find((address) => address.isDefault) || user.addresses[0];
+
+    setSelectedAddressId((prev) => prev || nextDefaultAddress.id);
+
+    if (addressMode === 'saved') {
+      applyAddressToForm(nextDefaultAddress);
+    }
+  }, [user, addressMode]);
+
+  useEffect(() => {
+    if (addressMode !== 'saved' || !selectedAddressId || !user?.addresses?.length) {
+      return;
+    }
+
+    const selectedAddress = user.addresses.find((address) => address.id === selectedAddressId);
+    if (selectedAddress) {
+      applyAddressToForm(selectedAddress);
+    }
+  }, [addressMode, selectedAddressId, user]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -109,6 +170,37 @@ export const CheckoutNew: React.FC = () => {
     setIsProcessing(true);
 
     try {
+      if (user && token && addressMode === 'new' && saveAddressForLater) {
+        const response: any = await authAPI.addAddress(
+          {
+            fullName: formData.fullName,
+            phone: formData.phone,
+            address: formData.address,
+            city: formData.city,
+            district: formData.district,
+            ward: formData.ward,
+            isDefault: (user.addresses || []).length === 0,
+          },
+          token
+        );
+
+        const nextAddresses = Array.isArray(response?.addresses)
+          ? response.addresses.map((addr: any) => ({
+              id: addr?.id || addr?._id || '',
+              fullName: addr?.fullName || '',
+              phone: addr?.phone || '',
+              address: addr?.address || '',
+              city: addr?.city || '',
+              district: addr?.district || '',
+              ward: addr?.ward || '',
+              isDefault: Boolean(addr?.isDefault),
+            }))
+          : user.addresses;
+
+        updateUser({ addresses: nextAddresses });
+        setSaveAddressForLater(false);
+      }
+
       const orderId = await addOrder({
         userId: user?.id || 'guest',
         items: items.map(item => ({
@@ -128,7 +220,7 @@ export const CheckoutNew: React.FC = () => {
           address: formData.address,
           city: formData.city,
           district: formData.district,
-          ward: '',
+          ward: formData.ward,
           isDefault: false,
         },
         guestInfo: !user
@@ -186,6 +278,70 @@ export const CheckoutNew: React.FC = () => {
                   </div>
 
                   <div className="space-y-6">
+                    {user && (user.addresses?.length || 0) > 0 && (
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <BookMarked className="w-4 h-4 text-primary" />
+                          <p className="text-sm font-medium">Tùy chọn địa chỉ</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <Button
+                            type="button"
+                            variant={addressMode === 'saved' ? 'default' : 'outline'}
+                            onClick={() => setAddressMode('saved')}
+                            className={addressMode === 'saved' ? 'bg-primary hover:bg-primary/90 text-white' : ''}
+                          >
+                            Dùng địa chỉ đã lưu
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={addressMode === 'new' ? 'default' : 'outline'}
+                            onClick={() => {
+                              setAddressMode('new');
+                              setSelectedAddressId('');
+                              clearAddressFields();
+                            }}
+                            className={addressMode === 'new' ? 'bg-primary hover:bg-primary/90 text-white' : ''}
+                          >
+                            Nhập địa chỉ mới
+                          </Button>
+                        </div>
+
+                        {addressMode === 'saved' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {user.addresses.map((address) => (
+                              <button
+                                key={address.id}
+                                type="button"
+                                onClick={() => setSelectedAddressId(address.id)}
+                                className={`rounded-lg border p-4 text-left transition-colors ${
+                                  selectedAddressId === address.id
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="font-medium text-sm">{address.fullName}</p>
+                                  {address.isDefault && (
+                                    <span className="text-[11px] rounded-full bg-primary/10 px-2 py-1 text-primary">
+                                      Mặc định
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{address.phone}</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {address.address}
+                                  {address.ward ? `, ${address.ward}` : ''}
+                                  {address.district ? `, ${address.district}` : ''}
+                                  {address.city ? `, ${address.city}` : ''}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Personal Info */}
                     <div>
                       <h3 className="text-sm uppercase tracking-wide text-muted-foreground mb-4">
@@ -287,6 +443,18 @@ export const CheckoutNew: React.FC = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
+                            <Label htmlFor="ward">Phường/Xã</Label>
+                            <Input
+                              id="ward"
+                              name="ward"
+                              value={formData.ward}
+                              onChange={handleChange}
+                              className="mt-2"
+                              placeholder="Phường Bến Nghé"
+                            />
+                          </div>
+
+                          <div>
                             <Label htmlFor="city">Tỉnh/Thành phố *</Label>
                             <Input
                               id="city"
@@ -322,6 +490,26 @@ export const CheckoutNew: React.FC = () => {
                             )}
                           </div>
                         </div>
+
+                        {user && addressMode === 'new' && (
+                          <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                            <Checkbox
+                              id="saveAddressForLater"
+                              checked={saveAddressForLater}
+                              onCheckedChange={(checked) => setSaveAddressForLater(Boolean(checked))}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <Label htmlFor="saveAddressForLater" className="cursor-pointer flex items-center gap-2">
+                                <Home className="w-4 h-4" />
+                                Lưu địa chỉ này cho lần sau
+                              </Label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Địa chỉ mới sẽ được thêm vào sổ địa chỉ của tài khoản sau khi đặt hàng thành công.
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                         <div>
                           <Label htmlFor="notes" className="flex items-center gap-2">
@@ -472,7 +660,7 @@ export const CheckoutNew: React.FC = () => {
                       <p><span className="text-muted-foreground">Điện thoại:</span> {formData.phone}</p>
                       <p><span className="text-muted-foreground">Email:</span> {formData.email}</p>
                       <p>
-                        <span className="text-muted-foreground">Địa chỉ:</span> {formData.address}, {formData.district}, {formData.city}
+                        <span className="text-muted-foreground">Địa chỉ:</span> {formData.address}{formData.ward ? `, ${formData.ward}` : ''}, {formData.district}, {formData.city}
                       </p>
                       {formData.notes && (
                         <p><span className="text-muted-foreground">Ghi chú:</span> {formData.notes}</p>
@@ -508,7 +696,7 @@ export const CheckoutNew: React.FC = () => {
                         <div key={item.id} className="flex gap-4 pb-4 border-b last:border-b-0">
                           <div className="w-20 h-24 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                             <ImageWithFallback
-                              src={`https://source.unsplash.com/400x500/?${encodeURIComponent(item.image || item.name)}`}
+                              src={resolveImageSrc(item.image, 'products') || `https://source.unsplash.com/400x500/?${encodeURIComponent(item.name)}`}
                               alt={item.name}
                               className="w-full h-full object-cover"
                             />
@@ -596,7 +784,7 @@ export const CheckoutNew: React.FC = () => {
                     <div key={item.id} className="flex gap-3">
                       <div className="w-12 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                         <ImageWithFallback
-                          src={`https://source.unsplash.com/200x300/?${encodeURIComponent(item.image || item.name)}`}
+                          src={resolveImageSrc(item.image, 'products') || `https://source.unsplash.com/200x300/?${encodeURIComponent(item.name)}`}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />

@@ -43,6 +43,14 @@ export const sendNewsletterBroadcast = async (req, res, next) => {
       return sendError(res, 400, 'Vui lòng cung cấp tiêu đề và nội dung');
     }
 
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return sendError(
+        res,
+        503,
+        'Chức năng gửi email chưa được cấu hình. Vui lòng thiết lập EMAIL_USER và EMAIL_PASS ở server.'
+      );
+    }
+
     let emails = [];
 
     if (audience === 'subscribers' || audience === 'all') {
@@ -55,7 +63,14 @@ export const sendNewsletterBroadcast = async (req, res, next) => {
       emails = emails.concat(users.map((u) => u.email));
     }
 
-    const uniqueEmails = Array.from(new Set(emails.map((e) => e.toLowerCase())));
+    const uniqueEmails = Array.from(
+      new Set(
+        emails
+          .filter((e) => typeof e === 'string')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean)
+      )
+    );
 
     if (uniqueEmails.length === 0) {
       return sendError(res, 400, 'Không có người nhận phù hợp');
@@ -63,12 +78,25 @@ export const sendNewsletterBroadcast = async (req, res, next) => {
 
     const { html, text } = normalizeContent(content);
 
-    await sendEmail({
-      to: uniqueEmails.join(','),
-      subject,
-      html,
-      text,
-    });
+    try {
+      await sendEmail({
+        to: uniqueEmails.join(','),
+        subject,
+        html,
+        text,
+      });
+    } catch (sendErr) {
+      const isAuthError =
+        sendErr?.code === 'EAUTH' ||
+        sendErr?.responseCode === 535 ||
+        /auth|credential|username|password/i.test(sendErr?.message || '');
+
+      if (isAuthError) {
+        return sendError(res, 502, 'Không thể xác thực máy chủ email. Vui lòng kiểm tra cấu hình SMTP.');
+      }
+
+      return sendError(res, 502, `Gửi email thất bại: ${sendErr?.message || 'SMTP error'}`);
+    }
 
     return sendResponse(res, 200, 'Đã gửi thông báo', { count: uniqueEmails.length });
   } catch (error) {

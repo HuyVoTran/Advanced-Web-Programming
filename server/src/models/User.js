@@ -88,6 +88,12 @@ const userSchema = new mongoose.Schema(
       default: 'user',
     },
     addresses: [addressSchema],
+    favorites: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+      },
+    ],
     settings: {
       type: userSettingsSchema,
       default: () => ({

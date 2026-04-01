@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ProductCard } from '@/app/components/ProductCard';
 import { Checkbox } from '@/app/components/ui/checkbox';
 import { Label } from '@/app/components/ui/label';
-import { SlidersHorizontal, Grid3x3, List, ArrowUpDown } from 'lucide-react';
+import { SlidersHorizontal, Grid3x3, List, ArrowUpDown, Heart } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/app/components/ui/sheet';
 import { SearchBar } from '@/app/components/shared/SearchBar';
 import { EmptyState } from '@/app/components/shared/EmptyState';
@@ -22,6 +22,8 @@ import {
 } from '@/app/components/ui/select';
 import { ShoppingBag } from 'lucide-react';
 import { useProducts, useCategories, useBrands } from '@/hooks/useCustomHooks';
+import { useAuth } from '@/contexts/AuthContext';
+import { notify } from '@/utils/notifications';
 
 export const Products: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -32,6 +34,7 @@ export const Products: React.FC = () => {
   const { products: apiProducts, loading: loadingProducts, error: errorProducts } = useProducts();
   const { categories } = useCategories();
   const { brands: apiBrands } = useBrands();
+  const { user, isFavorite } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -45,6 +48,7 @@ export const Products: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
   const [priceRangeDraft, setPriceRangeDraft] = useState<[number, number]>([0, MAX_PRICE]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -101,6 +105,10 @@ export const Products: React.FC = () => {
       items.push(`Từ khóa: ${searchQuery.trim()}`);
     }
 
+    if (favoritesOnly) {
+      items.push('Sản phẩm yêu thích');
+    }
+
     if (sortBy !== 'featured') {
       const sortLabels: Record<string, string> = {
         newest: 'Mới nhất',
@@ -113,7 +121,7 @@ export const Products: React.FC = () => {
     }
 
     return items;
-  }, [selectedCategories, selectedBrands, selectedMaterials, priceRange, MAX_PRICE, searchQuery, sortBy, categories, apiBrands]);
+  }, [selectedCategories, selectedBrands, selectedMaterials, priceRange, MAX_PRICE, searchQuery, sortBy, favoritesOnly, categories, apiBrands]);
 
   const normalizePriceRange = useCallback((min: number, max: number): [number, number] => {
     const safeMin = Number.isFinite(min) ? Math.max(0, min) : 0;
@@ -189,7 +197,9 @@ export const Products: React.FC = () => {
       const materialMatch = selectedMaterials.length === 0 || 
         selectedMaterials.some(mat => (product.material || '').toLowerCase().includes(mat.toLowerCase()));
 
-      return searchMatch && categoryMatch && brandMatch && priceMatch && materialMatch;
+      const favoriteMatch = !favoritesOnly || isFavorite(String(product._id || product.id));
+
+      return searchMatch && categoryMatch && brandMatch && priceMatch && materialMatch && favoriteMatch;
     });
 
     // Sorting
@@ -216,7 +226,7 @@ export const Products: React.FC = () => {
     }
 
     return filtered;
-  }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, sortBy, apiProducts, categories]);
+  }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, favoritesOnly, sortBy, apiProducts, categories, isFavorite]);
 
   const toggleCategory = useCallback((categoryId: string) => {
     setSelectedCategories(prev =>
@@ -247,6 +257,7 @@ export const Products: React.FC = () => {
     setSelectedBrands([]);
     setPriceRange([0, MAX_PRICE]);
     setSelectedMaterials([]);
+    setFavoritesOnly(false);
   }, [MAX_PRICE]);
 
   const FilterPanel = () => (
@@ -445,7 +456,13 @@ export const Products: React.FC = () => {
                   onRemove={() => toggleMaterial(material)}
                 />
               ))}
-              {(selectedCategories.length > 0 || selectedBrands.length > 0 || selectedMaterials.length > 0) && (
+              {favoritesOnly && (
+                <ActiveFilterTag
+                  label="Yêu thích"
+                  onRemove={() => setFavoritesOnly(false)}
+                />
+              )}
+              {(selectedCategories.length > 0 || selectedBrands.length > 0 || selectedMaterials.length > 0 || favoritesOnly) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -466,6 +483,21 @@ export const Products: React.FC = () => {
                 placeholder="Tìm theo tên, thương hiệu, chất liệu..."
                 className="w-full sm:w-80"
               />
+              <Button
+                type="button"
+                variant={favoritesOnly ? 'default' : 'outline'}
+                onClick={() => {
+                  if (!user) {
+                    notify.info('Vui lòng đăng nhập để lọc sản phẩm yêu thích');
+                    return;
+                  }
+                  setFavoritesOnly((prev) => !prev);
+                }}
+                className={favoritesOnly ? 'bg-rose-500 hover:bg-rose-600 text-white' : ''}
+              >
+                <Heart className={`w-4 h-4 mr-2 ${favoritesOnly ? 'fill-current' : ''}`} />
+                Yêu thích
+              </Button>
               {/* View Mode Toggle */}
               <div className="hidden sm:flex items-center gap-1 border border-gray-200 rounded-md p-1">
                 <button

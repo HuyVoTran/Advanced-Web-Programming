@@ -1,13 +1,35 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { HeroCarousel } from '@/app/components/HeroCarousel';
-import { ProductCard } from '@/app/components/ProductCard';
-import { CategoryCard } from '@/app/components/CategoryCard';
-import { Newsletter } from '@/app/components/Newsletter';
-import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import React, { Suspense } from 'react';
 import { useProducts, useCategories, useFeaturedProducts } from '@/hooks/useCustomHooks';
 import { Skeleton } from '@/app/components/shared/Skeleton';
-import { ErrorState } from '@/app/components/shared/ErrorState';
+import { SectionReveal } from '@/app/components/shared/SectionReveal';
+
+const HomeHeroSection = React.lazy(() =>
+  import('@/app/components/home/HomeHeroSection').then((module) => ({ default: module.HomeHeroSection }))
+);
+const NewProductsSection = React.lazy(() =>
+  import('@/app/components/home/NewProductsSection').then((module) => ({ default: module.NewProductsSection }))
+);
+const CategoriesSection = React.lazy(() =>
+  import('@/app/components/home/CategoriesSection').then((module) => ({ default: module.CategoriesSection }))
+);
+const FeaturedBannerSection = React.lazy(() =>
+  import('@/app/components/home/FeaturedBannerSection').then((module) => ({ default: module.FeaturedBannerSection }))
+);
+const FeaturedProductsSection = React.lazy(() =>
+  import('@/app/components/home/FeaturedProductsSection').then((module) => ({ default: module.FeaturedProductsSection }))
+);
+const NewsletterSection = React.lazy(() =>
+  import('@/app/components/home/NewsletterSection').then((module) => ({ default: module.NewsletterSection }))
+);
+
+const SectionFallback: React.FC<{ className?: string }> = ({ className }) => (
+  <div className={className ?? 'py-24'}>
+    <div className="container mx-auto px-4 lg:px-8">
+      <Skeleton className="h-12 w-64 mx-auto mb-8" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  </div>
+);
 
 export const Home: React.FC = () => {
   const { products: allProducts, loading: loadingProducts, error: errorProducts } = useProducts();
@@ -18,151 +40,43 @@ export const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Carousel */}
-      <HeroCarousel />
+      <Suspense fallback={<SectionFallback className="h-[80vh]" />}>
+        <HomeHeroSection />
+      </Suspense>
 
-      {/* New Products Section */}
-      <section className="py-24 bg-white">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-light mb-4 tracking-wide">
-              Sản phẩm mới
-            </h2>
-            <p className="text-gray-600 font-light max-w-2xl mx-auto">
-              Khám phá những thiết kế mới nhất từ các thương hiệu cao cấp
-            </p>
-          </div>
+      <SectionReveal>
+        <Suspense fallback={<SectionFallback />}>
+          <NewProductsSection newProducts={newProducts} loading={loadingProducts} error={errorProducts} />
+        </Suspense>
+      </SectionReveal>
 
-          {errorProducts ? (
-            <ErrorState message="Lỗi tải sản phẩm mới" onRetry={() => window.location.reload()} />
-          ) : loadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="aspect-square rounded" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-              {newProducts.length > 0 ? (
-                newProducts.map((product, index) => (
-                  <ProductCard key={product._id || product.id} product={product} index={index} />
-                ))
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <p className="text-gray-500">Không có sản phẩm mới</p>
-                </div>
-              )}
-            </div>
-          )}
+      <SectionReveal delay={0.06}>
+        <Suspense fallback={<SectionFallback />}>
+          <CategoriesSection categories={categories} loading={loadingCategories} error={errorCategories} />
+        </Suspense>
+      </SectionReveal>
 
-          <div className="text-center">
-            <Link
-              to="/products"
-              className="inline-block border border-gray-900 text-gray-900 px-10 py-3 text-sm tracking-wider uppercase hover:bg-gray-900 hover:text-white transition-all duration-300"
-            >
-              Xem tất cả sản phẩm
-            </Link>
-          </div>
-        </div>
-      </section>
+      <SectionReveal delay={0.1}>
+        <Suspense fallback={<SectionFallback />}>
+          <FeaturedBannerSection />
+        </Suspense>
+      </SectionReveal>
 
-      {/* Categories Section */}
-      <section className="py-24 bg-gray-50">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-light mb-4 tracking-wide">
-              Danh mục sản phẩm
-            </h2>
-            <p className="text-gray-600 font-light max-w-2xl mx-auto">
-              Khám phá bộ sưu tập đa dạng của chúng tôi
-            </p>
-          </div>
+      <SectionReveal delay={0.14}>
+        <Suspense fallback={<SectionFallback />}>
+          <FeaturedProductsSection
+            featuredProducts={featuredProducts}
+            loading={loadingFeatured}
+            error={errorFeatured}
+          />
+        </Suspense>
+      </SectionReveal>
 
-          {errorCategories ? (
-            <ErrorState message="Lỗi tải danh mục" onRetry={() => window.location.reload()} />
-          ) : loadingCategories ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="aspect-square rounded" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              {categories.length > 0 ? (
-                // show only first 4 categories on the home page
-                categories.slice(0, 4).map((category) => (
-                  <CategoryCard key={category._id || category.id} category={category} />
-                ))
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <p className="text-gray-500">Không có danh mục nào</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Featured Collection Banner */}
-      <section className="py-24 bg-white">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="relative h-[500px] overflow-hidden rounded-sm">
-            <ImageWithFallback
-              src="/images/SalvioRoyale-NewCollection.png"
-              alt="Featured Collection"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/5" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
-              <Link
-                to="/products"
-                className="inline-block bg-white text-gray-900 mt-50 px-8 py-4 text-sm tracking-wider uppercase hover:bg-[#C9A24D] hover:text-white transition-all duration-300"
-              >
-                Khám phá ngay
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Products */}
-      <section className="py-24 bg-gray-50">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-light mb-4 tracking-wide">
-              Sản phẩm nổi bật
-            </h2>
-            <p className="text-gray-600 font-light max-w-2xl mx-auto">
-              Những món trang sức được yêu thích nhất
-            </p>
-          </div>
-
-          {errorFeatured ? (
-            <ErrorState message="Lỗi tải sản phẩm nổi bật" onRetry={() => window.location.reload()} />
-          ) : loadingFeatured ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="aspect-square rounded" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredProducts.length > 0 ? (
-                featuredProducts.slice(0, 3).map((product, index) => (
-                  <ProductCard key={product._id || product.id} product={product} index={index} />
-                ))
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <p className="text-gray-500">Không có sản phẩm nổi bật</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <Newsletter />
+      <SectionReveal delay={0.18}>
+        <Suspense fallback={<SectionFallback className="py-12" />}>
+          <NewsletterSection />
+        </Suspense>
+      </SectionReveal>
     </div>
   );
 };

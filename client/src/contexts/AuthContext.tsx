@@ -8,6 +8,7 @@ export interface User {
   email: string;
   phone: string;
   addresses: Address[];
+  favoriteProductIds?: string[];
   /** convenience flag derived from `role === 'admin'` */
   isAdmin: boolean;
   /** original role string returned by the server ("user" | "admin") */
@@ -69,6 +70,8 @@ interface AuthContextType {
   addAddress: (address: Omit<Address, 'id'>) => void;
   updateAddress: (addressId: string, updates: Partial<Address>) => void;
   deleteAddress: (addressId: string) => void;
+  isFavorite: (productId: string) => boolean;
+  toggleFavorite: (productId: string) => Promise<boolean>;
   setToken: (token: string | null) => void;
 }
 
@@ -133,6 +136,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: u.email || u.user?.email || '',
       phone: u.phone || u.user?.phone || '',
       addresses: Array.isArray(rawAddresses) ? rawAddresses.map(normalizeAddress) : [],
+      favoriteProductIds: Array.isArray(u.favoriteProductIds || u.favorites || u.user?.favorites)
+        ? (u.favoriteProductIds || u.favorites || u.user?.favorites).map((item: any) => String(item?._id || item?.id || item))
+        : [],
       role,
       settings: normalizeSettings(u.settings || u.user?.settings),
       // server may already include isAdmin; fallback to checking role
@@ -335,6 +341,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isFavorite = (productId: string) => {
+    if (!user || !productId) return false;
+    return (user.favoriteProductIds || []).includes(productId);
+  };
+
+  const toggleFavorite = async (productId: string): Promise<boolean> => {
+    if (!user || !token || !productId) {
+      throw new Error('Vui lòng đăng nhập để sử dụng danh sách yêu thích');
+    }
+
+    const currentlyFavorite = (user.favoriteProductIds || []).includes(productId);
+    const { authAPI } = await import('@/services/api');
+    const result = currentlyFavorite
+      ? await authAPI.removeFavorite(productId, token)
+      : await authAPI.addFavorite(productId, token);
+
+    const nextFavorites = Array.isArray(result?.favorites)
+      ? result.favorites.map((item: any) => String(item?._id || item?.id || item))
+      : user.favoriteProductIds || [];
+
+    setUser({
+      ...user,
+      favoriteProductIds: nextFavorites,
+    });
+
+    return !currentlyFavorite;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -347,6 +381,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addAddress,
         updateAddress,
         deleteAddress,
+        isFavorite,
+        toggleFavorite,
         setToken,
       }}
     >

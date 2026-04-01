@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, MapPin, ShoppingBag, Settings, LogOut, ArrowLeft } from 'lucide-react';
+import { User, MapPin, ShoppingBag, Settings, LogOut, ArrowLeft, Heart } from 'lucide-react';
 import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -20,12 +20,14 @@ export const UserDashboard: React.FC = () => {
     }
   }, [user, navigate]);
 
-  const userOrders = user ? getUserOrders(user.id) : [];
+  const userOrders = user ? getUserOrders(user.id || user._id) : [];
+  const favoriteCount = user?.favoriteProductIds?.length || 0;
 
   const menuItems = [
     { icon: User, label: 'Thông tin cá nhân', path: '/profile', description: 'Cập nhật thông tin tài khoản' },
     { icon: MapPin, label: 'Sổ địa chỉ', path: '/addresses', description: 'Quản lý địa chỉ giao hàng' },
     { icon: ShoppingBag, label: 'Đơn hàng của tôi', path: '/orders', description: 'Xem lịch sử đơn hàng' },
+    { icon: Heart, label: 'Sản phẩm yêu thích', path: '/favorites', description: 'Lưu các sản phẩm quan tâm' },
     { icon: Settings, label: 'Cài đặt', path: '/settings', description: 'Tùy chỉnh tài khoản' },
   ];
 
@@ -93,7 +95,7 @@ export const UserDashboard: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-600">Tổng đơn hàng</span>
@@ -120,6 +122,14 @@ export const UserDashboard: React.FC = () => {
                 <div className="text-2xl">
                   {userOrders.filter(o => o.status === 'delivered').length}
                 </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600">Yêu thích</span>
+                  <Heart className="w-5 h-5 text-rose-500" />
+                </div>
+                <div className="text-2xl">{favoriteCount}</div>
               </div>
             </div>
 
@@ -181,7 +191,7 @@ export const UserDashboard: React.FC = () => {
             </div>
 
             {/* Quick Links */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Link
                 to="/profile"
                 className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -198,6 +208,15 @@ export const UserDashboard: React.FC = () => {
                 <MapPin className="w-8 h-8 text-green-600 mb-3" />
                 <h3 className="text-lg mb-2">Quản lý địa chỉ</h3>
                 <p className="text-sm text-gray-600">Thêm hoặc chỉnh sửa địa chỉ giao hàng</p>
+              </Link>
+
+              <Link
+                to="/favorites"
+                className="bg-gradient-to-r from-rose-50 to-rose-100 rounded-lg p-6 hover:shadow-md transition-shadow"
+              >
+                <Heart className="w-8 h-8 text-rose-600 mb-3" />
+                <h3 className="text-lg mb-2">Sản phẩm yêu thích</h3>
+                <p className="text-sm text-gray-600">Xem lại nhanh các sản phẩm bạn đã lưu</p>
               </Link>
             </div>
           </div>

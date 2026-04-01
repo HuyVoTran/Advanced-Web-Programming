@@ -8,6 +8,8 @@ import {
   addAddress,
   updateAddress,
   deleteAddress,
+  addFavorite,
+  removeFavorite,
   forgotPassword,
   resetPassword,
 } from '../controllers/authController.js';
@@ -25,5 +27,7 @@ router.put('/change-password', authenticate, changePassword);
 router.post('/addresses', authenticate, addAddress);
 router.put('/addresses/:addressId', authenticate, updateAddress);
 router.delete('/addresses/:addressId', authenticate, deleteAddress);
+router.post('/favorites/:productId', authenticate, addFavorite);
+router.delete('/favorites/:productId', authenticate, removeFavorite);
 
 export default router;

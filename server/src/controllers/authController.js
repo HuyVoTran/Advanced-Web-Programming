@@ -125,6 +125,7 @@ export const getProfile = async (req, res, next) => {
         role: user.role,
         isAdmin: user.role === 'admin',
         addresses: user.addresses,
+        favorites: user.favorites,
         settings: user.settings,
         createdAt: user.createdAt,
       },
@@ -184,6 +185,7 @@ export const updateProfile = async (req, res, next) => {
         role: user.role,
         isAdmin: user.role === 'admin',
         addresses: user.addresses,
+        favorites: user.favorites,
         settings: user.settings,
         createdAt: user.createdAt,
       },
@@ -307,6 +309,60 @@ export const deleteAddress = async (req, res, next) => {
     await user.save();
 
     return sendResponse(res, 200, 'Xóa địa chỉ thành công', { addresses: user.addresses });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addFavorite = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+
+    if (!productId) {
+      return sendError(res, 400, 'Thiếu mã sản phẩm');
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return sendError(res, 404, 'Không tìm thấy người dùng');
+    }
+
+    const alreadyFavorite = user.favorites.some((item) => item.toString() === productId);
+
+    if (!alreadyFavorite) {
+      user.favorites.push(productId);
+      await user.save();
+    }
+
+    return sendResponse(res, 200, 'Đã thêm vào yêu thích', {
+      favorites: user.favorites,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeFavorite = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+
+    if (!productId) {
+      return sendError(res, 400, 'Thiếu mã sản phẩm');
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return sendError(res, 404, 'Không tìm thấy người dùng');
+    }
+
+    user.favorites = user.favorites.filter((item) => item.toString() !== productId);
+    await user.save();
+
+    return sendResponse(res, 200, 'Đã xóa khỏi yêu thích', {
+      favorites: user.favorites,
+    });
   } catch (error) {
     next(error);
   }

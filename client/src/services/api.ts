@@ -303,6 +303,18 @@ export const authAPI = {
       method: 'DELETE',
       token,
     }),
+
+  addFavorite: (productId: string, token: string) =>
+    apiCall(`/auth/favorites/${productId}`, {
+      method: 'POST',
+      token,
+    }),
+
+  removeFavorite: (productId: string, token: string) =>
+    apiCall(`/auth/favorites/${productId}`, {
+      method: 'DELETE',
+      token,
+    }),
 };
 
 /**

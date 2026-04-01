@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatPrice } from '@/utils/constants';
 import { ProductCard } from '@/app/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { ShoppingBag, Heart, Share2 } from 'lucide-react';
@@ -10,11 +11,15 @@ import { Skeleton } from '@/app/components/shared/Skeleton';
 import { ErrorState } from '@/app/components/shared/ErrorState';
 import { productsAPI } from '@/services/api';
 import { PageBreadcrumb } from '@/app/components/shared/PageBreadcrumb';
+import { useProducts } from '@/hooks/useCustomHooks';
+import { notify } from '@/utils/notifications';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { user, isFavorite, toggleFavorite } = useAuth();
+  const { products: allProducts, loading: loadingFavoriteProducts } = useProducts();
 
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -107,6 +112,34 @@ export const ProductDetail: React.FC = () => {
     navigate('/cart');
   };
 
+  const handleToggleFavorite = async () => {
+    const productId = String(product?._id || product?.id || '');
+
+    if (!productId) {
+      return;
+    }
+
+    if (!user) {
+      notify.info('Vui lòng đăng nhập để lưu sản phẩm yêu thích');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const added = await toggleFavorite(productId);
+      if (added) {
+        notify.wishlistAdded(product.name);
+      } else {
+        notify.wishlistRemoved(product.name);
+      }
+    } catch (error) {
+      notify.error(
+        'Không thể cập nhật danh sách yêu thích',
+        error instanceof Error ? error.message : undefined
+      );
+    }
+  };
+
   const imageUrls = (product.images || []).map((img: string) => {
     if (!img) return img;
     if (img.startsWith('http')) {
@@ -128,6 +161,19 @@ export const ProductDetail: React.FC = () => {
   const materialLabel = typeof product.material === 'string' && product.material.length > 0
     ? `${product.material.charAt(0).toUpperCase()}${product.material.slice(1)}`
     : product.material;
+
+  const favoriteProducts = useMemo(() => {
+    const favoriteIds = user?.favoriteProductIds || [];
+    const currentProductId = String(product._id || product.id || '');
+
+    return allProducts
+      .filter((item: any) => favoriteIds.includes(String(item._id || item.id)))
+      .filter((item: any) => String(item._id || item.id) !== currentProductId)
+      .slice(0, 4);
+  }, [allProducts, product, user?.favoriteProductIds]);
+
+  const currentProductId = String(product._id || product.id || '');
+  const favorite = currentProductId ? isFavorite(currentProductId) : false;
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
@@ -251,8 +297,13 @@ export const ProductDetail: React.FC = () => {
 
             {/* Additional Actions */}
             <div className="flex items-center space-x-6 pt-4">
-              <button className="flex items-center space-x-2 text-gray-600 hover:text-[#C9A24D] transition-colors">
-                <Heart className="w-5 h-5" />
+              <button
+                onClick={handleToggleFavorite}
+                className={`flex items-center space-x-2 transition-colors ${
+                  favorite ? 'text-rose-500 hover:text-rose-600' : 'text-gray-600 hover:text-[#C9A24D]'
+                }`}
+              >
+                <Heart className={`w-5 h-5 ${favorite ? 'fill-current' : ''}`} />
                 <span className="text-sm">Yêu thích</span>
               </button>
               <button className="flex items-center space-x-2 text-gray-600 hover:text-[#C9A24D] transition-colors">
@@ -265,7 +316,7 @@ export const ProductDetail: React.FC = () => {
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
-          <div>
+          <div className="mb-24">
             <h2 className="text-3xl font-light mb-8 tracking-wide">
               Sản phẩm liên quan
             </h2>
@@ -278,6 +329,40 @@ export const ProductDetail: React.FC = () => {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {!loadingFavoriteProducts && (
+          <div>
+            <h2 className="text-3xl font-light mb-8 tracking-wide">
+              Sản phẩm yêu thích
+            </h2>
+
+            {favoriteProducts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {favoriteProducts.map((favoriteProduct, index) => (
+                  <ProductCard
+                    key={favoriteProduct._id || favoriteProduct.id}
+                    product={favoriteProduct}
+                    index={index}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
+                <Heart className="w-10 h-10 text-gray-300 mx-auto mb-4" />
+                <p className="text-lg text-gray-800 mb-2">Chưa có sản phẩm yêu thích phù hợp</p>
+                <p className="text-sm text-gray-600 mb-5">
+                  Hãy nhấn vào biểu tượng trái tim để lưu sản phẩm bạn quan tâm và xem lại nhanh hơn.
+                </p>
+                <button
+                  onClick={() => navigate('/products')}
+                  className="inline-flex items-center justify-center border border-gray-900 px-5 py-2 text-sm tracking-wide uppercase text-gray-900 transition-colors duration-300 hover:bg-gray-900 hover:text-white"
+                >
+                  Khám phá sản phẩm
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
