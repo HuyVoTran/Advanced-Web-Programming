@@ -9,6 +9,45 @@ import News from '../models/News.js'; // Giả định model này tồn tại
 import NewsletterSubscription from '../models/NewsletterSubscription.js'; // Giả định model này tồn tại
 import sendEmail from '../utils/sendEmail.js'; // Giả định utility này tồn tại
 
+/**
+ * Chuẩn hoá một Order document thành format thống nhất cho admin frontend.
+ * - orderNumber: virtual từ model (ORD-XXXXXX)
+ * - itemCount: số lượng dòng sản phẩm
+ * - items: mảng có productName, price, quantity, image
+ * - shippingAddress: map từ customerInfo
+ * - user: lấy từ order.user (populated) hoặc customerInfo
+ */
+const formatOrder = (order) => {
+  const o = order.toObject ? order.toObject() : order;
+
+  const items = (o.items || []).map((item) => ({
+    productId: item.product?._id || item.product,
+    productName: item.product?.name || 'Sản phẩm không còn tồn tại',
+    price: item.price,
+    quantity: item.quantity,
+    image: (item.product?.images || [])[0] || '',
+  }));
+
+  const ci = o.customerInfo || {};
+  const addressParts = [ci.address, ci.ward, ci.district, ci.city].filter(Boolean);
+  const shippingAddress = {
+    street: ci.address || '',
+    ward: ci.ward || '',
+    district: ci.district || '',
+    city: ci.city || '',
+    fullAddress: addressParts.join(', '),
+  };
+
+  return {
+    ...o,
+    orderNumber: o.orderNumber || ('ORD-' + String(o._id).slice(-6).toUpperCase()),
+    itemCount: items.length,
+    items,
+    shippingAddress,
+    note: o.notes || '',
+  };
+};
+
 // Bảng điều khiển
 export const getDashboard = async (req, res, next) => {
   try {
@@ -231,7 +270,7 @@ export const getAllOrders = async (req, res, next) => {
       res,
       200,
       'Đơn hàng được lấy thành công',
-      orders,
+      orders.map(formatOrder),
       pageNum,
       limitNum,
       total
@@ -254,13 +293,13 @@ export const updateOrderStatus = async (req, res, next) => {
       id,
       { status, notes: notes || undefined },
       { new: true }
-    ).populate('items.product');
+    ).populate('user').populate('items.product');
 
     if (!order) {
       return sendError(res, 404, 'Đơn hàng không tìm thấy');
     }
 
-    return sendResponse(res, 200, 'Trạng thái đơn hàng được cập nhật thành công', order);
+    return sendResponse(res, 200, 'Trạng thái đơn hàng được cập nhật thành công', formatOrder(order));
   } catch (error) {
     next(error);
   }

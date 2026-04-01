@@ -86,6 +86,14 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Virtual: mã đơn hàng hiển thị (ORD- + 6 ký tự cuối của _id viết hoa)
+orderSchema.virtual('orderNumber').get(function () {
+  return 'ORD-' + this._id.toString().slice(-6).toUpperCase();
+});
+
+orderSchema.set('toJSON', { virtuals: true });
+orderSchema.set('toObject', { virtuals: true });
+
 // Lấy dữ liệu sản phẩm và người dùng
 orderSchema.pre(/^find/, function () {
   this.populate('items.product').populate('user');

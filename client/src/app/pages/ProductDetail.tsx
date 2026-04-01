@@ -58,6 +58,40 @@ export const ProductDetail: React.FC = () => {
     }
   }, [id]);
 
+  // All derived values that depend on `product` — must be computed unconditionally
+  // before any early returns to satisfy the Rules of Hooks.
+  const imageUrls = useMemo(() => {
+    if (!product) return ['https://source.unsplash.com/800x1000/?jewelry'];
+    const urls = (product.images || []).map((img: string) => {
+      if (!img) return img;
+      if (img.startsWith('http')) return img;
+      if (img.startsWith('/client/public/')) return img.replace('/client/public', '');
+      if (img.startsWith('/')) return img;
+      return `/images/products/${img}`;
+    });
+    return urls.length > 0 ? urls : ['https://source.unsplash.com/800x1000/?jewelry'];
+  }, [product]);
+
+  const materialLabel = useMemo(() => {
+    if (!product) return '';
+    return typeof product.material === 'string' && product.material.length > 0
+      ? `${product.material.charAt(0).toUpperCase()}${product.material.slice(1)}`
+      : product.material;
+  }, [product]);
+
+  const favoriteProducts = useMemo(() => {
+    if (!product) return [];
+    const favoriteIds = user?.favoriteProductIds || [];
+    const currentProductId = String(product._id || product.id || '');
+    return allProducts
+      .filter((item: any) => favoriteIds.includes(String(item._id || item.id)))
+      .filter((item: any) => String(item._id || item.id) !== currentProductId)
+      .slice(0, 4);
+  }, [allProducts, product, user?.favoriteProductIds]);
+
+  const currentProductId = product ? String(product._id || product.id || '') : '';
+  const favorite = currentProductId ? isFavorite(currentProductId) : false;
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-24 pb-16">
@@ -139,41 +173,6 @@ export const ProductDetail: React.FC = () => {
       );
     }
   };
-
-  const imageUrls = (product.images || []).map((img: string) => {
-    if (!img) return img;
-    if (img.startsWith('http')) {
-      return img;
-    }
-    if (img.startsWith('/client/public/')) {
-      return img.replace('/client/public', '');
-    }
-    if (img.startsWith('/')) {
-      return img;
-    }
-    return `/images/products/${img}`;
-  });
-
-  if (imageUrls.length === 0) {
-    imageUrls.push('https://source.unsplash.com/800x1000/?jewelry');
-  }
-
-  const materialLabel = typeof product.material === 'string' && product.material.length > 0
-    ? `${product.material.charAt(0).toUpperCase()}${product.material.slice(1)}`
-    : product.material;
-
-  const favoriteProducts = useMemo(() => {
-    const favoriteIds = user?.favoriteProductIds || [];
-    const currentProductId = String(product._id || product.id || '');
-
-    return allProducts
-      .filter((item: any) => favoriteIds.includes(String(item._id || item.id)))
-      .filter((item: any) => String(item._id || item.id) !== currentProductId)
-      .slice(0, 4);
-  }, [allProducts, product, user?.favoriteProductIds]);
-
-  const currentProductId = String(product._id || product.id || '');
-  const favorite = currentProductId ? isFavorite(currentProductId) : false;
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">

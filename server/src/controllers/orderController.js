@@ -4,6 +4,40 @@ import Product from '../models/Product.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination } from '../utils/validators.js';
 
+/**
+ * Transform một Order document thành format chuẩn cho frontend.
+ */
+const formatOrder = (order) => {
+  const o = order.toObject ? order.toObject() : order;
+
+  const items = (o.items || []).map((item) => ({
+    productId: item.product?._id || item.product,
+    productName: item.product?.name || 'Sản phẩm không còn tồn tại',
+    price: item.price,
+    quantity: item.quantity,
+    image: (item.product?.images || [])[0] || '',
+  }));
+
+  const ci = o.customerInfo || {};
+  const addressParts = [ci.address, ci.ward, ci.district, ci.city].filter(Boolean);
+  const shippingAddress = {
+    street: ci.address || '',
+    ward: ci.ward || '',
+    district: ci.district || '',
+    city: ci.city || '',
+    fullAddress: addressParts.join(', '),
+  };
+
+  return {
+    ...o,
+    orderNumber: o.orderNumber || ('ORD-' + String(o._id).slice(-6).toUpperCase()),
+    itemCount: items.length,
+    items,
+    shippingAddress,
+    note: o.notes || '',
+  };
+};
+
 export const createOrder = async (req, res, next) => {
   try {
     const { customerInfo, items, paymentMethod, notes } = req.body;
@@ -117,7 +151,7 @@ export const getOrderById = async (req, res, next) => {
       return sendError(res, 403, 'Bạn không có quyền xem đơn hàng này');
     }
 
-    return sendResponse(res, 200, 'Đơn hàng được lấy thành công', order);
+    return sendResponse(res, 200, 'Đơn hàng được lấy thành công', formatOrder(order));
   } catch (error) {
     next(error);
   }

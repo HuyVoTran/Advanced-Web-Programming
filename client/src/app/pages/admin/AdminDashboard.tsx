@@ -128,8 +128,11 @@ export const AdminDashboard: React.FC = () => {
             <BarChart data={orderStatsChartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip formatter={(value) => [Number(value), 'Số đơn']} />
+              <YAxis
+                allowDecimals={false}
+                tickFormatter={(value) => Math.floor(value).toString()}
+              />
+              <Tooltip formatter={(value) => [Math.floor(Number(value)), 'Số đơn']} />
               <Bar dataKey="count" fill="#C9A24D" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

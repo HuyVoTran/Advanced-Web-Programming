@@ -27,24 +27,35 @@ const STATUS_TEXT: Record<string, string> = {
 interface OrderDetail {
   _id: string;
   orderNumber: string;
-  user: {
+  user?: {
     _id: string;
     name: string;
     email: string;
+  };
+  customerInfo: {
+    fullName: string;
+    email: string;
     phone: string;
+    address: string;
+    ward?: string;
+    district?: string;
+    city?: string;
   };
   items: Array<{
     productId: string;
     productName: string;
     price: number;
     quantity: number;
+    image?: string;
   }>;
+  itemCount: number;
   totalPrice: number;
   shippingAddress: {
     street: string;
     ward: string;
     district: string;
     city: string;
+    fullAddress: string;
   };
   status: string;
   paymentMethod: string;
@@ -165,7 +176,7 @@ export const AdminOrderDetail: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl mb-2 tracking-wide">Chi Tiết Đơn Hàng</h1>
-            <p className="text-gray-600">Mã đơn: {order.orderNumber}</p>
+            <p className="text-gray-600">Mã đơn: {order.orderNumber || order._id}</p>
           </div>
           <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
             {STATUS_TEXT[order.status] || order.status}
@@ -305,15 +316,15 @@ export const AdminOrderDetail: React.FC = () => {
             <div className="space-y-3 text-sm">
               <div>
                 <div className="text-gray-600 mb-1">Họ tên:</div>
-                <div>{order.user?.name || 'N/A'}</div>
+                <div>{order.customerInfo?.fullName || order.user?.name || 'N/A'}</div>
               </div>
               <div>
                 <div className="text-gray-600 mb-1">Email:</div>
-                <div>{order.user?.email || 'N/A'}</div>
+                <div>{order.customerInfo?.email || order.user?.email || 'N/A'}</div>
               </div>
               <div>
                 <div className="text-gray-600 mb-1">Số điện thoại:</div>
-                <div>{order.user?.phone || 'N/A'}</div>
+                <div>{order.customerInfo?.phone || 'N/A'}</div>
               </div>
             </div>
           </div>
@@ -324,7 +335,7 @@ export const AdminOrderDetail: React.FC = () => {
               <h2 className="text-xl">Địa Chỉ Giao Hàng</h2>
             </div>
 
-            <p className="text-sm">{formatAddress(order.shippingAddress)}</p>
+            <p className="text-sm">{order.shippingAddress?.fullAddress || formatAddress(order.shippingAddress)}</p>
 
             {order.note && (
               <div className="mt-4 pt-4 border-t border-gray-200">

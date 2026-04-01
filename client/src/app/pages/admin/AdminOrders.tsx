@@ -8,15 +8,21 @@ import { vi } from 'date-fns/locale';
 
 interface Order {
   _id: string;
-  orderNumber: string;
+  orderNumber?: string;
   user?: {
     _id: string;
     name: string;
     email: string;
   };
+  customerInfo?: {
+    fullName: string;
+    email: string;
+    phone: string;
+  };
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'shipping' | 'completed' | 'cancelled';
   itemCount: number;
+  items?: any[];
   createdAt: string;
 }
 
@@ -40,9 +46,9 @@ export const AdminOrders: React.FC = () => {
   const normalizedSearchTerm = searchTerm.toLowerCase().trim();
 
   const filteredOrders = (allOrders || []).filter(order => {
-    const orderNumber = (order.orderNumber || '').toLowerCase();
-    const userName = (order.user?.name || '').toLowerCase();
-    const userEmail = (order.user?.email || '').toLowerCase();
+    const orderNumber = (order.orderNumber || order._id || '').toLowerCase();
+    const userName = (order.user?.name || order.customerInfo?.fullName || '').toLowerCase();
+    const userEmail = (order.user?.email || order.customerInfo?.email || '').toLowerCase();
 
     const matchesSearch =
       normalizedSearchTerm === '' ||
@@ -169,17 +175,17 @@ export const AdminOrders: React.FC = () => {
                 filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <div className="text-sm">{order.orderNumber}</div>
+                      <div className="text-sm font-mono">{order.orderNumber || ('ORD-' + order._id.slice(-6).toUpperCase())}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm">{order.user?.name || 'Guest'}</div>
-                      <div className="text-xs text-gray-500">{order.user?.email}</div>
+                      <div className="text-sm">{order.user?.name || order.customerInfo?.fullName || 'Guest'}</div>
+                      <div className="text-xs text-gray-500">{order.user?.email || order.customerInfo?.email}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      {order.itemCount} sản phẩm
+                      {(order.itemCount ?? order.items?.length ?? 0)} sản phẩm
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
                       {formatPrice(order.totalPrice)}

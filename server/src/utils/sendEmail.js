@@ -1,18 +1,5 @@
 import nodemailer from 'nodemailer';
 
-const emailUser = process.env.EMAIL_USER || '';
-const emailPass = process.env.EMAIL_PASS || '';
-
-const transport = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '587', 10),
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: emailUser,
-    pass: emailPass,
-  },
-});
-
 const stripHtml = (value = '') =>
   String(value)
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
@@ -24,7 +11,10 @@ const stripHtml = (value = '') =>
 
 const buildBrandedHtml = ({ title, contentHtml }) => {
   const siteUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  const logoUrl = `${siteUrl.replace(/\/$/, '')}/images/SalvioRoyal-Logo.png`;
+  // Dùng raw GitHub URL để email client bên ngoài có thể tải được logo
+  const logoUrl =
+    process.env.EMAIL_LOGO_URL ||
+    'https://raw.githubusercontent.com/HuyVoTran/Advanced-Web-Programming/main/client/public/images/SalvioRoyale-Logo.png';
   const year = new Date().getFullYear();
 
   return `
@@ -34,11 +24,10 @@ const buildBrandedHtml = ({ title, contentHtml }) => {
           <td align="center">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #ece7dd;border-radius:14px;overflow:hidden;">
               <tr>
-                <td style="background:linear-gradient(135deg,#111827 0%,#1f2937 100%);padding:22px 28px;text-align:center;">
+                <td style="background:#ffffff;padding:20px 28px;text-align:center;border-bottom:1px solid #ece7dd;">
                   <a href="${siteUrl}" style="text-decoration:none;display:inline-block;">
-                    <img src="${logoUrl}" alt="Salvio Royale" style="height:42px;max-width:220px;object-fit:contain;display:block;margin:0 auto 10px;" />
+                    <img src="${logoUrl}" alt="Salvio Royale" style="height:48px;max-width:240px;object-fit:contain;display:block;margin:0 auto;" />
                   </a>
-                  <p style="margin:0;color:#d4af37;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;">Luxury Jewelry House</p>
                 </td>
               </tr>
 
@@ -72,9 +61,22 @@ const buildBrandedHtml = ({ title, contentHtml }) => {
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
+  const emailUser = process.env.EMAIL_USER || '';
+  const emailPass = process.env.EMAIL_PASS || '';
+
   if (!emailUser || !emailPass) {
     throw new Error('EMAIL_USER hoặc EMAIL_PASS chưa được cấu hình trong môi trường');
   }
+
+  const transport = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT || '587', 10),
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: {
+      user: emailUser,
+      pass: emailPass,
+    },
+  });
 
   const baseHtml = html || `<p>${String(text || '').replace(/\n/g, '<br />')}</p>`;
   const brandedHtml = buildBrandedHtml({
