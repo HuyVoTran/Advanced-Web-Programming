@@ -66,6 +66,17 @@ export const CheckoutNew: React.FC = () => {
     paymentMethod: 'cod' as 'cod' | 'bank_transfer' | 'card',
   });
 
+  const totalOriginalPrice = items.reduce((sum, item) => {
+    const originalUnit = Number(item.originalPrice ?? item.price ?? 0);
+    return sum + originalUnit * item.quantity;
+  }, 0);
+
+  const totalDiscount = items.reduce((sum, item) => {
+    const fallbackDiscount = Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0));
+    const discountUnit = Number(item.discountAmount ?? fallbackDiscount);
+    return sum + discountUnit * item.quantity;
+  }, 0);
+
   const applyAddressToForm = (address: Address) => {
     setFormData((prev) => ({
       ...prev,
@@ -208,6 +219,10 @@ export const CheckoutNew: React.FC = () => {
           productName: item.name,
           image: item.image || item.name,
           price: item.price,
+          originalPrice: Number(item.originalPrice ?? item.price ?? 0),
+          salePercent: Number(item.salePercent ?? 0),
+          discountAmount: Number(item.discountAmount ?? Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0))),
+          finalPrice: Number(item.finalPrice ?? item.price ?? 0),
           quantity: item.quantity,
         })),
         total,
@@ -698,18 +713,40 @@ export const CheckoutNew: React.FC = () => {
                             />
                           </div>
                           <div className="flex-1 flex justify-between">
-                            <div>
-                              <p className="font-light">{item.name}</p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Số lượng: {item.quantity}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-primary">{formatPrice(item.price)}</p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {formatPrice(item.price * item.quantity)}
-                              </p>
-                            </div>
+                            {(() => {
+                              const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+                              const salePercent = Number(item.salePercent ?? 0);
+                              const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+                              const hasSale = salePercent > 0 && originalUnitPrice > finalUnitPrice;
+
+                              return (
+                                <>
+                                  <div>
+                                    <p className="font-light">{item.name}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Số lượng: {item.quantity}</p>
+                                    {hasSale ? (
+                                      <div className="mt-1 text-sm">
+                                        <p className="text-muted-foreground line-through">Giá gốc: {formatPrice(originalUnitPrice)}</p>
+                                        <p className="text-red-600">Giảm: {salePercent}%</p>
+                                        <p className="text-primary">Giá sale: {formatPrice(finalUnitPrice)}</p>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-primary mt-1">Giá bán: {formatPrice(finalUnitPrice)}</p>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    {hasSale && (
+                                      <p className="text-sm text-muted-foreground line-through mt-1">
+                                        {formatPrice(originalUnitPrice * item.quantity)}
+                                      </p>
+                                    )}
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {formatPrice(finalUnitPrice * item.quantity)}
+                                    </p>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}
@@ -756,8 +793,12 @@ export const CheckoutNew: React.FC = () => {
               
               <div className="space-y-3 mb-6 pb-6 border-b">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tạm tính</span>
-                  <span>{formatPrice(total)}</span>
+                  <span className="text-muted-foreground">Tạm tính (giá gốc)</span>
+                  <span>{formatPrice(totalOriginalPrice)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Tổng giảm giá</span>
+                  <span>-{formatPrice(totalDiscount)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Phí vận chuyển</span>
@@ -785,13 +826,30 @@ export const CheckoutNew: React.FC = () => {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">SL: {item.quantity}</p>
-                      </div>
-                      <p className="text-sm text-primary whitespace-nowrap">
-                        {formatPrice(item.price * item.quantity)}
-                      </p>
+                      {(() => {
+                        const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+                        const salePercent = Number(item.salePercent ?? 0);
+                        const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+                        const hasSale = salePercent > 0 && originalUnitPrice > finalUnitPrice;
+
+                        return (
+                          <>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm truncate">{item.name}</p>
+                              <p className="text-xs text-muted-foreground">SL: {item.quantity}</p>
+                              {hasSale && <p className="text-[11px] text-red-600">Sale {salePercent}%</p>}
+                            </div>
+                            <div className="text-right whitespace-nowrap">
+                              {hasSale && (
+                                <p className="text-[11px] text-muted-foreground line-through">
+                                  {formatPrice(originalUnitPrice * item.quantity)}
+                                </p>
+                              )}
+                              <p className="text-sm text-primary">{formatPrice(finalUnitPrice * item.quantity)}</p>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>

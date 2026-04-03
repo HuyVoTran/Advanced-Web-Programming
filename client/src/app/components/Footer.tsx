@@ -1,11 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
-import { getPreferredCurrency, setPreferredCurrency } from '@/utils/constants';
+import { getPreferredCurrency, resetPromoHeaderDismissed, setPreferredCurrency } from '@/utils/constants';
 import { useAuth } from '@/contexts/AuthContext';
-
-const PROMOTION_DISMISSED_KEY = 'salvio_promo_header_dismissed';
-const PROMOTION_RESET_EVENT = 'salvio_promo_header_reset';
 
 export const Footer: React.FC = () => {
   const { user } = useAuth();
@@ -169,8 +166,7 @@ export const Footer: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              window.localStorage.removeItem(PROMOTION_DISMISSED_KEY);
-              window.dispatchEvent(new CustomEvent(PROMOTION_RESET_EVENT));
+              resetPromoHeaderDismissed();
             }}
             className="mt-3 text-xs text-gray-400 hover:text-[#C9A24D] transition-colors"
           >

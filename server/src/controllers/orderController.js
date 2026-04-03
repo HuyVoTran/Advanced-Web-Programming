@@ -15,6 +15,10 @@ const formatOrder = (order) => {
     productId: item.product?._id || item.product,
     productName: item.product?.name || 'Sản phẩm không còn tồn tại',
     price: item.price,
+    originalPrice: item.originalPrice ?? item.price,
+    salePercent: item.salePercent ?? 0,
+    discountAmount: item.discountAmount ?? 0,
+    finalPrice: item.finalPrice ?? item.price,
     quantity: item.quantity,
     image: (item.product?.images || [])[0] || '',
   }));
@@ -33,6 +37,12 @@ const formatOrder = (order) => {
     ...o,
     itemCount: items.length,
     items,
+    totalOriginalPrice:
+      o.totalOriginalPrice ??
+      items.reduce((sum, item) => sum + Number(item.originalPrice || item.price || 0) * Number(item.quantity || 0), 0),
+    totalDiscount:
+      o.totalDiscount ??
+      items.reduce((sum, item) => sum + Number(item.discountAmount || 0) * Number(item.quantity || 0), 0),
     shippingAddress,
     note: o.notes || '',
   };
@@ -45,6 +55,31 @@ const formatCurrency = (value = 0) =>
     style: 'currency',
     currency: 'VND',
   }).format(Number(value || 0));
+
+const clampSalePercent = (value = 0) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return Math.min(100, Math.max(0, numericValue));
+};
+
+const roundPriceToStep = (value, step = 1000) => {
+  const numericValue = Number(value);
+  const numericStep = Number(step);
+  const safeValue = Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
+  const safeStep = Number.isFinite(numericStep) && numericStep > 0 ? numericStep : 1000;
+  return Math.max(0, Math.round(safeValue / safeStep) * safeStep);
+};
+
+const calculateDiscountedPrice = (basePrice, salePercent) => {
+  const normalizedBasePrice = Number.isFinite(Number(basePrice)) ? Math.max(0, Number(basePrice)) : 0;
+  const normalizedSalePercent = clampSalePercent(salePercent);
+
+  if (normalizedSalePercent <= 0) {
+    return roundPriceToStep(normalizedBasePrice);
+  }
+
+  return roundPriceToStep(normalizedBasePrice * (1 - normalizedSalePercent / 100));
+};
 
 const sendOrderCreatedEmail = async (order) => {
   const customerEmail = order?.customerInfo?.email;
@@ -113,6 +148,8 @@ export const createOrder = async (req, res, next) => {
 
     // Xác minh các mục và tính tổng cộng
     let totalPrice = 0;
+    let totalOriginalPrice = 0;
+    let totalDiscount = 0;
     const orderItems = [];
 
     for (const item of items) {
@@ -126,13 +163,24 @@ export const createOrder = async (req, res, next) => {
         return sendError(res, 400, `Hàng không đủ cho ${product.name}`);
       }
 
+      const originalPrice = Number(product.originalPrice || product.price || 0);
+      const salePercent = clampSalePercent(product.salePercent || 0);
+      const finalPrice = calculateDiscountedPrice(originalPrice, salePercent);
+      const discountAmount = Math.max(0, originalPrice - finalPrice);
+
       orderItems.push({
         product: product._id,
         quantity: item.quantity,
-        price: product.price,
+        price: finalPrice,
+        originalPrice,
+        salePercent,
+        discountAmount,
+        finalPrice,
       });
 
-      totalPrice += product.price * item.quantity;
+      totalPrice += finalPrice * item.quantity;
+      totalOriginalPrice += originalPrice * item.quantity;
+      totalDiscount += discountAmount * item.quantity;
 
       // Giảm kho hàng
       product.stock -= item.quantity;
@@ -145,6 +193,8 @@ export const createOrder = async (req, res, next) => {
       customerInfo,
       items: orderItems,
       totalPrice,
+      totalOriginalPrice,
+      totalDiscount,
       paymentMethod: paymentMethod || 'cod',
       notes: notes || '',
     });
@@ -241,8 +291,12 @@ export const cancelOrder = async (req, res, next) => {
       return sendError(res, 404, 'Đơn hàng không tìm thấy');
     }
 
+    const requesterId = String(req.user?._id || req.user?.id || '');
+    const ownerId = order.user ? String(order.user?._id || order.user) : '';
+    const isAdmin = req.user?.role === 'admin';
+
     // Kiểm tra xem người dùng có sở hữu đơn hàng này hay không
-    if (order.user && order.user.toString() !== req.user.id) {
+    if (ownerId && ownerId !== requesterId && !isAdmin) {
       return sendError(res, 403, 'Bạn không có quyền hủy đơn hàng này');
     }
 

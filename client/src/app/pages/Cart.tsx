@@ -73,6 +73,15 @@ export const Cart: React.FC = () => {
   }
 
   const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
+  const totalOriginalPrice = items.reduce((sum, item) => {
+    const originalUnit = Number(item.originalPrice ?? item.price ?? 0);
+    return sum + originalUnit * item.quantity;
+  }, 0);
+  const totalDiscount = items.reduce((sum, item) => {
+    const fallbackDiscount = Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0));
+    const discountUnit = Number(item.discountAmount ?? fallbackDiscount);
+    return sum + discountUnit * item.quantity;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
@@ -110,6 +119,12 @@ export const Cart: React.FC = () => {
             <AnimatePresence mode="popLayout">
               {items.map((item) => {
                 const imageUrl = resolveImageSrc(item.image, 'products') || `https://source.unsplash.com/400x500/?${encodeURIComponent(item.name)}`;
+                const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+                const salePercent = Number(item.salePercent ?? 0);
+                const saleUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+                const hasSale = salePercent > 0 && originalUnitPrice > saleUnitPrice;
+                const lineOriginalPrice = originalUnitPrice * item.quantity;
+                const lineFinalPrice = saleUnitPrice * item.quantity;
                 
                 return (
                   <motion.div
@@ -142,9 +157,19 @@ export const Cart: React.FC = () => {
                         >
                           {item.name}
                         </Link>
-                        <p className="text-primary mt-2 text-lg">
-                          {formatPrice(item.price)}
-                        </p>
+                        <div className="mt-2">
+                          {hasSale ? (
+                            <>
+                              <p className="text-sm text-muted-foreground line-through">
+                                Giá gốc: {formatPrice(originalUnitPrice)}
+                              </p>
+                              <p className="text-sm text-red-600">Giảm: {salePercent}%</p>
+                              <p className="text-primary text-lg">Giá sale: {formatPrice(saleUnitPrice)}</p>
+                            </>
+                          ) : (
+                            <p className="text-primary text-lg">Giá bán: {formatPrice(saleUnitPrice)}</p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between mt-4">
@@ -184,9 +209,14 @@ export const Cart: React.FC = () => {
 
                     {/* Subtotal */}
                     <div className="text-right hidden sm:block">
-                      <p className="text-lg font-light">
-                        {formatPrice(item.price * item.quantity)}
-                      </p>
+                      {hasSale ? (
+                        <>
+                          <p className="text-sm text-muted-foreground line-through">{formatPrice(lineOriginalPrice)}</p>
+                          <p className="text-lg font-light text-primary">{formatPrice(lineFinalPrice)}</p>
+                        </>
+                      ) : (
+                        <p className="text-lg font-light">{formatPrice(lineFinalPrice)}</p>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -214,8 +244,12 @@ export const Cart: React.FC = () => {
 
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Tạm tính</span>
-                  <span>{formatPrice(total)}</span>
+                  <span>Tạm tính (giá gốc)</span>
+                  <span>{formatPrice(totalOriginalPrice)}</span>
+                </div>
+                <div className="flex justify-between text-green-600">
+                  <span>Tổng giảm giá</span>
+                  <span>-{formatPrice(totalDiscount)}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Phí vận chuyển</span>

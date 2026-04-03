@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { SearchBar } from './shared/SearchBar';
 import { useProducts, useClickOutside, useNews, useCategories } from '@/hooks/useCustomHooks';
 import { AnimatePresence, motion } from 'motion/react';
+import { isPromoHeaderDismissed, PROMOTION_RESET_EVENT, setPromoHeaderDismissed } from '@/utils/constants';
 
 const PROMOTION_ITEMS = [
   {
@@ -18,9 +19,6 @@ const PROMOTION_ITEMS = [
     label: 'Miễn phí ship toàn bộ sản phẩm',
   },
 ];
-const PROMOTION_DISMISSED_KEY = 'salvio_promo_header_dismissed';
-const PROMOTION_RESET_EVENT = 'salvio_promo_header_reset';
-
 export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -57,14 +55,8 @@ export const Header: React.FC = () => {
 
   useEffect(() => {
     const syncPromotionVisibility = () => {
-      const isDismissed = window.localStorage.getItem(PROMOTION_DISMISSED_KEY) === '1';
+      const isDismissed = isPromoHeaderDismissed();
       setIsPromotionVisible(!isDismissed);
-    };
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (!event.key || event.key === PROMOTION_DISMISSED_KEY) {
-        syncPromotionVisibility();
-      }
     };
 
     const handlePromoReset = () => {
@@ -73,11 +65,9 @@ export const Header: React.FC = () => {
     };
 
     syncPromotionVisibility();
-    window.addEventListener('storage', handleStorageChange);
     window.addEventListener(PROMOTION_RESET_EVENT, handlePromoReset as EventListener);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener(PROMOTION_RESET_EVENT, handlePromoReset as EventListener);
     };
   }, []);
@@ -98,7 +88,7 @@ export const Header: React.FC = () => {
 
   const handleDismissPromotion = () => {
     setIsPromotionVisible(false);
-    window.localStorage.setItem(PROMOTION_DISMISSED_KEY, '1');
+    setPromoHeaderDismissed(true);
   };
 
   const searchResults = useMemo(() => {

@@ -40,6 +40,8 @@ type OrderDetailExport = {
   updatedAt?: string;
   status?: string;
   totalPrice: number;
+  totalOriginalPrice?: number;
+  totalDiscount?: number;
   paymentMethod?: string;
   customerInfo?: {
     fullName?: string;
@@ -57,7 +59,15 @@ type OrderDetailExport = {
     district?: string;
     city?: string;
   };
-  items: Array<{ productName: string; quantity: number; price: number }>;
+  items: Array<{
+    productName: string;
+    quantity: number;
+    price: number;
+    originalPrice?: number;
+    salePercent?: number;
+    discountAmount?: number;
+    finalPrice?: number;
+  }>;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -457,10 +467,19 @@ export const exportOrderInvoiceDetailPdf = async (order: OrderDetailExport) => {
       .filter(Boolean)
       .join(', ');
 
-  const lineSubtotal = order.items.reduce(
-    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
-    0
-  );
+  const lineSubtotal = order.items.reduce((sum, item) => {
+    const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+    return sum + originalUnitPrice * Number(item.quantity || 0);
+  }, 0);
+  const totalDiscount =
+    Number(order.totalDiscount) ||
+    order.items.reduce((sum, item) => {
+      const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+      const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+      const fallbackDiscount = Math.max(0, originalUnitPrice - finalUnitPrice);
+      const discountUnit = Number(item.discountAmount ?? fallbackDiscount);
+      return sum + discountUnit * Number(item.quantity || 0);
+    }, 0);
   const shippingFee = 0;
   const grandTotal = Number(order.totalPrice || 0);
   const vatAmount = Math.round(grandTotal * (COMPANY_INFO.vatRate / (1 + COMPANY_INFO.vatRate)));
@@ -551,16 +570,26 @@ export const exportOrderInvoiceDetailPdf = async (order: OrderDetailExport) => {
       {
         table: {
           headerRows: 1,
-          widths: [30, '*', 55, 95, 95],
+          widths: [24, '*', 34, 56, 60, 74, 80],
           body: [
-            ['STT', 'Tên hàng hóa, dịch vụ', 'SL', 'Đơn giá', 'Thành tiền'],
-            ...order.items.map((item, index) => [
-              String(index + 1),
-              item.productName,
-              String(item.quantity),
-              formatCurrency(item.price),
-              formatCurrency(item.price * item.quantity),
-            ]),
+            ['STT', 'Tên hàng hóa, dịch vụ', 'SL', 'Giảm', 'Đơn giá gốc', 'Đơn giá sale', 'Thành tiền'],
+            ...order.items.map((item, index) => {
+              const quantity = Number(item.quantity || 0);
+              const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+              const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+              const salePercent = Number(item.salePercent ?? 0);
+              const lineTotal = finalUnitPrice * quantity;
+
+              return [
+                String(index + 1),
+                item.productName,
+                String(quantity),
+                `${salePercent}%`,
+                formatCurrency(originalUnitPrice),
+                formatCurrency(finalUnitPrice),
+                formatCurrency(lineTotal),
+              ];
+            }),
           ],
         },
         layout: {
@@ -586,6 +615,7 @@ export const exportOrderInvoiceDetailPdf = async (order: OrderDetailExport) => {
                   widths: ['*', 'auto'],
                   body: [
                     ['Tạm tính hàng hóa', formatCurrency(lineSubtotal)],
+                    ['Tổng giảm giá', `-${formatCurrency(totalDiscount)}`],
                     ['Giá trị trước thuế', formatCurrency(preTaxAmount)],
                     [`Thuế GTGT (${(COMPANY_INFO.vatRate * 100).toFixed(0)}%)`, formatCurrency(vatAmount)],
                     ['Phí vận chuyển', formatCurrency(shippingFee)],
@@ -638,6 +668,15 @@ export const exportOrderInvoiceDetailExcel = (
   order: OrderDetailExport,
   filename = `hoa-don-${order._id}.xlsx`
 ) => {
+  const computedTotalDiscount =
+    Number(order.totalDiscount) ||
+    order.items.reduce((sum, item) => {
+      const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+      const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+      const fallbackDiscount = Math.max(0, originalUnitPrice - finalUnitPrice);
+      return sum + Number(item.discountAmount ?? fallbackDiscount) * Number(item.quantity || 0);
+    }, 0);
+
   const summaryRows = [
     { 'Thông tin': 'Mã đơn hàng', 'Giá trị': order._id },
     { 'Thông tin': 'Ngày đặt', 'Giá trị': formatDateTime(order.createdAt) },
@@ -658,6 +697,7 @@ export const exportOrderInvoiceDetailExcel = (
           .filter(Boolean)
           .join(', '),
     },
+    { 'Thông tin': 'Tổng giảm giá (VNĐ)', 'Giá trị': Number(computedTotalDiscount || 0) },
     { 'Thông tin': 'Tổng thanh toán (VNĐ)', 'Giá trị': Number(order.totalPrice || 0) },
   ];
 
@@ -665,8 +705,11 @@ export const exportOrderInvoiceDetailExcel = (
     STT: index + 1,
     'Sản phẩm': item.productName,
     'Số lượng': item.quantity,
-    'Đơn giá (VNĐ)': Number(item.price || 0),
-    'Thành tiền (VNĐ)': Number(item.price || 0) * Number(item.quantity || 0),
+    'Giảm giá (%)': Number(item.salePercent ?? 0),
+    'Đơn giá gốc (VNĐ)': Number(item.originalPrice ?? item.price ?? 0),
+    'Đơn giá sale (VNĐ)': Number(item.finalPrice ?? item.price ?? 0),
+    'Thành tiền (VNĐ)': Number(item.finalPrice ?? item.price ?? 0) * Number(item.quantity || 0),
+    'Tiền giảm (VNĐ)': Number(item.discountAmount ?? Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0))) * Number(item.quantity || 0),
   }));
 
   const workbook = XLSX.utils.book_new();

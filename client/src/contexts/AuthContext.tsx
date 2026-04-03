@@ -46,10 +46,16 @@ export interface Order {
     productId: string;
     productName: string;
     price: number;
+    originalPrice?: number;
+    salePercent?: number;
+    discountAmount?: number;
+    finalPrice?: number;
     quantity: number;
     image: string;
   }>;
   total: number;
+  totalOriginalPrice?: number;
+  totalDiscount?: number;
   status: 'pending' | 'confirmed' | 'shipping' | 'completed' | 'cancelled';
   cancelReason?: string;
   paymentMethod?: 'cod' | 'card' | 'bank_transfer';

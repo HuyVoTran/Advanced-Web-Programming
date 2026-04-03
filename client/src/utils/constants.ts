@@ -12,6 +12,13 @@ export const CURRENCY_GUEST_STORAGE_KEY = 'luxury_jewelry_currency_guest';
 export const CURRENCY_USER_SCOPE_KEY = 'luxury_jewelry_currency_active_user';
 export const CURRENCY_USER_STORAGE_PREFIX = 'luxury_jewelry_currency_user_';
 export const CURRENCY_CHANGE_EVENT = 'luxury_jewelry_currency_change';
+export const PROMOTION_RESET_EVENT = 'salvio_promo_header_reset';
+
+const CURRENCY_GUEST_COOKIE_KEY = 'luxury_jewelry_currency_guest';
+const CURRENCY_SCOPE_COOKIE_KEY = 'luxury_jewelry_currency_scope_user';
+const PROMOTION_DISMISSED_COOKIE_KEY = 'salvio_promo_header_dismissed';
+const PROMOTION_DISMISSED_SESSION_KEY = 'salvio_promo_header_dismissed';
+const COOKIE_MAX_AGE_DAYS = 30;
 
 const USD_EXCHANGE_RATE = 25000;
 
@@ -24,13 +31,92 @@ const normalizeUserId = (value?: string | null): string | null => {
 };
 
 const getUserCurrencyStorageKey = (userId: string) => `${CURRENCY_USER_STORAGE_PREFIX}${userId}`;
+const getUserCurrencyCookieKey = (userId: string) => `${CURRENCY_USER_STORAGE_PREFIX}${userId}`;
+
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const encodedName = `${encodeURIComponent(name)}=`;
+  const parts = document.cookie.split(';');
+
+  for (const part of parts) {
+    const trimmedPart = part.trim();
+    if (trimmedPart.startsWith(encodedName)) {
+      return decodeURIComponent(trimmedPart.slice(encodedName.length));
+    }
+  }
+
+  return null;
+};
+
+const setCookie = (name: string, value: string, days: number = COOKIE_MAX_AGE_DAYS): void => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const maxAge = Math.max(0, Math.floor(days * 24 * 60 * 60));
+  const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+};
+
+const removeCookie = (name: string): void => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${encodeURIComponent(name)}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+};
+
+const getSessionStorageValue = (key: string): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const setSessionStorageValue = (key: string, value: string): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // ignore storage errors
+  }
+};
+
+const removeSessionStorageValue = (key: string): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // ignore storage errors
+  }
+};
 
 export const getCurrencyScopeUser = (): string | null => {
   if (typeof window === 'undefined') {
     return null;
   }
 
-  return normalizeUserId(window.localStorage.getItem(CURRENCY_USER_SCOPE_KEY));
+  const fromSession = normalizeUserId(getSessionStorageValue(CURRENCY_USER_SCOPE_KEY));
+  if (fromSession) {
+    return fromSession;
+  }
+
+  return normalizeUserId(getCookie(CURRENCY_SCOPE_COOKIE_KEY));
 };
 
 export const setCurrencyScopeUser = (userId: string | null): void => {
@@ -40,11 +126,13 @@ export const setCurrencyScopeUser = (userId: string | null): void => {
 
   const normalizedUserId = normalizeUserId(userId);
   if (normalizedUserId) {
-    window.localStorage.setItem(CURRENCY_USER_SCOPE_KEY, normalizedUserId);
+    setSessionStorageValue(CURRENCY_USER_SCOPE_KEY, normalizedUserId);
+    setCookie(CURRENCY_SCOPE_COOKIE_KEY, normalizedUserId);
     return;
   }
 
-  window.localStorage.removeItem(CURRENCY_USER_SCOPE_KEY);
+  removeSessionStorageValue(CURRENCY_USER_SCOPE_KEY);
+  removeCookie(CURRENCY_SCOPE_COOKIE_KEY);
 };
 
 export const getPreferredCurrency = (fallback: CurrencyCode = 'vnd', userId?: string | null): CurrencyCode => {
@@ -54,13 +142,19 @@ export const getPreferredCurrency = (fallback: CurrencyCode = 'vnd', userId?: st
 
   const scopedUserId = normalizeUserId(userId) || getCurrencyScopeUser();
   if (scopedUserId) {
-    const userStored = window.localStorage.getItem(getUserCurrencyStorageKey(scopedUserId));
+    const userStored =
+      getSessionStorageValue(getUserCurrencyStorageKey(scopedUserId)) ||
+      getCookie(getUserCurrencyCookieKey(scopedUserId)) ||
+      window.localStorage.getItem(getUserCurrencyStorageKey(scopedUserId));
+
     if (userStored) {
       return normalizeCurrency(userStored);
     }
   }
 
   const guestStored =
+    getSessionStorageValue(CURRENCY_GUEST_STORAGE_KEY) ||
+    getCookie(CURRENCY_GUEST_COOKIE_KEY) ||
     window.localStorage.getItem(CURRENCY_GUEST_STORAGE_KEY) ||
     window.localStorage.getItem(CURRENCY_STORAGE_KEY);
 
@@ -76,13 +170,47 @@ export const setPreferredCurrency = (currency: CurrencyCode, userId?: string | n
   const scopedUserId = normalizeUserId(userId) || getCurrencyScopeUser();
 
   if (scopedUserId) {
-    window.localStorage.setItem(getUserCurrencyStorageKey(scopedUserId), normalized);
+    setSessionStorageValue(getUserCurrencyStorageKey(scopedUserId), normalized);
+    setCookie(getUserCurrencyCookieKey(scopedUserId), normalized);
   } else {
-    window.localStorage.setItem(CURRENCY_GUEST_STORAGE_KEY, normalized);
-    window.localStorage.setItem(CURRENCY_STORAGE_KEY, normalized);
+    setSessionStorageValue(CURRENCY_GUEST_STORAGE_KEY, normalized);
+    setCookie(CURRENCY_GUEST_COOKIE_KEY, normalized);
   }
 
   window.dispatchEvent(new CustomEvent(CURRENCY_CHANGE_EVENT, { detail: normalized }));
+};
+
+export const isPromoHeaderDismissed = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const sessionValue = getSessionStorageValue(PROMOTION_DISMISSED_SESSION_KEY);
+  if (sessionValue !== null) {
+    return sessionValue === '1';
+  }
+
+  return getCookie(PROMOTION_DISMISSED_COOKIE_KEY) === '1';
+};
+
+export const setPromoHeaderDismissed = (dismissed: boolean): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (dismissed) {
+    setSessionStorageValue(PROMOTION_DISMISSED_SESSION_KEY, '1');
+    setCookie(PROMOTION_DISMISSED_COOKIE_KEY, '1');
+  } else {
+    removeSessionStorageValue(PROMOTION_DISMISSED_SESSION_KEY);
+    removeCookie(PROMOTION_DISMISSED_COOKIE_KEY);
+  }
+
+  window.dispatchEvent(new CustomEvent(PROMOTION_RESET_EVENT));
+};
+
+export const resetPromoHeaderDismissed = (): void => {
+  setPromoHeaderDismissed(false);
 };
 
 const toPrettyUsd = (rawUsd: number): number => {

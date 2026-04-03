@@ -35,20 +35,41 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const customerInfo = raw?.customerInfo || {};
     const items = (raw?.items || []).map((item: any) => {
       const product = item?.product || {};
+      const rawPrice = Number(item?.price ?? product?.price ?? 0);
+      const originalPrice = Number(item?.originalPrice ?? rawPrice);
+      const salePercent = Number(item?.salePercent ?? 0);
+      const finalPrice = Number(item?.finalPrice ?? rawPrice);
+      const discountAmount = Number(item?.discountAmount ?? Math.max(0, originalPrice - finalPrice));
       return {
         productId: product?._id || item?.productId || item?.product || '',
         productName: product?.name || item?.productName || '',
-        price: item?.price ?? product?.price ?? 0,
+        price: rawPrice,
+        originalPrice,
+        salePercent,
+        discountAmount,
+        finalPrice,
         quantity: item?.quantity ?? 0,
         image: product?.images?.[0] || item?.image || '',
       };
     });
 
+    const total = Number(raw?.totalPrice ?? raw?.total ?? 0);
+    const totalOriginalPrice = Number(
+      raw?.totalOriginalPrice ??
+        items.reduce((sum: number, item: any) => sum + Number(item.originalPrice || item.price || 0) * Number(item.quantity || 0), 0)
+    );
+    const totalDiscount = Number(
+      raw?.totalDiscount ??
+        items.reduce((sum: number, item: any) => sum + Number(item.discountAmount || 0) * Number(item.quantity || 0), 0)
+    );
+
     return {
       id: orderId,
       userId: raw?.user?._id || raw?.user || 'guest',
       items,
-      total: raw?.totalPrice ?? raw?.total ?? 0,
+      total,
+      totalOriginalPrice,
+      totalDiscount,
       status: raw?.status || 'pending',
       cancelReason: raw?.cancelReason || '',
       paymentMethod: raw?.paymentMethod || 'cod',

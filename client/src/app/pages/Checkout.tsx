@@ -30,6 +30,17 @@ export const Checkout: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const totalOriginalPrice = items.reduce((sum, item) => {
+    const originalUnit = Number(item.originalPrice ?? item.price ?? 0);
+    return sum + originalUnit * item.quantity;
+  }, 0);
+
+  const totalDiscount = items.reduce((sum, item) => {
+    const fallbackDiscount = Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0));
+    const discountUnit = Number(item.discountAmount ?? fallbackDiscount);
+    return sum + discountUnit * item.quantity;
+  }, 0);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -50,6 +61,10 @@ export const Checkout: React.FC = () => {
           productId: item.productId || item.id,
           productName: item.name,
           price: item.price,
+          originalPrice: Number(item.originalPrice ?? item.price ?? 0),
+          salePercent: Number(item.salePercent ?? 0),
+          discountAmount: Number(item.discountAmount ?? Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0))),
+          finalPrice: Number(item.finalPrice ?? item.price ?? 0),
           quantity: item.quantity,
           image: item.image,
         })),
@@ -250,6 +265,10 @@ export const Checkout: React.FC = () => {
                 <div className="space-y-4 mb-6">
                   {items.map((item) => {
                     const imageUrl = `https://source.unsplash.com/200x250/?${encodeURIComponent(item.image)}`;
+                    const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+                    const salePercent = Number(item.salePercent ?? 0);
+                    const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+                    const hasSale = salePercent > 0 && originalUnitPrice > finalUnitPrice;
                     return (
                       <div key={item.id} className="flex gap-4">
                         <div className="w-16 h-20 bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">
@@ -261,12 +280,25 @@ export const Checkout: React.FC = () => {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm line-clamp-2">{item.name}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {item.quantity} x {formatPrice(item.price)}
-                          </p>
+                          {hasSale ? (
+                            <>
+                              <p className="text-xs text-gray-500 mt-1 line-through">
+                                Giá gốc: {item.quantity} x {formatPrice(originalUnitPrice)}
+                              </p>
+                              <p className="text-xs text-red-600">Sale {salePercent}%</p>
+                              <p className="text-xs text-[#C9A24D]">Giá sale: {item.quantity} x {formatPrice(finalUnitPrice)}</p>
+                            </>
+                          ) : (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {item.quantity} x {formatPrice(finalUnitPrice)}
+                            </p>
+                          )}
                         </div>
-                        <div className="text-sm">
-                          {formatPrice(item.price * item.quantity)}
+                        <div className="text-sm text-right">
+                          {hasSale && (
+                            <p className="text-xs text-gray-500 line-through">{formatPrice(originalUnitPrice * item.quantity)}</p>
+                          )}
+                          <p>{formatPrice(finalUnitPrice * item.quantity)}</p>
                         </div>
                       </div>
                     );
@@ -275,8 +307,12 @@ export const Checkout: React.FC = () => {
 
                 <div className="border-t border-gray-300 pt-4 space-y-3 mb-6">
                   <div className="flex justify-between text-gray-600">
-                    <span>Tạm tính</span>
-                    <span>{formatPrice(total)}</span>
+                    <span>Tạm tính (giá gốc)</span>
+                    <span>{formatPrice(totalOriginalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between text-green-600">
+                    <span>Tổng giảm giá</span>
+                    <span>-{formatPrice(totalDiscount)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Phí vận chuyển</span>

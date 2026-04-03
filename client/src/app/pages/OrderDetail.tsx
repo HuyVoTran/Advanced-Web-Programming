@@ -29,6 +29,21 @@ export const OrderDetail: React.FC = () => {
   const hasAutoOpenedCancelDialog = React.useRef(false);
 
   const order = id ? getOrderById(id) : undefined;
+  const totalOriginalPrice = order
+    ? Number(
+        order.totalOriginalPrice ??
+          order.items.reduce((sum, item) => sum + Number(item.originalPrice ?? item.price ?? 0) * item.quantity, 0)
+      )
+    : 0;
+  const totalDiscount = order
+    ? Number(
+        order.totalDiscount ??
+          order.items.reduce((sum, item) => {
+            const fallbackDiscount = Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0));
+            return sum + Number(item.discountAmount ?? fallbackDiscount) * item.quantity;
+          }, 0)
+      )
+    : 0;
 
   React.useEffect(() => {
     if (!user) {
@@ -149,16 +164,36 @@ export const OrderDetail: React.FC = () => {
                   <div>
                     <p>{item.productName}</p>
                     <p className="text-sm text-gray-500">SL: {item.quantity}</p>
+                    {Number(item.salePercent || 0) > 0 && (
+                      <p className="text-sm text-red-600">Sale: {item.salePercent}%</p>
+                    )}
                   </div>
                 </div>
-                <p>{formatPrice(item.price * item.quantity)}</p>
+                <div className="text-right">
+                  {Number(item.salePercent || 0) > 0 && (
+                    <p className="text-sm text-gray-500 line-through">
+                      {formatPrice(Number(item.originalPrice ?? item.price ?? 0) * item.quantity)}
+                    </p>
+                  )}
+                  <p>{formatPrice(Number(item.finalPrice ?? item.price ?? 0) * item.quantity)}</p>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-gray-200 mt-4 pt-4 flex justify-between">
-            <span className="font-medium">Tổng cộng</span>
-            <span className="text-lg text-[#C9A24D]">{formatPrice(order.total)}</span>
+          <div className="border-t border-gray-200 mt-4 pt-4 space-y-2">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Tạm tính (giá gốc)</span>
+              <span>{formatPrice(totalOriginalPrice)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-green-600">
+              <span>Tổng giảm giá</span>
+              <span>-{formatPrice(totalDiscount)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">Tổng cộng</span>
+              <span className="text-lg text-[#C9A24D]">{formatPrice(order.total)}</span>
+            </div>
           </div>
         </div>
 

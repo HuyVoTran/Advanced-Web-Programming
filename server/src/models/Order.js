@@ -15,6 +15,25 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  originalPrice: {
+    type: Number,
+    required: true,
+  },
+  salePercent: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  finalPrice: {
+    type: Number,
+    required: true,
+  },
 });
 
 const customerInfoSchema = new mongoose.Schema({
@@ -63,6 +82,16 @@ const orderSchema = new mongoose.Schema(
     totalPrice: {
       type: Number,
       required: true,
+    },
+    totalOriginalPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalDiscount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     paymentMethod: {
       type: String,

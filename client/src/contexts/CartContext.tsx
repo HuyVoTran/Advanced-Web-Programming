@@ -24,6 +24,10 @@ export interface CartItem {
   productId: string;
   name: string;
   price: number;
+  originalPrice?: number;
+  salePercent?: number;
+  discountAmount?: number;
+  finalPrice?: number;
   image: string;
   quantity: number;
 }
@@ -102,6 +106,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       productId,
       name: product.name,
       price: finalPrice,
+      originalPrice: basePrice,
+      salePercent,
+      discountAmount: Math.max(0, basePrice - finalPrice),
+      finalPrice,
       image: primaryImage,
       quantity,
     });
