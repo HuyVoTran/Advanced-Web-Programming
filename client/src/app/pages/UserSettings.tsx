@@ -222,8 +222,12 @@ export const UserSettings: React.FC = () => {
                   value={currency}
                   onChange={(e) => {
                     const nextCurrency = e.target.value as 'vnd' | 'usd';
+                    if (nextCurrency === currency) {
+                      return;
+                    }
                     setCurrency(nextCurrency);
                     setPreferredCurrency(nextCurrency);
+                    window.location.reload();
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
                 >

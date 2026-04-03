@@ -35,12 +35,26 @@ export const apiCall = async <T = any>(
       headers,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    const contentType = response.headers.get('content-type') || '';
+    const isJsonResponse = contentType.includes('application/json');
+
+    const responseBody = isJsonResponse
+      ? await response.json().catch(() => null)
+      : await response.text().catch(() => '');
+
+    if (!isJsonResponse) {
+      const preview = typeof responseBody === 'string' ? responseBody.trim().slice(0, 120) : '';
+      throw new Error(
+        `API trả về non-JSON tại ${endpoint}. Kiểm tra Vite proxy/backend. Status: ${response.status}. Response preview: ${preview}`
+      );
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      const errorData = (responseBody && typeof responseBody === 'object') ? responseBody : {};
+      throw new Error((errorData as any).message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = responseBody;
     return data.data || data;
   } catch (error) {
     console.error(`API Error (${endpoint}):`, error);
