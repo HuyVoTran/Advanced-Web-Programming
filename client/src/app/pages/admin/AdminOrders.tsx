@@ -267,7 +267,7 @@ export const AdminOrders: React.FC = () => {
             className={`bg-white rounded-lg border-2 p-4 text-left transition-colors ${
               statusFilter === item.status
                 ? 'border-[#C9A24D] bg-[#C9A24D]/5'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200 hover:border-[#C9A24D]/50 hover:bg-gray-50'
             }`}
           >
             <div className="text-2xl mb-1">{item.count}</div>

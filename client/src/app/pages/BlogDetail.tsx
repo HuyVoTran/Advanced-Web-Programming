@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalendarDays, ArrowLeft } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Share2, Check } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { newsAPI } from '@/services/api';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
@@ -13,6 +13,7 @@ export const BlogDetail: React.FC = () => {
   const [post, setPost] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const sanitizedContent = useMemo(
     () => DOMPurify.sanitize(post?.content || ''),
@@ -70,6 +71,25 @@ export const BlogDetail: React.FC = () => {
     );
   }
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: post.title, url });
+        return;
+      } catch {
+        // fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
@@ -96,6 +116,22 @@ export const BlogDetail: React.FC = () => {
           </span>
           <span>•</span>
           <span>{post.author || 'Admin'}</span>
+          <button
+            onClick={handleShare}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-[#C9A24D] hover:text-[#C9A24D] transition-colors text-xs"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-green-500" />
+                <span className="text-green-600">Đã sao chép</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="w-3.5 h-3.5" />
+                <span>Chia sẻ</span>
+              </>
+            )}
+          </button>
         </div>
 
         {post.thumbnail && (

@@ -157,28 +157,41 @@ export const OrderDetail: React.FC = () => {
         <div className="border border-gray-200 rounded-lg p-6 mb-6">
           <h2 className="text-xl mb-4">Sản phẩm</h2>
           <div className="space-y-3">
-            {order.items.map((item, index) => (
-              <div key={index} className="flex items-center justify-between border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <Package className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p>{item.productName}</p>
-                    <p className="text-sm text-gray-500">SL: {item.quantity}</p>
-                    {Number(item.salePercent || 0) > 0 && (
-                      <p className="text-sm text-red-600">Sale: {item.salePercent}%</p>
+            {order.items.map((item, index) => {
+              const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+              const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+              const salePercent = Number(item.salePercent || 0);
+              const hasSale = salePercent > 0 && originalUnitPrice > finalUnitPrice;
+
+              return (
+                <div key={index} className="flex items-center justify-between border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    <Package className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p>{item.productName}</p>
+                      <p className="text-sm text-gray-500">SL: {item.quantity}</p>
+                      {hasSale && (
+                        <p className="text-sm text-gray-500">Giá gốc: {formatPrice(originalUnitPrice)}</p>
+                      )}
+                      {hasSale && (
+                        <p className="text-sm text-red-600">Giảm giá: {salePercent}%</p>
+                      )}
+                      {hasSale && (
+                        <p className="text-sm text-[#C9A24D]">Giá sau khi giảm: {formatPrice(finalUnitPrice)}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {hasSale && (
+                      <p className="text-sm text-gray-500 line-through">
+                        {formatPrice(originalUnitPrice * item.quantity)}
+                      </p>
                     )}
+                    <p>{formatPrice(finalUnitPrice * item.quantity)}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  {Number(item.salePercent || 0) > 0 && (
-                    <p className="text-sm text-gray-500 line-through">
-                      {formatPrice(Number(item.originalPrice ?? item.price ?? 0) * item.quantity)}
-                    </p>
-                  )}
-                  <p>{formatPrice(Number(item.finalPrice ?? item.price ?? 0) * item.quantity)}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="border-t border-gray-200 mt-4 pt-4 space-y-2">
@@ -190,10 +203,22 @@ export const OrderDetail: React.FC = () => {
               <span>Tổng giảm giá</span>
               <span>-{formatPrice(totalDiscount)}</span>
             </div>
+            {order.couponCode && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Mã giảm giá ({order.couponCode})</span>
+                <span>-{formatPrice(order.couponDiscount ?? 0)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="font-medium">Tổng cộng</span>
               <span className="text-lg text-[#C9A24D]">{formatPrice(order.total)}</span>
             </div>
+            {order.status === 'completed' && (order as any).loyaltyPointsAwarded > 0 && (
+              <div className="flex justify-between text-sm text-amber-600 mt-1">
+                <span>🏅 Điểm tích lũy</span>
+                <span>+{(order as any).loyaltyPointsAwarded} điểm</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -215,6 +240,19 @@ export const OrderDetail: React.FC = () => {
             <p>{order.paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : order.paymentMethod || 'N/A'}</p>
           </div>
 
+          {order.status === 'completed' && (order as any).loyaltyPointsAwarded > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-sm text-gray-500 mb-2">Điểm tích lũy từ đơn hàng này</p>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
+                  +{(order as any).loyaltyPointsAwarded} điểm
+                </span>
+                <span className="text-xs text-gray-500">
+                  Hạng {(order as any).loyaltyRankApplied || 'member'} · x{(order as any).loyaltyMultiplierApplied || 1} lần
+                </span>
+              </div>
+            </div>
+          )}
           {order.status === 'cancelled' && order.cancelReason && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-sm text-gray-500">Lý do hủy đơn</p>

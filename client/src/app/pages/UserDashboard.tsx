@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, MapPin, ShoppingBag, Settings, LogOut, ArrowLeft, Heart, LayoutDashboard } from 'lucide-react';
+import { User, MapPin, ShoppingBag, Settings, LogOut, ArrowLeft, Heart, LayoutDashboard, Crown } from 'lucide-react';
 import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -28,6 +28,7 @@ export const UserDashboard: React.FC = () => {
     { icon: User, label: 'Thông tin cá nhân', path: '/profile', description: 'Cập nhật thông tin tài khoản' },
     { icon: MapPin, label: 'Sổ địa chỉ', path: '/addresses', description: 'Quản lý địa chỉ giao hàng' },
     { icon: ShoppingBag, label: 'Đơn hàng của tôi', path: '/orders', description: 'Xem lịch sử đơn hàng' },
+    { icon: Crown, label: 'Membership', path: '/membership', description: 'Xem hạng và đổi điểm' },
     { icon: Heart, label: 'Sản phẩm yêu thích', path: '/favorites', description: 'Lưu các sản phẩm quan tâm' },
     { icon: Settings, label: 'Cài đặt', path: '/settings', description: 'Tùy chỉnh tài khoản' },
   ];
@@ -96,7 +97,7 @@ export const UserDashboard: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-600">Tổng đơn hàng</span>
@@ -131,6 +132,14 @@ export const UserDashboard: React.FC = () => {
                   <Heart className="w-5 h-5 text-rose-500" />
                 </div>
                 <div className="text-2xl">{favoriteCount}</div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600">Điểm thành viên</span>
+                  <Crown className="w-5 h-5 text-[#C9A24D]" />
+                </div>
+                <div className="text-2xl">{Number(user?.loyaltyPoints || 0).toLocaleString('vi-VN')}</div>
               </div>
             </div>
 

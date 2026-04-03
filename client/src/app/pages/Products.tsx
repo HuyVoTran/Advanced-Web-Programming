@@ -497,7 +497,7 @@ export const Products: React.FC = () => {
       {/* Clear Filters */}
       <button
         onClick={clearFilters}
-        className="w-full border border-gray-300 text-gray-700 px-6 py-2 text-sm hover:bg-gray-50 transition-colors duration-300"
+        className="w-full border border-gray-300 text-gray-700 px-6 py-2 text-sm hover:bg-gray-100 hover:border-gray-400 transition-colors duration-300"
       >
         Xóa bộ lọc
       </button>
@@ -588,6 +588,23 @@ export const Products: React.FC = () => {
                 placeholder="Tìm theo tên, thương hiệu, chất liệu..."
                 className="w-full sm:w-80"
               />
+
+              {/* Sort Dropdown */}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[200px]">
+                  <ArrowUpDown className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Sắp xếp" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="featured">Nổi bật</SelectItem>
+                  <SelectItem value="newest">Mới nhất</SelectItem>
+                  <SelectItem value="price-asc">Giá: Thấp đến cao</SelectItem>
+                  <SelectItem value="price-desc">Giá: Cao đến thấp</SelectItem>
+                  <SelectItem value="name-asc">Tên: A-Z</SelectItem>
+                  <SelectItem value="name-desc">Tên: Z-A</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Button
                 type="button"
                 variant={favoritesOnly ? 'default' : 'outline'}
@@ -603,14 +620,17 @@ export const Products: React.FC = () => {
                 <Heart className={`w-4 h-4 mr-2 ${favoritesOnly ? 'fill-current' : ''}`} />
                 Yêu thích
               </Button>
+
+              {/* Desktop Filter Toggle */}
               <Button
-                type="button"
-                variant={saleOnly ? 'default' : 'outline'}
-                onClick={() => setSaleOnly((prev) => !prev)}
-                className={saleOnly ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+                variant="outline"
+                className="hidden lg:flex"
+                onClick={() => setFilterOpen((v) => !v)}
               >
-                Đang giảm giá
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                {filterOpen ? 'Ẩn bộ lọc' : 'Mở bộ lọc'}
               </Button>
+
               {/* View Mode Toggle */}
               <div className="hidden sm:flex items-center gap-1 border border-gray-200 rounded-md p-1">
                 <button
@@ -630,32 +650,6 @@ export const Products: React.FC = () => {
                   <List className="w-4 h-4" />
                 </button>
               </div>
-
-              {/* Sort Dropdown */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[200px]">
-                  <ArrowUpDown className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Sắp xếp" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="featured">Nổi bật</SelectItem>
-                  <SelectItem value="newest">Mới nhất</SelectItem>
-                  <SelectItem value="price-asc">Giá: Thấp đến cao</SelectItem>
-                  <SelectItem value="price-desc">Giá: Cao đến thấp</SelectItem>
-                  <SelectItem value="name-asc">Tên: A-Z</SelectItem>
-                  <SelectItem value="name-desc">Tên: Z-A</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Desktop Filter Toggle */}
-              <Button
-                variant="outline"
-                className="hidden lg:flex"
-                onClick={() => setFilterOpen((v) => !v)}
-              >
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                {filterOpen ? 'Ẩn bộ lọc' : 'Mở bộ lọc'}
-              </Button>
 
               {/* Mobile Filter Button */}
               <Sheet>

@@ -201,6 +201,37 @@ export const ordersAPI = {
 };
 
 /**
+ * Coupon API
+ */
+export const couponAPI = {
+  validate: (code: string, orderTotal: number, token?: string) =>
+    apiCall('/coupons/validate', {
+      method: 'POST',
+      body: JSON.stringify({ code, orderTotal }),
+      ...(token ? { token } : {}),
+    }),
+};
+
+/**
+ * Membership API
+ */
+export const membershipAPI = {
+  getOverview: (token: string) => apiCall('/membership/overview', { token }),
+
+  getRewards: (token: string) => apiCall('/membership/rewards', { token }),
+
+  redeemReward: (rewardItemId: string, quantity: number, token: string) =>
+    apiCall('/membership/redeem', {
+      method: 'POST',
+      body: JSON.stringify({ rewardItemId, quantity }),
+      token,
+    }),
+
+  getMyRedemptions: (token: string, page = 1, limit = 20) =>
+    apiCall(`/membership/redemptions?page=${page}&limit=${limit}`, { token }),
+};
+
+/**
  * News API
  */
 export const newsAPI = {

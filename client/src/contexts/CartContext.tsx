@@ -81,7 +81,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (existingItem) {
         return prevItems.map(i =>
           i.productId === normalizedItem.productId
-            ? { ...i, quantity: i.quantity + normalizedItem.quantity, image: normalizedItem.image }
+            ? {
+                ...i,
+                quantity: i.quantity + normalizedItem.quantity,
+                image: normalizedItem.image,
+                price: normalizedItem.price,
+                originalPrice: normalizedItem.originalPrice,
+                salePercent: normalizedItem.salePercent,
+                discountAmount: normalizedItem.discountAmount,
+                finalPrice: normalizedItem.finalPrice,
+              }
             : i
         );
       }

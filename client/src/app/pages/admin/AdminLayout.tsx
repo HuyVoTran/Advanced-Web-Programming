@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import { LayoutDashboard, Package, ShoppingCart, Users, List, LogOut, Newspaper, Mail, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, List, LogOut, Newspaper, Mail, MessageSquare, Tag, Crown } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -27,6 +27,8 @@ export const AdminLayout: React.FC = () => {
     { name: 'Liên hệ', path: '/admin/contacts', icon: MessageSquare },
     { name: 'Đơn hàng', path: '/admin/orders', icon: ShoppingCart },
     { name: 'Người dùng', path: '/admin/users', icon: Users },
+    { name: 'Mã giảm giá', path: '/admin/coupons', icon: Tag },
+    { name: 'Membership', path: '/admin/membership', icon: Crown },
   ];
 
   const handleLogout = () => {

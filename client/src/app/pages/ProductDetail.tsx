@@ -179,6 +179,24 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: product.name, url });
+        return;
+      } catch {
+        // fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Đã sao chép link sản phẩm');
+    } catch {
+      toast.error('Không thể sao chép link');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white pt-24 pb-16">
       <div className="container mx-auto px-4 lg:px-8">
@@ -316,7 +334,10 @@ export const ProductDetail: React.FC = () => {
                 <Heart className={`w-5 h-5 ${favorite ? 'fill-current' : ''}`} />
                 <span className="text-sm">Yêu thích</span>
               </button>
-              <button className="flex items-center space-x-2 text-gray-600 hover:text-[#C9A24D] transition-colors">
+              <button
+                onClick={handleShare}
+                className="flex items-center space-x-2 text-gray-600 hover:text-[#C9A24D] transition-colors"
+              >
                 <Share2 className="w-5 h-5" />
                 <span className="text-sm">Chia sẻ</span>
               </button>

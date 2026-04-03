@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAdminFetch } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
-import { Package, ShoppingCart, Users, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
+import { Package, ShoppingCart, Users, DollarSign, TrendingUp, AlertCircle, Tag } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardData {
@@ -16,6 +16,18 @@ interface DashboardData {
   };
   recentOrders: any[];
   orderStats: any[];
+  couponStats?: {
+    totalCoupons: number;
+    activeCoupons: number;
+    totalUsed: number;
+    totalDiscount: number;
+  };
+  membershipStats?: {
+    totalRewardItems: number;
+    totalRedeemedQuantity: number;
+    totalPointsRedeemed: number;
+    totalRedeemOrders: number;
+  };
 }
 
 const formatPrice = (value: number) => {
@@ -64,6 +76,8 @@ export const AdminDashboard: React.FC = () => {
     { name: 'Tổng đơn hàng', value: dashboardData.stats.totalOrders.toString(), icon: ShoppingCart, color: 'bg-blue-500' },
     { name: 'Sản phẩm', value: dashboardData.stats.totalProducts.toString(), icon: Package, color: 'bg-purple-500' },
     { name: 'Người dùng', value: dashboardData.stats.totalUsers.toString(), icon: Users, color: 'bg-orange-500' },
+    { name: 'Giảm giá qua mã', value: formatPrice(dashboardData.couponStats?.totalDiscount ?? 0), icon: Tag, color: 'bg-red-500' },
+    { name: 'Điểm đã đổi', value: (dashboardData.membershipStats?.totalPointsRedeemed ?? 0).toLocaleString('vi-VN'), icon: Tag, color: 'bg-indigo-500' },
   ];
 
   const orderStatsChartData = Object.entries(orderStatusConfig).map(([status, config]) => {
@@ -86,7 +100,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {stats.map((stat) => (
           <div key={stat.name} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">

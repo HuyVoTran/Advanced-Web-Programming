@@ -26,6 +26,7 @@ import { AddressManagement } from '@/app/pages/AddressManagement';
 import { UserSettings } from '@/app/pages/UserSettings';
 import { OrderHistory } from '@/app/pages/OrderHistory';
 import { OrderDetail } from '@/app/pages/OrderDetail';
+import { Membership } from '@/app/pages/Membership';
 import { FavoriteProducts } from '@/app/pages/FavoriteProducts';
 import { About } from '@/app/pages/About';
 import { Contact } from '@/app/pages/Contact';
@@ -50,6 +51,8 @@ import { AdminUsers } from '@/app/pages/admin/AdminUsers';
 import { AdminNews } from '@/app/pages/admin/AdminNews';
 import { AdminNewsletter } from '@/app/pages/admin/AdminNewsletter';
 import { AdminContacts } from '@/app/pages/admin/AdminContacts';
+import { AdminCoupons } from '@/app/pages/admin/AdminCoupons';
+import { AdminMembership } from '@/app/pages/admin/AdminMembership';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -101,6 +104,7 @@ function App() {
                 <Route path="/settings" element={<UserSettings />} />
                 <Route path="/orders" element={<OrderHistory />} />
                 <Route path="/orders/:id" element={<OrderDetail />} />
+                <Route path="/membership" element={<Membership />} />
                 <Route path="/favorites" element={<FavoriteProducts />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
@@ -128,6 +132,8 @@ function App() {
                   <Route path="newsletter" element={<AdminNewsletter />} />
                   <Route path="contacts" element={<AdminContacts />} />
                   <Route path="users" element={<AdminUsers />} />
+                  <Route path="coupons" element={<AdminCoupons />} />
+                  <Route path="membership" element={<AdminMembership />} />
                 </Route>
                 <Route path="/404" element={<NotFound />} />
                 <Route path="*" element={<NotFound />} />

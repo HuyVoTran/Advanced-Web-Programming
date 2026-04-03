@@ -3,11 +3,15 @@ import Order from '../models/Order.js';
 import User from '../models/User.js';
 import Brand from '../models/Brand.js';
 import Category from '../models/Category.js';
+import Coupon from '../models/Coupon.js';
+import RewardItem from '../models/RewardItem.js';
+import RewardRedemption from '../models/RewardRedemption.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination, validateProductData } from '../utils/validators.js';
 import News from '../models/News.js'; // Giả định model này tồn tại
 import NewsletterSubscription from '../models/NewsletterSubscription.js'; // Giả định model này tồn tại
 import sendEmail from '../utils/sendEmail.js'; // Giả định utility này tồn tại
+import { calculateEarnedPoints } from '../utils/membership.js';
 
 /**
  * Chuẩn hoá một Order document thành format thống nhất cho admin frontend.
@@ -128,6 +132,40 @@ export const getDashboard = async (req, res, next) => {
       },
     ]);
 
+    // Thống kê mã giảm giá coupon
+    const allCoupons = await Coupon.find();
+    const totalCouponDiscount = await Order.aggregate([
+      { $match: { couponCode: { $ne: '' }, status: { $ne: 'cancelled' } } },
+      { $group: { _id: null, total: { $sum: '$couponDiscount' } } },
+    ]);
+    const couponStats = {
+      totalCoupons: allCoupons.length,
+      activeCoupons: allCoupons.filter((c) => c.isActive).length,
+      totalUsed: allCoupons.reduce((sum, c) => sum + c.usedCount, 0),
+      totalDiscount: totalCouponDiscount[0]?.total || 0,
+    };
+
+    const [rewardStatsRow, totalRewardItems] = await Promise.all([
+      RewardRedemption.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalRedeemedQuantity: { $sum: '$quantity' },
+            totalPointsRedeemed: { $sum: '$totalPoints' },
+            totalRedeemOrders: { $sum: 1 },
+          },
+        },
+      ]),
+      RewardItem.countDocuments({ isActive: true }),
+    ]);
+
+    const membershipStats = {
+      totalRewardItems,
+      totalRedeemedQuantity: rewardStatsRow?.[0]?.totalRedeemedQuantity || 0,
+      totalPointsRedeemed: rewardStatsRow?.[0]?.totalPointsRedeemed || 0,
+      totalRedeemOrders: rewardStatsRow?.[0]?.totalRedeemOrders || 0,
+    };
+
     return sendResponse(res, 200, 'Dữ liệu bảng điều khiển được lấy thành công', {
       stats: {
         totalOrders,
@@ -139,6 +177,8 @@ export const getDashboard = async (req, res, next) => {
       },
       recentOrders,
       orderStats,
+      couponStats,
+      membershipStats,
     });
   } catch (error) {
     next(error);
@@ -347,19 +387,38 @@ export const updateOrderStatus = async (req, res, next) => {
       return sendError(res, 400, 'Trạng thái không hợp lệ');
     }
 
-    const updatePayload = {
-      status,
-      ...(notes ? { notes } : {}),
-      ...(status === 'cancelled' && notes ? { cancelReason: notes } : {}),
-    };
-
-    const order = await Order.findByIdAndUpdate(id, updatePayload, { new: true })
-      .populate('user')
-      .populate('items.product');
+    const order = await Order.findById(id).populate('user').populate('items.product');
 
     if (!order) {
       return sendError(res, 404, 'Đơn hàng không tìm thấy');
     }
+
+    const previousStatus = order.status;
+    order.status = status;
+    if (notes) {
+      order.notes = notes;
+    }
+    if (status === 'cancelled' && notes) {
+      order.cancelReason = notes;
+    }
+
+    if (status === 'completed' && previousStatus !== 'completed' && order.user?._id) {
+      const orderOwner = await User.findById(order.user._id);
+      if (orderOwner) {
+        const nextTotalSpent = Number(orderOwner.totalSpent || 0) + Number(order.totalPrice || 0);
+        const earned = calculateEarnedPoints(order.totalPrice, nextTotalSpent);
+
+        orderOwner.totalSpent = nextTotalSpent;
+        orderOwner.loyaltyPoints = Number(orderOwner.loyaltyPoints || 0) + Number(earned.earnedPoints || 0);
+        await orderOwner.save();
+
+        order.loyaltyPointsAwarded = Number(earned.earnedPoints || 0);
+        order.loyaltyMultiplierApplied = Number(earned.multiplier || 1);
+        order.loyaltyRankApplied = earned.level?.rank || 'member';
+      }
+    }
+
+    await order.save();
 
     if (status === 'confirmed' || status === 'cancelled') {
       try {

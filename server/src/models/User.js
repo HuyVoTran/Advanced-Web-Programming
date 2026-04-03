@@ -111,6 +111,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    loyaltyPoints: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalSpent: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalPointsRedeemed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     resetPasswordToken: {
       type: String,
     },

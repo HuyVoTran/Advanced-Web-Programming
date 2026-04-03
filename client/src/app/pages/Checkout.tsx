@@ -286,7 +286,7 @@ export const Checkout: React.FC = () => {
                                 Giá gốc: {item.quantity} x {formatPrice(originalUnitPrice)}
                               </p>
                               <p className="text-xs text-red-600">Sale {salePercent}%</p>
-                              <p className="text-xs text-[#C9A24D]">Giá sale: {item.quantity} x {formatPrice(finalUnitPrice)}</p>
+                              <p className="text-xs text-[#C9A24D]">Giá sau khi giảm: {item.quantity} x {formatPrice(finalUnitPrice)}</p>
                             </>
                           ) : (
                             <p className="text-xs text-gray-500 mt-1">

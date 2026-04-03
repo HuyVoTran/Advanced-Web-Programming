@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, LayoutDashboard, LogOut, MapPin, Settings, ShoppingBag, User, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Crown, Heart, LayoutDashboard, LogOut, MapPin, Settings, ShoppingBag, User, type LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface UserDashboardLayoutProps {
@@ -22,6 +22,7 @@ const MENU_ITEMS: Array<{
   { icon: User, label: 'Thông tin cá nhân', path: '/profile', description: 'Cập nhật thông tin tài khoản' },
   { icon: MapPin, label: 'Sổ địa chỉ', path: '/addresses', description: 'Quản lý địa chỉ giao hàng' },
   { icon: ShoppingBag, label: 'Đơn hàng của tôi', path: '/orders', description: 'Xem lịch sử đơn hàng' },
+  { icon: Crown, label: 'Membership', path: '/membership', description: 'Theo dõi hạng & đổi điểm' },
   { icon: Heart, label: 'Yêu thích', path: '/favorites', description: 'Xem các sản phẩm đã lưu' },
   { icon: Settings, label: 'Cài đặt', path: '/settings', description: 'Tùy chỉnh tài khoản' },
 ];

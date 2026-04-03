@@ -15,7 +15,7 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { authAPI } from '@/services/api';
+import { authAPI, couponAPI } from '@/services/api';
 import { resolveImageSrc } from '@/utils/image';
 import { 
   CreditCard, 
@@ -28,7 +28,9 @@ import {
   CheckCircle,
   AlertCircle,
   Home,
-  BookMarked
+  BookMarked,
+  Tag,
+  X
 } from 'lucide-react';
 
 const STEPS = [
@@ -53,6 +55,11 @@ export const CheckoutNew: React.FC = () => {
   const [addressMode, setAddressMode] = useState<'saved' | 'new'>(initialAddressMode);
   const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddress?.id || '');
   const [saveAddressForLater, setSaveAddressForLater] = useState(false);
+
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number; description: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: defaultAddress?.fullName || user?.fullName || user?.name || '',
@@ -175,6 +182,28 @@ export const CheckoutNew: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponLoading(true);
+    try {
+      const res: any = await couponAPI.validate(code, total, token || undefined);
+      const data = res?.data ?? res;
+      setAppliedCoupon({ code: data.code || code, discountAmount: data.discountAmount || 0, description: data.description || '' });
+      toast.success(`Áp dụng mã giảm giá thành công! Giảm ${formatPrice(data.discountAmount)}`);
+    } catch (err: any) {
+      const msg = err?.message || 'Mã giảm giá không hợp lệ';
+      toast.error(msg);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+  };
+
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) return;
 
@@ -226,6 +255,8 @@ export const CheckoutNew: React.FC = () => {
           quantity: item.quantity,
         })),
         total,
+        couponCode: appliedCoupon?.code || '',
+        couponDiscount: appliedCoupon?.discountAmount || 0,
         status: 'pending',
         paymentMethod: formData.paymentMethod,
         shippingAddress: {
@@ -332,7 +363,7 @@ export const CheckoutNew: React.FC = () => {
                                 className={`rounded-lg border p-4 text-left transition-colors ${
                                   selectedAddressId === address.id
                                     ? 'border-primary bg-primary/5'
-                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                    : 'border-gray-200 bg-white hover:border-primary/50 hover:bg-primary/5'
                                 }`}
                               >
                                 <div className="flex items-center justify-between mb-2">
@@ -586,7 +617,7 @@ export const CheckoutNew: React.FC = () => {
                     <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
                       formData.paymentMethod === 'cod' 
                         ? 'border-primary bg-primary/5' 
-                        : 'border-gray-200 hover:border-gray-300'
+                        : 'border-gray-200 hover:border-primary/50 hover:bg-primary/5'
                     }`}>
                       <Label htmlFor="cod" className="flex items-start gap-3 cursor-pointer">
                         <RadioGroupItem value="cod" id="cod" className="mt-1" />
@@ -728,7 +759,7 @@ export const CheckoutNew: React.FC = () => {
                                       <div className="mt-1 text-sm">
                                         <p className="text-muted-foreground line-through">Giá gốc: {formatPrice(originalUnitPrice)}</p>
                                         <p className="text-red-600">Giảm: {salePercent}%</p>
-                                        <p className="text-primary">Giá sale: {formatPrice(finalUnitPrice)}</p>
+                                        <p className="text-primary">Giá sau khi giảm: {formatPrice(finalUnitPrice)}</p>
                                       </div>
                                     ) : (
                                       <p className="text-sm text-primary mt-1">Giá bán: {formatPrice(finalUnitPrice)}</p>
@@ -791,6 +822,44 @@ export const CheckoutNew: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-28">
               <h3 className="text-xl font-light mb-6">Tóm tắt đơn hàng</h3>
               
+              {/* Coupon Input */}
+              <div className="mb-6 pb-6 border-b">
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Mã giảm giá</span>
+                </div>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between rounded-lg bg-green-50 border border-green-200 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium text-green-700">{appliedCoupon.code}</p>
+                      {appliedCoupon.description && <p className="text-xs text-green-600">{appliedCoupon.description}</p>}
+                    </div>
+                    <button onClick={handleRemoveCoupon} className="text-gray-400 hover:text-red-500 transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                      onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                      placeholder="Nhập mã giảm giá"
+                      className="flex-1 rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="bg-primary hover:bg-primary/90 text-white whitespace-nowrap"
+                    >
+                      {couponLoading ? '...' : 'Áp dụng'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-3 mb-6 pb-6 border-b">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tạm tính (giá gốc)</span>
@@ -800,6 +869,12 @@ export const CheckoutNew: React.FC = () => {
                   <span>Tổng giảm giá</span>
                   <span>-{formatPrice(totalDiscount)}</span>
                 </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Giảm (mã {appliedCoupon.code})</span>
+                    <span>-{formatPrice(appliedCoupon.discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Phí vận chuyển</span>
                   <span className="text-primary">Miễn phí</span>
@@ -808,7 +883,7 @@ export const CheckoutNew: React.FC = () => {
 
               <div className="flex justify-between items-center mb-6">
                 <span className="text-lg">Tổng cộng</span>
-                <span className="text-2xl text-primary font-light">{formatPrice(total)}</span>
+                <span className="text-2xl text-primary font-light">{formatPrice(Math.max(0, total - (appliedCoupon?.discountAmount ?? 0)))}</span>
               </div>
 
               {/* Mini Cart Items */}

@@ -122,7 +122,13 @@ export const Cart: React.FC = () => {
                 const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
                 const salePercent = Number(item.salePercent ?? 0);
                 const saleUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
-                const hasSale = salePercent > 0 && originalUnitPrice > saleUnitPrice;
+                const hasSale = salePercent > 0 || originalUnitPrice > saleUnitPrice;
+                const effectiveSalePercent =
+                  salePercent > 0
+                    ? salePercent
+                    : originalUnitPrice > 0
+                      ? Math.round(((originalUnitPrice - saleUnitPrice) / originalUnitPrice) * 100)
+                      : 0;
                 const lineOriginalPrice = originalUnitPrice * item.quantity;
                 const lineFinalPrice = saleUnitPrice * item.quantity;
                 
@@ -163,8 +169,8 @@ export const Cart: React.FC = () => {
                               <p className="text-sm text-muted-foreground line-through">
                                 Giá gốc: {formatPrice(originalUnitPrice)}
                               </p>
-                              <p className="text-sm text-red-600">Giảm: {salePercent}%</p>
-                              <p className="text-primary text-lg">Giá sale: {formatPrice(saleUnitPrice)}</p>
+                              <p className="text-sm text-red-600">Giảm: {effectiveSalePercent}%</p>
+                              <p className="text-primary text-lg">Giá sau khi giảm: {formatPrice(saleUnitPrice)}</p>
                             </>
                           ) : (
                             <p className="text-primary text-lg">Giá bán: {formatPrice(saleUnitPrice)}</p>

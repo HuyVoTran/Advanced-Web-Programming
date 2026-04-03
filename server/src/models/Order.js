@@ -93,6 +93,31 @@ const orderSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    couponCode: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    couponDiscount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    loyaltyPointsAwarded: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    loyaltyMultiplierApplied: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+    loyaltyRankApplied: {
+      type: String,
+      default: 'member',
+      trim: true,
+    },
     paymentMethod: {
       type: String,
       enum: ['cod', 'card', 'bank_transfer'],

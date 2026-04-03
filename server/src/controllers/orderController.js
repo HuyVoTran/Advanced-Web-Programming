@@ -1,6 +1,8 @@
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
+import Coupon from '../models/Coupon.js';
+import { calculateCouponDiscount } from './couponController.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination } from '../utils/validators.js';
 import sendEmail from '../utils/sendEmail.js';
@@ -43,6 +45,11 @@ const formatOrder = (order) => {
     totalDiscount:
       o.totalDiscount ??
       items.reduce((sum, item) => sum + Number(item.discountAmount || 0) * Number(item.quantity || 0), 0),
+    couponCode: o.couponCode || '',
+    couponDiscount: o.couponDiscount || 0,
+    loyaltyPointsAwarded: Number(o.loyaltyPointsAwarded || 0),
+    loyaltyMultiplierApplied: Number(o.loyaltyMultiplierApplied || 1),
+    loyaltyRankApplied: o.loyaltyRankApplied || 'member',
     shippingAddress,
     note: o.notes || '',
   };
@@ -135,7 +142,7 @@ const sendOrderCancelledEmail = async (order, reason = '') => {
 
 export const createOrder = async (req, res, next) => {
   try {
-    const { customerInfo, items, paymentMethod, notes } = req.body;
+    const { customerInfo, items, paymentMethod, notes, couponCode } = req.body;
 
     // Xác thực
     if (!customerInfo || !items || items.length === 0) {
@@ -187,14 +194,38 @@ export const createOrder = async (req, res, next) => {
       await product.save();
     }
 
+    // Áp dụng mã giảm giá coupon
+    let appliedCouponCode = '';
+    let couponDiscount = 0;
+
+    if (couponCode && typeof couponCode === 'string' && couponCode.trim()) {
+      const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase() });
+      if (
+        coupon &&
+        coupon.isActive &&
+        (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date()) &&
+        (coupon.usageLimit === 0 || coupon.usedCount < coupon.usageLimit) &&
+        (coupon.minOrderAmount === 0 || totalPrice >= coupon.minOrderAmount)
+      ) {
+        couponDiscount = calculateCouponDiscount(coupon, totalPrice);
+        appliedCouponCode = coupon.code;
+        coupon.usedCount += 1;
+        await coupon.save();
+      }
+    }
+
+    const finalTotalPrice = Math.max(0, totalPrice - couponDiscount);
+
     // Tạo đơn hàng
     const order = new Order({
       user: req.user ? req.user.id : null,
       customerInfo,
       items: orderItems,
-      totalPrice,
+      totalPrice: finalTotalPrice,
       totalOriginalPrice,
       totalDiscount,
+      couponCode: appliedCouponCode,
+      couponDiscount,
       paymentMethod: paymentMethod || 'cod',
       notes: notes || '',
     });

@@ -84,6 +84,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isDefault: false,
       },
       createdAt: raw?.createdAt || new Date().toISOString(),
+      couponCode: raw?.couponCode || '',
+      couponDiscount: Number(raw?.couponDiscount ?? 0),
+      loyaltyPointsAwarded: Number(raw?.loyaltyPointsAwarded ?? 0),
+      loyaltyMultiplierApplied: Number(raw?.loyaltyMultiplierApplied ?? 1),
+      loyaltyRankApplied: raw?.loyaltyRankApplied || 'member',
       guestInfo: customerInfo.fullName
         ? { name: customerInfo.fullName, email: customerInfo.email, phone: customerInfo.phone }
         : raw?.guestInfo,
@@ -131,6 +136,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         })),
         paymentMethod: normalizedPaymentMethod,
         notes: '',
+        couponCode: (order as any).couponCode || '',
+        couponDiscount: Number((order as any).couponDiscount ?? 0),
       };
 
       const created: any = await ordersAPI.create(payload, token || undefined);

@@ -107,7 +107,7 @@ export const AdminUsers: React.FC = () => {
             className={`bg-white rounded-lg border-2 p-6 text-left transition-colors ${
               roleFilter === item.role
                 ? 'border-[#C9A24D] bg-[#C9A24D]/5'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200 hover:border-[#C9A24D]/50 hover:bg-gray-50'
             }`}
           >
             <div className="flex items-center gap-3 mb-3">

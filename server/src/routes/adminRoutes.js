@@ -25,6 +25,21 @@ import {
   getNewsletterUsers,
   sendNewsletterBroadcast,
 } from '../controllers/newsletterAdminController.js';
+import {
+  getAllCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon,
+  getCouponStats,
+} from '../controllers/couponController.js';
+import {
+  createRewardItemAdmin,
+  deleteRewardItemAdmin,
+  getAllRewardItemsAdmin,
+  getRewardRedemptionStatsAdmin,
+  syncUserMembershipAdmin,
+  updateRewardItemAdmin,
+} from '../controllers/membershipController.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import { adminOnly } from '../middlewares/role.middleware.js';
 
@@ -74,5 +89,20 @@ router.delete('/news/:id', deleteNews);
 router.get('/newsletter/subscribers', getNewsletterSubscribers);
 router.get('/newsletter/users', getNewsletterUsers);
 router.post('/newsletter/send', sendNewsletterBroadcast);
+
+// Coupon Management
+router.get('/coupons', getAllCoupons);
+router.get('/coupons/stats', getCouponStats);
+router.post('/coupons', createCoupon);
+router.put('/coupons/:id', updateCoupon);
+router.delete('/coupons/:id', deleteCoupon);
+
+// Membership Reward Management
+router.get('/membership/rewards', getAllRewardItemsAdmin);
+router.post('/membership/rewards', createRewardItemAdmin);
+router.put('/membership/rewards/:id', updateRewardItemAdmin);
+router.delete('/membership/rewards/:id', deleteRewardItemAdmin);
+router.get('/membership/stats', getRewardRedemptionStatsAdmin);
+router.post('/membership/sync/:userId', syncUserMembershipAdmin);
 
 export default router;

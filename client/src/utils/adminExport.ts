@@ -42,6 +42,11 @@ type OrderDetailExport = {
   totalPrice: number;
   totalOriginalPrice?: number;
   totalDiscount?: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  loyaltyPointsAwarded?: number;
+  loyaltyMultiplierApplied?: number;
+  loyaltyRankApplied?: string;
   paymentMethod?: string;
   customerInfo?: {
     fullName?: string;
@@ -572,7 +577,7 @@ export const exportOrderInvoiceDetailPdf = async (order: OrderDetailExport) => {
           headerRows: 1,
           widths: [24, '*', 34, 56, 60, 74, 80],
           body: [
-            ['STT', 'Tên hàng hóa, dịch vụ', 'SL', 'Giảm', 'Đơn giá gốc', 'Đơn giá sale', 'Thành tiền'],
+            ['STT', 'Tên hàng hóa, dịch vụ', 'SL', 'Giảm', 'Đơn giá gốc', 'Đơn giá sau khi giảm', 'Thành tiền'],
             ...order.items.map((item, index) => {
               const quantity = Number(item.quantity || 0);
               const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
@@ -616,10 +621,18 @@ export const exportOrderInvoiceDetailPdf = async (order: OrderDetailExport) => {
                   body: [
                     ['Tạm tính hàng hóa', formatCurrency(lineSubtotal)],
                     ['Tổng giảm giá', `-${formatCurrency(totalDiscount)}`],
+                    ...(order.couponCode ? [[
+                      `Mã giảm giá (${order.couponCode})`,
+                      `-${formatCurrency(Number(order.couponDiscount ?? 0))}`
+                    ]] : []),
                     ['Giá trị trước thuế', formatCurrency(preTaxAmount)],
                     [`Thuế GTGT (${(COMPANY_INFO.vatRate * 100).toFixed(0)}%)`, formatCurrency(vatAmount)],
                     ['Phí vận chuyển', formatCurrency(shippingFee)],
                     [{ text: 'TỔNG THANH TOÁN', bold: true }, { text: formatCurrency(grandTotal), bold: true }],
+                    ...(order.loyaltyPointsAwarded && order.loyaltyPointsAwarded > 0 ? [[
+                      { text: '\ud83c\udfc5 Điểm tích lũy từ đơn hàng này', color: '#b45309' },
+                      { text: `+${order.loyaltyPointsAwarded} điểm (hạng ${order.loyaltyRankApplied || 'member'} \u00b7 x${order.loyaltyMultiplierApplied ?? 1})`, color: '#b45309' },
+                    ]] : []),
                   ],
                 },
                 layout: 'lightHorizontalLines',
@@ -698,7 +711,16 @@ export const exportOrderInvoiceDetailExcel = (
           .join(', '),
     },
     { 'Thông tin': 'Tổng giảm giá (VNĐ)', 'Giá trị': Number(computedTotalDiscount || 0) },
+    ...(order.couponCode ? [
+      { 'Thông tin': 'Mã giảm giá', 'Giá trị': order.couponCode },
+      { 'Thông tin': 'Tiền giảm qua mã (VNĐ)', 'Giá trị': Number(order.couponDiscount ?? 0) },
+    ] : []),
     { 'Thông tin': 'Tổng thanh toán (VNĐ)', 'Giá trị': Number(order.totalPrice || 0) },
+    ...(order.loyaltyPointsAwarded && order.loyaltyPointsAwarded > 0 ? [
+      { 'Thông tin': 'Điểm tích lũy từ đơn hàng', 'Giá trị': `+${order.loyaltyPointsAwarded} điểm` },
+      { 'Thông tin': 'Hạng thành viên áp dụng', 'Giá trị': order.loyaltyRankApplied || 'member' },
+      { 'Thông tin': 'Hệ số nhân điểm', 'Giá trị': `x${order.loyaltyMultiplierApplied ?? 1}` },
+    ] : []),
   ];
 
   const detailRows = order.items.map((item, index) => ({
@@ -707,7 +729,7 @@ export const exportOrderInvoiceDetailExcel = (
     'Số lượng': item.quantity,
     'Giảm giá (%)': Number(item.salePercent ?? 0),
     'Đơn giá gốc (VNĐ)': Number(item.originalPrice ?? item.price ?? 0),
-    'Đơn giá sale (VNĐ)': Number(item.finalPrice ?? item.price ?? 0),
+    'Đơn giá sau khi giảm (VNĐ)': Number(item.finalPrice ?? item.price ?? 0),
     'Thành tiền (VNĐ)': Number(item.finalPrice ?? item.price ?? 0) * Number(item.quantity || 0),
     'Tiền giảm (VNĐ)': Number(item.discountAmount ?? Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0))) * Number(item.quantity || 0),
   }));

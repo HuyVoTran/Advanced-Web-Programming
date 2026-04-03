@@ -8,6 +8,9 @@ export interface User {
   fullName?: string;
   email: string;
   phone: string;
+  loyaltyPoints?: number;
+  totalSpent?: number;
+  totalPointsRedeemed?: number;
   addresses: Address[];
   favoriteProductIds?: string[];
   /** convenience flag derived from `role === 'admin'` */
@@ -56,6 +59,11 @@ export interface Order {
   total: number;
   totalOriginalPrice?: number;
   totalDiscount?: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  loyaltyPointsAwarded?: number;
+  loyaltyMultiplierApplied?: number;
+  loyaltyRankApplied?: string;
   status: 'pending' | 'confirmed' | 'shipping' | 'completed' | 'cancelled';
   cancelReason?: string;
   paymentMethod?: 'cod' | 'card' | 'bank_transfer';
@@ -143,6 +151,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fullName: u.fullName || u.user?.fullName,
       email: u.email || u.user?.email || '',
       phone: u.phone || u.user?.phone || '',
+      loyaltyPoints: Number(u.loyaltyPoints ?? u.user?.loyaltyPoints ?? 0),
+      totalSpent: Number(u.totalSpent ?? u.user?.totalSpent ?? 0),
+      totalPointsRedeemed: Number(u.totalPointsRedeemed ?? u.user?.totalPointsRedeemed ?? 0),
       addresses: Array.isArray(rawAddresses) ? rawAddresses.map(normalizeAddress) : [],
       favoriteProductIds: Array.isArray(u.favoriteProductIds || u.favorites || u.user?.favorites)
         ? (u.favoriteProductIds || u.favorites || u.user?.favorites).map((item: any) => String(item?._id || item?.id || item))

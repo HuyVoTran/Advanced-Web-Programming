@@ -215,6 +215,58 @@ export const adminApi = {
     return response.data.data;
   },
 
+  // ============ COUPONS ============
+  getAllCoupons: async () => {
+    const response = await apiClient.get('/admin/coupons');
+    return response.data.data;
+  },
+
+  getCouponStats: async () => {
+    const response = await apiClient.get('/admin/coupons/stats');
+    return response.data.data;
+  },
+
+  createCoupon: async (data: any) => {
+    const response = await apiClient.post('/admin/coupons', data);
+    return response.data.data;
+  },
+
+  updateCoupon: async (id: string, data: any) => {
+    const response = await apiClient.put(`/admin/coupons/${id}`, data);
+    return response.data.data;
+  },
+
+  deleteCoupon: async (id: string) => {
+    const response = await apiClient.delete(`/admin/coupons/${id}`);
+    return response.data.data;
+  },
+
+  // ============ MEMBERSHIP ============
+  getMembershipRewards: async () => {
+    const response = await apiClient.get('/admin/membership/rewards');
+    return response.data.data;
+  },
+
+  createMembershipReward: async (payload: any) => {
+    const response = await apiClient.post('/admin/membership/rewards', payload);
+    return response.data.data;
+  },
+
+  updateMembershipReward: async (id: string, payload: any) => {
+    const response = await apiClient.put(`/admin/membership/rewards/${id}`, payload);
+    return response.data.data;
+  },
+
+  deleteMembershipReward: async (id: string) => {
+    const response = await apiClient.delete(`/admin/membership/rewards/${id}`);
+    return response.data.data;
+  },
+
+  getMembershipStats: async () => {
+    const response = await apiClient.get('/admin/membership/stats');
+    return response.data.data;
+  },
+
   // ============ UPLOADS ============
   uploadCategoryImage: async (id: string, file: File) => {
     const formData = new FormData();

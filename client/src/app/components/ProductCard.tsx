@@ -60,6 +60,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
       productId,
       name: product.name,
       price: salePrice,
+      originalPrice: basePrice,
+      salePercent,
+      discountAmount: Math.max(0, basePrice - salePrice),
+      finalPrice: salePrice,
       image: imageUrl,
       quantity: 1,
     });

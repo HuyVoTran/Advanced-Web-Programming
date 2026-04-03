@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ShoppingCart, Heart, Share2 } from 'lucide-react';
-import { formatPrice } from '@/utils/constants';
+import { calculateDiscountedPrice, formatPrice } from '@/utils/constants';
 import { Product } from '../../../contexts/CartContext';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { Button } from '../../components/ui/button';
@@ -26,12 +26,19 @@ export const QuickView: React.FC<QuickViewProps> = ({ product, isOpen, onClose }
   const productId = product.id || product._id || '';
   const images = product.images || [product.image || 'jewelry'];
   const imageUrl = images[selectedImageIndex] || 'jewelry';
+  const basePrice = Number(product.originalPrice || product.price || 0);
+  const salePercent = Number(product.salePercent || 0);
+  const finalPrice = calculateDiscountedPrice(basePrice, salePercent);
 
   const handleAddToCart = () => {
     addItem({
       productId: productId || '',
       name: product.name,
-      price: product.price,
+      price: finalPrice,
+      originalPrice: basePrice,
+      salePercent,
+      discountAmount: Math.max(0, basePrice - finalPrice),
+      finalPrice,
       image: images[0] || '',
       quantity,
     });

@@ -45,11 +45,19 @@ interface OrderDetail {
     productId: string;
     productName: string;
     price: number;
+    originalPrice?: number;
+    salePercent?: number;
+    discountAmount?: number;
+    finalPrice?: number;
     quantity: number;
     image?: string;
   }>;
   itemCount: number;
   totalPrice: number;
+  totalOriginalPrice?: number;
+  totalDiscount?: number;
+  couponCode?: string;
+  couponDiscount?: number;
   shippingAddress: {
     street: string;
     ward: string;
@@ -62,6 +70,9 @@ interface OrderDetail {
   createdAt: string;
   updatedAt: string;
   note?: string;
+  loyaltyPointsAwarded?: number;
+  loyaltyMultiplierApplied?: number;
+  loyaltyRankApplied?: string;
 }
 
 function formatPrice(price: number): string {
@@ -161,7 +172,17 @@ export const AdminOrderDetail: React.FC = () => {
     );
   }
 
-  const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalOriginalPrice = Number(
+    order.totalOriginalPrice ??
+      order.items.reduce((sum, item) => sum + Number(item.originalPrice ?? item.price ?? 0) * item.quantity, 0)
+  );
+  const totalDiscount = Number(
+    order.totalDiscount ??
+      order.items.reduce((sum, item) => {
+        const fallbackDiscount = Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0));
+        return sum + Number(item.discountAmount ?? fallbackDiscount) * item.quantity;
+      }, 0)
+  );
 
   return (
     <div>
@@ -189,7 +210,7 @@ export const AdminOrderDetail: React.FC = () => {
                   toast.error(error?.message || 'Không thể xuất hóa đơn chi tiết');
                 }
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors"
             >
               <Download className="w-4 h-4" />
               Xuất hóa đơn chi tiết PDF
@@ -204,7 +225,7 @@ export const AdminOrderDetail: React.FC = () => {
                   toast.error(error?.message || 'Không thể xuất hóa đơn chi tiết Excel');
                 }
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors"
             >
               <Download className="w-4 h-4" />
               Xuất hóa đơn chi tiết Excel
@@ -225,31 +246,66 @@ export const AdminOrderDetail: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {order.items.map((item, index) => (
-                <div key={index} className="flex gap-4 pb-4 border-b border-gray-200 last:border-0">
-                  <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Package className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="mb-2">{item.productName}</h3>
-                    <div className="flex items-center justify-between text-sm text-gray-600">
-                      <span>Số lượng: {item.quantity}</span>
-                      <span>{formatPrice(item.price)}</span>
+              {order.items.map((item, index) => {
+                const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
+                const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
+                const salePercent = Number(item.salePercent ?? 0);
+                const hasSale = salePercent > 0 && originalUnitPrice > finalUnitPrice;
+
+                return (
+                  <div key={index} className="flex gap-4 pb-4 border-b border-gray-200 last:border-0">
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <Package className="w-10 h-10 text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="mb-2">{item.productName}</h3>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="space-y-1 text-gray-600">
+                          <p>Số lượng: {item.quantity}</p>
+                          {hasSale && <p>Giá gốc: {formatPrice(originalUnitPrice)}</p>}
+                          {hasSale && <p className="text-red-600">Giảm giá: {salePercent}%</p>}
+                          {hasSale && <p className="text-[#C9A24D]">Giá sau khi giảm: {formatPrice(finalUnitPrice)}</p>}
+                        </div>
+                        <div className="text-right">
+                          {hasSale && (
+                            <p className="text-xs text-gray-500 line-through">
+                              {formatPrice(originalUnitPrice * item.quantity)}
+                            </p>
+                          )}
+                          <p className="text-sm text-[#C9A24D]">{formatPrice(finalUnitPrice * item.quantity)}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-6 pt-6 border-t-2 border-gray-200 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tạm tính:</span>
-                <span>{formatPrice(subtotal)}</span>
+                <span className="text-gray-600">Tạm tính (giá gốc):</span>
+                <span>{formatPrice(totalOriginalPrice)}</span>
               </div>
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Tổng giảm giá:</span>
+                <span>-{formatPrice(totalDiscount)}</span>
+              </div>
+              {order.couponCode && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Mã giảm giá ({order.couponCode}):</span>
+                  <span>-{formatPrice(order.couponDiscount ?? 0)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-lg pt-2">
                 <span>Tổng cộng:</span>
                 <span className="text-[#C9A24D]">{formatPrice(order.totalPrice)}</span>
               </div>
+              {order.status === 'completed' && (order.loyaltyPointsAwarded ?? 0) > 0 && (
+                <div className="flex justify-between text-sm text-amber-600 pt-1">
+                  <span>🏅 Điểm tích lũy</span>
+                  <span>+{order.loyaltyPointsAwarded} điểm (x{order.loyaltyMultiplierApplied ?? 1}, hạng {order.loyaltyRankApplied || 'member'})</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -398,6 +454,29 @@ export const AdminOrderDetail: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {order.status === 'completed' && (order.loyaltyPointsAwarded ?? 0) > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">🏅</span>
+                <h2 className="text-xl">Điểm Tích Lũy</h2>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <div className="text-gray-600 mb-1">Điểm được cộng:</div>
+                  <div className="text-amber-600 font-semibold text-lg">+{order.loyaltyPointsAwarded} điểm</div>
+                </div>
+                <div>
+                  <div className="text-gray-600 mb-1">Hạng thành viên:</div>
+                  <div className="capitalize">{order.loyaltyRankApplied || 'member'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-600 mb-1">Hệ số nhân:</div>
+                  <div>x{order.loyaltyMultiplierApplied ?? 1}</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
