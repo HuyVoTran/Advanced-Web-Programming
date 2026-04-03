@@ -104,33 +104,6 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
             </ul>
-
-            <div className="mt-6 text-center">
-              <label className="block text-xs uppercase tracking-wide text-gray-500 mb-2">Tiền tệ</label>
-              <select
-                value={currency}
-                onChange={(e) => {
-                  const nextCurrency = e.target.value as 'vnd' | 'usd';
-                  setCurrency(nextCurrency);
-                  setPreferredCurrency(nextCurrency);
-                }}
-                className="w-full max-w-[260px] mx-auto bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
-              >
-                <option value="vnd">VNĐ - Đồng Việt Nam</option>
-                <option value="usd">USD - US Dollar</option>
-              </select>
-
-              <button
-                type="button"
-                onClick={() => {
-                  window.localStorage.removeItem(PROMOTION_DISMISSED_KEY);
-                  window.dispatchEvent(new CustomEvent(PROMOTION_RESET_EVENT));
-                }}
-                className="mt-3 text-xs text-[#C9A24D] hover:text-[#D7B56C] transition-colors"
-              >
-                Hiện lại promo header
-              </button>
-            </div>
           </div>
 
           {/* Contact Info */}
@@ -153,6 +126,33 @@ export const Footer: React.FC = () => {
               </li>
             </ul>
           </div>
+        </div>
+
+        <div className="mt-10 flex flex-col items-center">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 mb-2 text-center">Tiền tệ</label>
+          <select
+            value={currency}
+            onChange={(e) => {
+              const nextCurrency = e.target.value as 'vnd' | 'usd';
+              setCurrency(nextCurrency);
+              setPreferredCurrency(nextCurrency);
+            }}
+            className="w-full max-w-[300px] bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+          >
+            <option value="vnd">🇻🇳 VNĐ - Đồng Việt Nam</option>
+            <option value="usd">🇺🇸 USD - US Dollar</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={() => {
+              window.localStorage.removeItem(PROMOTION_DISMISSED_KEY);
+              window.dispatchEvent(new CustomEvent(PROMOTION_RESET_EVENT));
+            }}
+            className="mt-3 text-xs text-gray-400 hover:text-[#C9A24D] transition-colors"
+          >
+            Hiện lại promo header
+          </button>
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center">
