@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProductCard } from '@/app/components/ProductCard';
@@ -27,6 +27,7 @@ import { notify } from '@/utils/notifications';
 import { formatPrice } from '@/utils/constants';
 
 export const Products: React.FC = () => {
+  const ITEMS_PER_BATCH = 9;
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const brandParam = searchParams.get('brand');
@@ -53,6 +54,9 @@ export const Products: React.FC = () => {
   const [saleOnly, setSaleOnly] = useState(false);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     setPriceRangeDraft(priceRange);
@@ -244,6 +248,37 @@ export const Products: React.FC = () => {
 
     return filtered;
   }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, favoritesOnly, saleOnly, sortBy, apiProducts, categories, isFavorite]);
+
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount]
+  );
+
+  const hasMoreProducts = visibleCount < filteredProducts.length;
+
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_BATCH);
+  }, [filteredProducts.length, searchQuery, selectedCategories, selectedBrands, selectedMaterials, favoritesOnly, saleOnly, sortBy, priceRange, ITEMS_PER_BATCH]);
+
+  useEffect(() => {
+    return () => {
+      if (loadMoreTimeoutRef.current) {
+        window.clearTimeout(loadMoreTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || !hasMoreProducts) {
+      return;
+    }
+
+    setLoadingMore(true);
+    loadMoreTimeoutRef.current = window.setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + ITEMS_PER_BATCH, filteredProducts.length));
+      setLoadingMore(false);
+    }, 350);
+  }, [loadingMore, hasMoreProducts, ITEMS_PER_BATCH, filteredProducts.length]);
 
   const toggleCategory = useCallback((categoryId: string) => {
     setSelectedCategories(prev =>
@@ -611,9 +646,9 @@ export const Products: React.FC = () => {
 
           {/* Results Count */}
           <p className="text-sm text-muted-foreground">
-            {loadingProducts ? 'Đang tải...' : filteredProducts.length === apiProducts.length 
-              ? `Hiển thị tất cả ${filteredProducts.length} sản phẩm`
-              : `Tìm thấy ${filteredProducts.length} sản phẩm`
+            {loadingProducts ? 'Đang tải...' : filteredProducts.length === 0
+              ? `Hiển thị 0 / 0 sản phẩm (tổng ${apiProducts.length})`
+              : `Hiển thị ${visibleProducts.length} / ${filteredProducts.length} sản phẩm (tổng ${apiProducts.length})`
             }
           </p>
         </div>
@@ -651,7 +686,7 @@ export const Products: React.FC = () => {
                 }
               >
                 <AnimatePresence mode="popLayout">
-                  {filteredProducts.map((product, index) => (
+                  {visibleProducts.map((product, index) => (
                     <motion.div
                       key={product._id || product.id}
                       layout
@@ -682,6 +717,22 @@ export const Products: React.FC = () => {
                   }
                 }}
               />
+            )}
+
+            {!loadingProducts && !errorProducts && visibleProducts.length > 0 && hasMoreProducts && (
+              <div className="mt-10 flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="min-w-[220px]"
+                >
+                  {loadingMore
+                    ? 'Đang tải thêm...'
+                    : `Xem thêm ${Math.min(ITEMS_PER_BATCH, filteredProducts.length - visibleCount)} sản phẩm`}
+                </Button>
+              </div>
             )}
           </div>
         </div>
