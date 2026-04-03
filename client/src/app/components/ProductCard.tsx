@@ -28,11 +28,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const imageUrl = getPrimaryProductImage(product) || 'https://source.unsplash.com/600x800/?jewelry';
   const favorite = isFavorite(productId);
   const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
+  const basePrice = Number(product.originalPrice || product.price || 0);
   const salePercent = Number(product.salePercent || 0);
   const hasSale = salePercent > 0;
   const salePrice = hasSale
-    ? Math.max(0, Math.round(Number(product.price || 0) * (1 - salePercent / 100)))
-    : Number(product.price || 0);
+    ? Math.max(0, Math.round(basePrice * (1 - salePercent / 100)))
+    : basePrice;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -154,7 +155,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
             <div className="flex items-center justify-between mt-4">
               <div className="flex flex-col">
                 {hasSale && (
-                  <span className="text-sm text-gray-500 line-through">{formatPrice(product.price)}</span>
+                  <span className="text-sm text-gray-500 line-through">{formatPrice(basePrice)}</span>
                 )}
                 <p className={`text-xl ${hasSale ? 'text-red-600' : 'text-primary'}`}>{formatPrice(salePrice)}</p>
               </div>
@@ -231,7 +232,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
             <p className="text-sm text-white/80 mb-1">{categoryName}</p>
             <div className="mb-4 text-center">
               {hasSale && (
-                <p className="text-sm text-white/70 line-through">{formatPrice(product.price)}</p>
+                <p className="text-sm text-white/70 line-through">{formatPrice(basePrice)}</p>
               )}
               <p className={`text-lg font-light tracking-wide ${hasSale ? 'text-red-400' : 'text-[#C9A24D]'}`}>
                 {formatPrice(salePrice)}
@@ -254,7 +255,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
           <h3 className="text-sm text-gray-900 line-clamp-1">{product.name}</h3>
           <div className="space-y-0.5">
             {hasSale && (
-              <p className="text-xs text-gray-500 line-through">{formatPrice(product.price)}</p>
+              <p className="text-xs text-gray-500 line-through">{formatPrice(basePrice)}</p>
             )}
             <p className={`text-base ${hasSale ? 'text-red-600' : 'text-[#C9A24D]'}`}>{formatPrice(salePrice)}</p>
           </div>

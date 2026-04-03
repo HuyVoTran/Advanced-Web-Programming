@@ -49,6 +49,7 @@ export const Products: React.FC = () => {
   const [priceRangeDraft, setPriceRangeDraft] = useState<[number, number]>([0, MAX_PRICE]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [saleOnly, setSaleOnly] = useState(false);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -109,6 +110,10 @@ export const Products: React.FC = () => {
       items.push('Sản phẩm yêu thích');
     }
 
+    if (saleOnly) {
+      items.push('Đang giảm giá');
+    }
+
     if (sortBy !== 'featured') {
       const sortLabels: Record<string, string> = {
         newest: 'Mới nhất',
@@ -121,7 +126,7 @@ export const Products: React.FC = () => {
     }
 
     return items;
-  }, [selectedCategories, selectedBrands, selectedMaterials, priceRange, MAX_PRICE, searchQuery, sortBy, favoritesOnly, categories, apiBrands]);
+  }, [selectedCategories, selectedBrands, selectedMaterials, priceRange, MAX_PRICE, searchQuery, sortBy, favoritesOnly, saleOnly, categories, apiBrands]);
 
   const normalizePriceRange = useCallback((min: number, max: number): [number, number] => {
     const safeMin = Number.isFinite(min) ? Math.max(0, min) : 0;
@@ -196,7 +201,8 @@ export const Products: React.FC = () => {
           return productCategoryId === category._id || productCategoryName === category.name;
         });
 
-      const saleMatch = !hasSaleCategory || Number(product.salePercent || 0) > 0;
+      const requiresSale = hasSaleCategory || saleOnly;
+      const saleMatch = !requiresSale || Number(product.salePercent || 0) > 0;
 
       const productBrandId = typeof product.brand === 'object'
         ? product.brand?._id
@@ -241,7 +247,7 @@ export const Products: React.FC = () => {
     }
 
     return filtered;
-  }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, favoritesOnly, sortBy, apiProducts, categories, isFavorite]);
+  }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, favoritesOnly, saleOnly, sortBy, apiProducts, categories, isFavorite]);
 
   const toggleCategory = useCallback((categoryId: string) => {
     setSelectedCategories(prev =>
@@ -273,6 +279,7 @@ export const Products: React.FC = () => {
     setPriceRange([0, MAX_PRICE]);
     setSelectedMaterials([]);
     setFavoritesOnly(false);
+    setSaleOnly(false);
   }, [MAX_PRICE]);
 
   const FilterPanel = () => (
@@ -402,6 +409,22 @@ export const Products: React.FC = () => {
         </div>
       </div>
 
+      <div>
+        <h3 className="text-lg mb-4">Khuyến mãi</h3>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="sale-only"
+              checked={saleOnly}
+              onCheckedChange={() => setSaleOnly((prev) => !prev)}
+            />
+            <Label htmlFor="sale-only" className="text-sm cursor-pointer">
+              Chỉ hiển thị sản phẩm đang giảm giá
+            </Label>
+          </div>
+        </div>
+      </div>
+
       <Button
         type="button"
         onClick={applyPriceRangeFromInputs}
@@ -477,7 +500,13 @@ export const Products: React.FC = () => {
                   onRemove={() => setFavoritesOnly(false)}
                 />
               )}
-              {(selectedCategories.length > 0 || selectedBrands.length > 0 || selectedMaterials.length > 0 || favoritesOnly) && (
+              {saleOnly && (
+                <ActiveFilterTag
+                  label="Đang giảm giá"
+                  onRemove={() => setSaleOnly(false)}
+                />
+              )}
+              {(selectedCategories.length > 0 || selectedBrands.length > 0 || selectedMaterials.length > 0 || favoritesOnly || saleOnly) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -512,6 +541,14 @@ export const Products: React.FC = () => {
               >
                 <Heart className={`w-4 h-4 mr-2 ${favoritesOnly ? 'fill-current' : ''}`} />
                 Yêu thích
+              </Button>
+              <Button
+                type="button"
+                variant={saleOnly ? 'default' : 'outline'}
+                onClick={() => setSaleOnly((prev) => !prev)}
+                className={saleOnly ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+              >
+                Đang giảm giá
               </Button>
               {/* View Mode Toggle */}
               <div className="hidden sm:flex items-center gap-1 border border-gray-200 rounded-md p-1">

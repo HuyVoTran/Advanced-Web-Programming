@@ -6,6 +6,7 @@ export interface Product {
   id?: string;
   name: string;
   price: number;
+  originalPrice?: number | null;
   salePercent?: number;
   image?: string;
   images?: string[];
@@ -88,10 +89,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const primaryImage = Array.isArray(product.images) && product.images.length > 0
       ? product.images[0]
       : product.image || '';
+    const basePrice = Number(product.originalPrice || product.price || 0);
     const salePercent = Number(product.salePercent || 0);
     const finalPrice = salePercent > 0
-      ? Math.max(0, Math.round(product.price * (1 - salePercent / 100)))
-      : product.price;
+      ? Math.max(0, Math.round(basePrice * (1 - salePercent / 100)))
+      : basePrice;
 
     if (!productId) {
       return;

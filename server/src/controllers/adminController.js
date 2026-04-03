@@ -143,6 +143,8 @@ export const createNews = async (req, res, next) => {
 export const createProduct = async (req, res, next) => {
   try {
     const { name, price, description, material, images, category, brand, isFeatured, stock, salePercent } = req.body;
+    const parsedPrice = Number(price);
+    const parsedSalePercent = Math.max(0, Math.min(100, Number(salePercent || 0)));
 
     const errors = validateProductData(req.body);
     if (errors.length > 0) {
@@ -151,7 +153,7 @@ export const createProduct = async (req, res, next) => {
 
     const product = new Product({
       name,
-      price,
+      price: parsedPrice,
       description,
       material,
       images,
@@ -159,7 +161,8 @@ export const createProduct = async (req, res, next) => {
       brand,
       isFeatured: isFeatured || false,
       stock: stock || 0,
-      salePercent: salePercent || 0,
+      salePercent: parsedSalePercent,
+      originalPrice: parsedSalePercent > 0 ? parsedPrice : null,
     });
 
     await product.save();
@@ -175,12 +178,14 @@ export const updateProduct = async (req, res, next) => {
     const { id } = req.params;
     const { name, price, description, material, images, category, brand, isFeatured, stock, isActive, salePercent } =
       req.body;
+    const parsedPrice = Number(price);
+    const parsedSalePercent = Math.max(0, Math.min(100, Number(salePercent || 0)));
 
     const product = await Product.findByIdAndUpdate(
       id,
       {
         name,
-        price,
+        price: parsedPrice,
         description,
         material,
         images,
@@ -189,7 +194,8 @@ export const updateProduct = async (req, res, next) => {
         isFeatured,
         stock,
         isActive,
-        salePercent,
+        salePercent: parsedSalePercent,
+        originalPrice: parsedSalePercent > 0 ? parsedPrice : null,
       },
       { new: true, runValidators: true }
     );

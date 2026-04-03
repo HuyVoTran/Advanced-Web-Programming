@@ -79,11 +79,12 @@ export const ProductDetail: React.FC = () => {
       : product.material;
   }, [product]);
 
+  const basePrice = Number(product?.originalPrice || product?.price || 0);
   const salePercent = Number(product?.salePercent || 0);
   const hasSale = salePercent > 0;
   const salePrice = hasSale
-    ? Math.max(0, Math.round(Number(product?.price || 0) * (1 - salePercent / 100)))
-    : Number(product?.price || 0);
+    ? Math.max(0, Math.round(basePrice * (1 - salePercent / 100)))
+    : basePrice;
 
   const favoriteProducts = useMemo(() => {
     if (!product) return [];
@@ -238,7 +239,7 @@ export const ProductDetail: React.FC = () => {
               </h1>
               <div className="mb-6">
                 {hasSale && (
-                  <p className="text-lg text-gray-500 line-through mb-1">{formatPrice(product.price)}</p>
+                  <p className="text-lg text-gray-500 line-through mb-1">{formatPrice(basePrice)}</p>
                 )}
                 <p className={`text-3xl ${hasSale ? 'text-red-600' : 'text-[#C9A24D]'}`}>
                   {formatPrice(salePrice)}
