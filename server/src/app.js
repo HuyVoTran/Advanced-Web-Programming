@@ -15,6 +15,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../../');
+const clientDistPath = path.join(projectRoot, 'client', 'dist');
 
 // Khởi tạo ứng dụng Express
 const app = express();
@@ -40,6 +41,14 @@ app.get('/health', (req, res) => {
 
 // Tuyến đường API
 app.use('/api', routes);
+
+// Serve frontend build từ Vite (single hosting trên Render)
+app.use(express.static(clientDistPath));
+
+// SPA fallback: mọi route không phải API sẽ trả về index.html
+app.get(/^\/(?!api(?:\/|$)|api-docs(?:\/|$)|health(?:\/|$)).*/, (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
+});
 
 // Trình xử lý 404
 app.use(notFoundHandler);
