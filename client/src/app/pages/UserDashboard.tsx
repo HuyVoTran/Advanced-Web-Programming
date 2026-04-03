@@ -121,7 +121,7 @@ export const UserDashboard: React.FC = () => {
                   <ShoppingBag className="w-5 h-5 text-green-500" />
                 </div>
                 <div className="text-2xl">
-                  {userOrders.filter(o => o.status === 'delivered').length}
+                  {userOrders.filter(o => ['completed', 'delivered'].includes(o.status)).length}
                 </div>
               </div>
 

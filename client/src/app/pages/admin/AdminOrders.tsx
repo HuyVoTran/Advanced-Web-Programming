@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Eye, AlertCircle, Download } from 'lucide-react';
 import { useAdminFetch } from '@/hooks/useCustomHooks';
@@ -6,7 +6,15 @@ import { adminApi } from '@/services/adminApi';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { exportOrderStatisticsPdf, exportOrdersInvoiceListPdf } from '@/utils/adminExport';
+import {
+  ExportPeriodType,
+  exportOrderStatisticsExcel,
+  exportOrderStatisticsPdf,
+  exportOrdersInvoiceListExcel,
+  exportOrdersInvoiceListPdf,
+  filterOrdersByPeriod,
+  getExportPeriodLabel,
+} from '@/utils/adminExport';
 
 interface Order {
   _id: string;
@@ -37,6 +45,8 @@ const formatPrice = (value: number) => {
 export const AdminOrders: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [exportPeriodType, setExportPeriodType] = useState<ExportPeriodType>('all');
+  const [exportPeriodValue, setExportPeriodValue] = useState('');
 
   // Fetch orders
   const { data: allOrders, loading, error } = useAdminFetch<Order[]>(
@@ -59,6 +69,16 @@ export const AdminOrders: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const exportPeriod = {
+    type: exportPeriodType,
+    value: exportPeriodValue,
+  };
+
+  const ordersForExport = useMemo(
+    () => filterOrdersByPeriod(filteredOrders, exportPeriod),
+    [filteredOrders, exportPeriodType, exportPeriodValue]
+  );
+
   const totalRevenue = (allOrders || []).reduce((sum, order) => {
     if (order.status !== 'cancelled') {
       return sum + order.totalPrice;
@@ -66,21 +86,75 @@ export const AdminOrders: React.FC = () => {
     return sum;
   }, 0);
 
-  const handleExportStatistics = () => {
+  const validateExportPeriod = () => {
+    if (exportPeriodType !== 'all' && !exportPeriodValue) {
+      toast.error('Vui lòng chọn giá trị ngày/tháng/năm để xuất');
+      return false;
+    }
+    return true;
+  };
+
+  const handleExportStatisticsPdf = () => {
     try {
-      exportOrderStatisticsPdf(filteredOrders);
-      toast.success('Đã xuất thống kê đơn hàng PDF');
+      if (!validateExportPeriod()) {
+        return;
+      }
+      if (ordersForExport.length === 0) {
+        toast.error('Không có dữ liệu theo phạm vi đã chọn');
+        return;
+      }
+      exportOrderStatisticsPdf(filteredOrders, exportPeriod);
+      toast.success(`Đã xuất thống kê PDF (${getExportPeriodLabel(exportPeriod)})`);
     } catch (error) {
       toast.error('Xuất thống kê thất bại');
     }
   };
 
-  const handleExportInvoices = () => {
+  const handleExportStatisticsExcel = () => {
     try {
-      exportOrdersInvoiceListPdf(filteredOrders);
-      toast.success('Đã xuất danh sách hóa đơn PDF');
+      if (!validateExportPeriod()) {
+        return;
+      }
+      if (ordersForExport.length === 0) {
+        toast.error('Không có dữ liệu theo phạm vi đã chọn');
+        return;
+      }
+      exportOrderStatisticsExcel(filteredOrders, exportPeriod);
+      toast.success(`Đã xuất thống kê Excel (${getExportPeriodLabel(exportPeriod)})`);
     } catch (error) {
-      toast.error('Xuất danh sách hóa đơn thất bại');
+      toast.error('Xuất thống kê Excel thất bại');
+    }
+  };
+
+  const handleExportInvoicesPdf = () => {
+    try {
+      if (!validateExportPeriod()) {
+        return;
+      }
+      if (ordersForExport.length === 0) {
+        toast.error('Không có dữ liệu theo phạm vi đã chọn');
+        return;
+      }
+      exportOrdersInvoiceListPdf(filteredOrders, exportPeriod);
+      toast.success(`Đã xuất danh sách hóa đơn PDF (${getExportPeriodLabel(exportPeriod)})`);
+    } catch (error) {
+      toast.error('Xuất danh sách hóa đơn PDF thất bại');
+    }
+  };
+
+  const handleExportInvoicesExcel = () => {
+    try {
+      if (!validateExportPeriod()) {
+        return;
+      }
+      if (ordersForExport.length === 0) {
+        toast.error('Không có dữ liệu theo phạm vi đã chọn');
+        return;
+      }
+      exportOrdersInvoiceListExcel(filteredOrders, exportPeriod);
+      toast.success(`Đã xuất danh sách hóa đơn Excel (${getExportPeriodLabel(exportPeriod)})`);
+    } catch (error) {
+      toast.error('Xuất danh sách hóa đơn Excel thất bại');
     }
   };
 
@@ -126,10 +200,55 @@ export const AdminOrders: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <select
+              value={exportPeriodType}
+              onChange={(e) => {
+                const nextType = e.target.value as ExportPeriodType;
+                setExportPeriodType(nextType);
+                setExportPeriodValue('');
+              }}
+              className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+            >
+              <option value="all">Toàn thời gian</option>
+              <option value="day">Theo ngày</option>
+              <option value="month">Theo tháng</option>
+              <option value="year">Theo năm</option>
+            </select>
+
+            {exportPeriodType === 'day' && (
+              <input
+                type="date"
+                value={exportPeriodValue}
+                onChange={(e) => setExportPeriodValue(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+              />
+            )}
+
+            {exportPeriodType === 'month' && (
+              <input
+                type="month"
+                value={exportPeriodValue}
+                onChange={(e) => setExportPeriodValue(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+              />
+            )}
+
+            {exportPeriodType === 'year' && (
+              <input
+                type="number"
+                min={2000}
+                max={2100}
+                placeholder="VD: 2026"
+                value={exportPeriodValue}
+                onChange={(e) => setExportPeriodValue(e.target.value)}
+                className="w-28 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+              />
+            )}
+
             <button
               type="button"
-              onClick={handleExportStatistics}
+              onClick={handleExportStatisticsPdf}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
             >
               <Download className="w-4 h-4" />
@@ -137,14 +256,33 @@ export const AdminOrders: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={handleExportInvoices}
+              onClick={handleExportStatisticsExcel}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Xuất thống kê Excel
+            </button>
+            <button
+              type="button"
+              onClick={handleExportInvoicesPdf}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C9A24D] text-white hover:bg-[#B8923D] transition-colors"
             >
               <Download className="w-4 h-4" />
               Xuất hóa đơn PDF
             </button>
+            <button
+              type="button"
+              onClick={handleExportInvoicesExcel}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-black transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Xuất hóa đơn Excel
+            </button>
           </div>
         </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Dữ liệu xuất hiện tại: {ordersForExport.length} đơn ({getExportPeriodLabel(exportPeriod)})
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">

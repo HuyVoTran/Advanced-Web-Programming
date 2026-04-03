@@ -27,7 +27,7 @@ import { notify } from '@/utils/notifications';
 import { formatPrice } from '@/utils/constants';
 
 export const Products: React.FC = () => {
-  const ITEMS_PER_BATCH = 9;
+  const ITEMS_PER_BATCH = 8;
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const brandParam = searchParams.get('brand');
