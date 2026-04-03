@@ -10,7 +10,7 @@ export const UserSettings: React.FC = () => {
   const { user, token, updateUser } = useAuth();
   const [notifications, setNotifications] = React.useState({
     email: user?.settings?.notifications?.email ?? true,
-    sms: user?.settings?.notifications?.sms ?? false,
+    sms: false,
     promotions: user?.settings?.notifications?.promotions ?? true,
   });
   const [language, setLanguage] = React.useState(user?.settings?.language || 'vi');
@@ -19,11 +19,17 @@ export const UserSettings: React.FC = () => {
     getPreferredCurrency((user?.settings?.currency as 'vnd' | 'usd') || 'vnd')
   );
   const [saving, setSaving] = React.useState(false);
+  const [passwordForm, setPasswordForm] = React.useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = React.useState(false);
 
   React.useEffect(() => {
     setNotifications({
       email: user?.settings?.notifications?.email ?? true,
-      sms: user?.settings?.notifications?.sms ?? false,
+      sms: false,
       promotions: user?.settings?.notifications?.promotions ?? true,
     });
     setLanguage(user?.settings?.language || 'vi');
@@ -54,26 +60,75 @@ export const UserSettings: React.FC = () => {
     try {
       setSaving(true);
       const settingsPayload = {
-        notifications,
+        notifications: {
+          ...notifications,
+          sms: false,
+        },
         language,
         timezone,
         currency,
       };
 
-      setPreferredCurrency(currency as 'vnd' | 'usd');
-
       const result: any = await authAPI.updateProfile({ settings: settingsPayload }, token);
       const updatedUser = result?.user || result;
+
+      setPreferredCurrency((updatedUser?.settings?.currency || currency) as 'vnd' | 'usd', user?.id);
 
       updateUser({
         settings: updatedUser?.settings || settingsPayload,
       });
 
       toast.success('Cài đặt đã được lưu!');
+      window.location.reload();
     } catch (error: any) {
       toast.error(error?.message || 'Lưu cài đặt thất bại');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!token) {
+      toast.error('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
+      return;
+    }
+
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error('Vui lòng nhập đầy đủ thông tin đổi mật khẩu');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      await authAPI.changePassword(
+        {
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+          confirmPassword: passwordForm.confirmPassword,
+        },
+        token
+      );
+
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      toast.success('Đổi mật khẩu thành công');
+    } catch (error: any) {
+      toast.error(error?.message || 'Đổi mật khẩu thất bại');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -110,12 +165,12 @@ export const UserSettings: React.FC = () => {
               <label className="flex items-center justify-between cursor-pointer group">
                 <div>
                   <div className="text-sm mb-1">Thông báo qua SMS</div>
-                  <div className="text-xs text-gray-500">Nhận tin nhắn về đơn hàng</div>
+                  <div className="text-xs text-gray-500">Tính năng SMS hiện chưa được hỗ trợ</div>
                 </div>
                 <input
                   type="checkbox"
-                  checked={notifications.sms}
-                  onChange={(e) => setNotifications({ ...notifications, sms: e.target.checked })}
+                  checked={false}
+                  disabled
                   className="w-5 h-5 rounded border-gray-300 text-[#C9A24D] focus:ring-[#C9A24D]"
                 />
               </label>
@@ -143,42 +198,76 @@ export const UserSettings: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <div>
+              <div className="py-3 border-b border-gray-200">
+                <div className="mb-3">
                   <div className="text-sm mb-1">Đổi mật khẩu</div>
-                  <div className="text-xs text-gray-500">Cập nhật mật khẩu của bạn</div>
+                  <div className="text-xs text-gray-500">Cập nhật mật khẩu tài khoản của bạn</div>
                 </div>
-                <button
-                  onClick={() => toast.info('Tính năng đang phát triển')}
-                  className="text-[#C9A24D] hover:underline text-sm"
-                >
-                  Thay đổi
-                </button>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <input
+                    type="password"
+                    placeholder="Mật khẩu hiện tại"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Mật khẩu mới"
+                    value={passwordForm.newPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Xác nhận mật khẩu mới"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                  />
+                </div>
+
+                <div className="mt-3">
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={changingPassword}
+                    className="inline-flex items-center px-4 py-2 rounded-lg bg-[#C9A24D] text-white hover:bg-[#B8923D] transition-colors disabled:opacity-60"
+                  >
+                    {changingPassword ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between py-3 border-b border-gray-200">
                 <div>
                   <div className="text-sm mb-1">Xác thực hai yếu tố</div>
-                  <div className="text-xs text-gray-500">Bảo vệ tài khoản tốt hơn</div>
+                  <div className="text-xs text-gray-500">Chưa hỗ trợ trên hệ thống hiện tại (Đang phát triển)</div>
                 </div>
                 <button
-                  onClick={() => toast.info('Tính năng đang phát triển')}
-                  className="text-[#C9A24D] hover:underline text-sm"
+                  disabled
+                  className="text-gray-400 text-sm cursor-not-allowed"
                 >
-                  Bật
+                  (Đang phát triển)
                 </button>
               </div>
 
               <div className="flex items-center justify-between py-3">
                 <div>
                   <div className="text-sm mb-1">Phiên đăng nhập</div>
-                  <div className="text-xs text-gray-500">Quản lý các thiết bị đã đăng nhập</div>
+                  <div className="text-xs text-gray-500">Quản lý đa thiết bị chưa được bật (Đang phát triển)</div>
                 </div>
                 <button
-                  onClick={() => toast.info('Tính năng đang phát triển')}
-                  className="text-[#C9A24D] hover:underline text-sm"
+                  disabled
+                  className="text-gray-400 text-sm cursor-not-allowed"
                 >
-                  Xem
+                  (Đang phát triển)
                 </button>
               </div>
             </div>
@@ -226,8 +315,6 @@ export const UserSettings: React.FC = () => {
                       return;
                     }
                     setCurrency(nextCurrency);
-                    setPreferredCurrency(nextCurrency);
-                    window.location.reload();
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
                 >

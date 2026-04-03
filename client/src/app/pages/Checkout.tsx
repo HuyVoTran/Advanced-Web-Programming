@@ -230,8 +230,8 @@ export const Checkout: React.FC = () => {
                       className="w-4 h-4"
                     />
                     <div>
-                      <p className="font-medium">Thẻ tín dụng/ghi nợ (Sắp có)</p>
-                      <p className="text-sm text-gray-600">Chưa khả dụng</p>
+                      <p className="font-medium">Thẻ tín dụng/ghi nợ (Đang phát triển)</p>
+                      <p className="text-sm text-gray-600">Hiện chưa khả dụng (Đang phát triển)</p>
                     </div>
                   </label>
                 </div>

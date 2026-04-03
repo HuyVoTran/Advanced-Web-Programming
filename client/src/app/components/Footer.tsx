@@ -2,12 +2,21 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
 import { getPreferredCurrency, setPreferredCurrency } from '@/utils/constants';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PROMOTION_DISMISSED_KEY = 'salvio_promo_header_dismissed';
 const PROMOTION_RESET_EVENT = 'salvio_promo_header_reset';
 
 export const Footer: React.FC = () => {
-  const [currency, setCurrency] = React.useState<'vnd' | 'usd'>(getPreferredCurrency('vnd'));
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user?.id);
+  const [currency, setCurrency] = React.useState<'vnd' | 'usd'>(
+    getPreferredCurrency((user?.settings?.currency as 'vnd' | 'usd') || 'vnd')
+  );
+
+  React.useEffect(() => {
+    setCurrency(getPreferredCurrency((user?.settings?.currency as 'vnd' | 'usd') || 'vnd'));
+  }, [user?.id, user?.settings?.currency]);
 
   React.useEffect(() => {
     const syncCurrency = () => {
@@ -133,6 +142,9 @@ export const Footer: React.FC = () => {
           <select
             value={currency}
             onChange={(e) => {
+              if (isLoggedIn) {
+                return;
+              }
               const nextCurrency = e.target.value as 'vnd' | 'usd';
               if (nextCurrency === currency) {
                 return;
@@ -141,11 +153,18 @@ export const Footer: React.FC = () => {
               setPreferredCurrency(nextCurrency);
               window.location.reload();
             }}
+            disabled={isLoggedIn}
             className="w-full max-w-[300px] bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
           >
             <option value="vnd">🇻🇳 VNĐ - Đồng Việt Nam</option>
             <option value="usd">🇺🇸 USD - US Dollar</option>
           </select>
+
+          {isLoggedIn && (
+            <p className="mt-2 text-[11px] text-gray-500 text-center">
+              Tiền tệ của tài khoản đang ưu tiên theo mục Cài đặt người dùng.
+            </p>
+          )}
 
           <button
             type="button"

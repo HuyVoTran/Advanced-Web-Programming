@@ -181,9 +181,9 @@ export const AdminOrderDetail: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  exportOrderInvoiceDetailPdf(order);
+                  await exportOrderInvoiceDetailPdf(order);
                   toast.success('Đã xuất hóa đơn chi tiết PDF');
                 } catch (error: any) {
                   toast.error(error?.message || 'Không thể xuất hóa đơn chi tiết');

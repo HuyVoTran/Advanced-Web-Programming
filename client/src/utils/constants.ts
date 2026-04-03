@@ -8,6 +8,9 @@ export const APP_VERSION = '1.0.0';
 export type CurrencyCode = 'vnd' | 'usd';
 
 export const CURRENCY_STORAGE_KEY = 'luxury_jewelry_currency';
+export const CURRENCY_GUEST_STORAGE_KEY = 'luxury_jewelry_currency_guest';
+export const CURRENCY_USER_SCOPE_KEY = 'luxury_jewelry_currency_active_user';
+export const CURRENCY_USER_STORAGE_PREFIX = 'luxury_jewelry_currency_user_';
 export const CURRENCY_CHANGE_EVENT = 'luxury_jewelry_currency_change';
 
 const USD_EXCHANGE_RATE = 25000;
@@ -15,20 +18,70 @@ const USD_EXCHANGE_RATE = 25000;
 const normalizeCurrency = (value?: string): CurrencyCode =>
   String(value || '').toLowerCase() === 'usd' ? 'usd' : 'vnd';
 
-export const getPreferredCurrency = (fallback: CurrencyCode = 'vnd'): CurrencyCode => {
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-  const stored = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
-  return normalizeCurrency(stored || fallback);
+const normalizeUserId = (value?: string | null): string | null => {
+  const normalized = String(value || '').trim();
+  return normalized ? normalized : null;
 };
 
-export const setPreferredCurrency = (currency: CurrencyCode): void => {
+const getUserCurrencyStorageKey = (userId: string) => `${CURRENCY_USER_STORAGE_PREFIX}${userId}`;
+
+export const getCurrencyScopeUser = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return normalizeUserId(window.localStorage.getItem(CURRENCY_USER_SCOPE_KEY));
+};
+
+export const setCurrencyScopeUser = (userId: string | null): void => {
   if (typeof window === 'undefined') {
     return;
   }
+
+  const normalizedUserId = normalizeUserId(userId);
+  if (normalizedUserId) {
+    window.localStorage.setItem(CURRENCY_USER_SCOPE_KEY, normalizedUserId);
+    return;
+  }
+
+  window.localStorage.removeItem(CURRENCY_USER_SCOPE_KEY);
+};
+
+export const getPreferredCurrency = (fallback: CurrencyCode = 'vnd', userId?: string | null): CurrencyCode => {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+
+  const scopedUserId = normalizeUserId(userId) || getCurrencyScopeUser();
+  if (scopedUserId) {
+    const userStored = window.localStorage.getItem(getUserCurrencyStorageKey(scopedUserId));
+    if (userStored) {
+      return normalizeCurrency(userStored);
+    }
+  }
+
+  const guestStored =
+    window.localStorage.getItem(CURRENCY_GUEST_STORAGE_KEY) ||
+    window.localStorage.getItem(CURRENCY_STORAGE_KEY);
+
+  return normalizeCurrency(guestStored || fallback);
+};
+
+export const setPreferredCurrency = (currency: CurrencyCode, userId?: string | null): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   const normalized = normalizeCurrency(currency);
-  window.localStorage.setItem(CURRENCY_STORAGE_KEY, normalized);
+  const scopedUserId = normalizeUserId(userId) || getCurrencyScopeUser();
+
+  if (scopedUserId) {
+    window.localStorage.setItem(getUserCurrencyStorageKey(scopedUserId), normalized);
+  } else {
+    window.localStorage.setItem(CURRENCY_GUEST_STORAGE_KEY, normalized);
+    window.localStorage.setItem(CURRENCY_STORAGE_KEY, normalized);
+  }
+
   window.dispatchEvent(new CustomEvent(CURRENCY_CHANGE_EVENT, { detail: normalized }));
 };
 

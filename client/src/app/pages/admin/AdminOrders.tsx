@@ -47,6 +47,8 @@ export const AdminOrders: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [exportPeriodType, setExportPeriodType] = useState<ExportPeriodType>('all');
   const [exportPeriodValue, setExportPeriodValue] = useState('');
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel'>('pdf');
+  const [exportTarget, setExportTarget] = useState<'statistics' | 'invoices'>('statistics');
 
   // Fetch orders
   const { data: allOrders, loading, error } = useAdminFetch<Order[]>(
@@ -94,7 +96,7 @@ export const AdminOrders: React.FC = () => {
     return true;
   };
 
-  const handleExportStatisticsPdf = () => {
+  const handleExportSelected = async () => {
     try {
       if (!validateExportPeriod()) {
         return;
@@ -103,58 +105,28 @@ export const AdminOrders: React.FC = () => {
         toast.error('Không có dữ liệu theo phạm vi đã chọn');
         return;
       }
-      exportOrderStatisticsPdf(filteredOrders, exportPeriod);
-      toast.success(`Đã xuất thống kê PDF (${getExportPeriodLabel(exportPeriod)})`);
-    } catch (error) {
-      toast.error('Xuất thống kê thất bại');
-    }
-  };
+      if (exportTarget === 'statistics' && exportFormat === 'pdf') {
+        await exportOrderStatisticsPdf(filteredOrders, exportPeriod);
+        toast.success(`Đã xuất thống kê PDF (${getExportPeriodLabel(exportPeriod)})`);
+        return;
+      }
 
-  const handleExportStatisticsExcel = () => {
-    try {
-      if (!validateExportPeriod()) {
+      if (exportTarget === 'statistics' && exportFormat === 'excel') {
+        exportOrderStatisticsExcel(filteredOrders, exportPeriod);
+        toast.success(`Đã xuất thống kê Excel (${getExportPeriodLabel(exportPeriod)})`);
         return;
       }
-      if (ordersForExport.length === 0) {
-        toast.error('Không có dữ liệu theo phạm vi đã chọn');
-        return;
-      }
-      exportOrderStatisticsExcel(filteredOrders, exportPeriod);
-      toast.success(`Đã xuất thống kê Excel (${getExportPeriodLabel(exportPeriod)})`);
-    } catch (error) {
-      toast.error('Xuất thống kê Excel thất bại');
-    }
-  };
 
-  const handleExportInvoicesPdf = () => {
-    try {
-      if (!validateExportPeriod()) {
+      if (exportTarget === 'invoices' && exportFormat === 'pdf') {
+        await exportOrdersInvoiceListPdf(filteredOrders, exportPeriod);
+        toast.success(`Đã xuất danh sách hóa đơn PDF (${getExportPeriodLabel(exportPeriod)})`);
         return;
       }
-      if (ordersForExport.length === 0) {
-        toast.error('Không có dữ liệu theo phạm vi đã chọn');
-        return;
-      }
-      exportOrdersInvoiceListPdf(filteredOrders, exportPeriod);
-      toast.success(`Đã xuất danh sách hóa đơn PDF (${getExportPeriodLabel(exportPeriod)})`);
-    } catch (error) {
-      toast.error('Xuất danh sách hóa đơn PDF thất bại');
-    }
-  };
 
-  const handleExportInvoicesExcel = () => {
-    try {
-      if (!validateExportPeriod()) {
-        return;
-      }
-      if (ordersForExport.length === 0) {
-        toast.error('Không có dữ liệu theo phạm vi đã chọn');
-        return;
-      }
       exportOrdersInvoiceListExcel(filteredOrders, exportPeriod);
       toast.success(`Đã xuất danh sách hóa đơn Excel (${getExportPeriodLabel(exportPeriod)})`);
     } catch (error) {
-      toast.error('Xuất danh sách hóa đơn Excel thất bại');
+      toast.error('Xuất báo cáo thất bại');
     }
   };
 
@@ -200,88 +172,84 @@ export const AdminOrders: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 items-center">
-            <select
-              value={exportPeriodType}
-              onChange={(e) => {
-                const nextType = e.target.value as ExportPeriodType;
-                setExportPeriodType(nextType);
-                setExportPeriodValue('');
-              }}
-              className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
-            >
-              <option value="all">Toàn thời gian</option>
-              <option value="day">Theo ngày</option>
-              <option value="month">Theo tháng</option>
-              <option value="year">Theo năm</option>
-            </select>
+          <div className="w-full md:w-auto rounded-xl border border-[#E6D6B0] bg-gradient-to-r from-[#fffdf9] to-[#fff8ea] p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={exportPeriodType}
+                onChange={(e) => {
+                  const nextType = e.target.value as ExportPeriodType;
+                  setExportPeriodType(nextType);
+                  setExportPeriodValue('');
+                }}
+                className="h-10 px-3 rounded-lg border border-[#E7D8B6] bg-white text-sm min-w-[150px]"
+              >
+                <option value="all">Toàn thời gian</option>
+                <option value="day">Theo ngày</option>
+                <option value="month">Theo tháng</option>
+                <option value="year">Theo năm</option>
+              </select>
 
-            {exportPeriodType === 'day' && (
-              <input
-                type="date"
-                value={exportPeriodValue}
-                onChange={(e) => setExportPeriodValue(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
-              />
-            )}
+              {exportPeriodType === 'day' && (
+                <input
+                  type="date"
+                  value={exportPeriodValue}
+                  onChange={(e) => setExportPeriodValue(e.target.value)}
+                  className="h-10 px-3 rounded-lg border border-[#E7D8B6] bg-white text-sm"
+                />
+              )}
 
-            {exportPeriodType === 'month' && (
-              <input
-                type="month"
-                value={exportPeriodValue}
-                onChange={(e) => setExportPeriodValue(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
-              />
-            )}
+              {exportPeriodType === 'month' && (
+                <input
+                  type="month"
+                  value={exportPeriodValue}
+                  onChange={(e) => setExportPeriodValue(e.target.value)}
+                  className="h-10 px-3 rounded-lg border border-[#E7D8B6] bg-white text-sm"
+                />
+              )}
 
-            {exportPeriodType === 'year' && (
-              <input
-                type="number"
-                min={2000}
-                max={2100}
-                placeholder="VD: 2026"
-                value={exportPeriodValue}
-                onChange={(e) => setExportPeriodValue(e.target.value)}
-                className="w-28 px-3 py-2 rounded-lg border border-gray-300 text-sm"
-              />
-            )}
+              {exportPeriodType === 'year' && (
+                <input
+                  type="number"
+                  min={2000}
+                  max={2100}
+                  placeholder="Năm"
+                  value={exportPeriodValue}
+                  onChange={(e) => setExportPeriodValue(e.target.value)}
+                  className="h-10 w-24 px-3 rounded-lg border border-[#E7D8B6] bg-white text-sm"
+                />
+              )}
 
-            <button
-              type="button"
-              onClick={handleExportStatisticsPdf}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Xuất thống kê PDF
-            </button>
-            <button
-              type="button"
-              onClick={handleExportStatisticsExcel}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Xuất thống kê Excel
-            </button>
-            <button
-              type="button"
-              onClick={handleExportInvoicesPdf}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C9A24D] text-white hover:bg-[#B8923D] transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Xuất hóa đơn PDF
-            </button>
-            <button
-              type="button"
-              onClick={handleExportInvoicesExcel}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-black transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Xuất hóa đơn Excel
-            </button>
+              <select
+                value={exportTarget}
+                onChange={(e) => setExportTarget(e.target.value as 'statistics' | 'invoices')}
+                className="h-10 px-3 rounded-lg border border-[#E7D8B6] bg-white text-sm min-w-[140px]"
+              >
+                <option value="statistics">Báo cáo thống kê</option>
+                <option value="invoices">Danh sách hóa đơn</option>
+              </select>
+
+              <select
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'excel')}
+                className="h-10 px-3 rounded-lg border border-[#E7D8B6] bg-white text-sm min-w-[110px]"
+              >
+                <option value="pdf">PDF</option>
+                <option value="excel">Excel</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={handleExportSelected}
+                className="inline-flex h-10 items-center gap-2 px-4 rounded-lg bg-[#C9A24D] text-white hover:bg-[#B8923D] transition-colors shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                Tải báo cáo
+              </button>
+            </div>
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          Dữ liệu xuất hiện tại: {ordersForExport.length} đơn ({getExportPeriodLabel(exportPeriod)})
+          Dữ liệu sẵn sàng xuất: {ordersForExport.length} đơn ({getExportPeriodLabel(exportPeriod)})
         </p>
       </div>
 

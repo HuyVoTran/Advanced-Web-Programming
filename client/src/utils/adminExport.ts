@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 
 type PdfMakeLike = {
   vfs?: Record<string, string>;
+  addFonts?: (fonts: Record<string, any>) => void;
   createPdf: (docDefinition: Record<string, any>) => { download: (filename: string) => void };
 };
 
@@ -12,6 +13,9 @@ const pdfFontsAny = pdfFonts as any;
 if (!pdfMakeAny.vfs) {
   pdfMakeAny.vfs = pdfFontsAny?.pdfMake?.vfs || pdfFontsAny?.vfs || {};
 }
+
+let montserratFontReady = false;
+let montserratFontLoadingPromise: Promise<boolean> | null = null;
 
 export type ExportPeriodType = 'all' | 'day' | 'month' | 'year';
 export type ExportPeriod = {
@@ -63,6 +67,24 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Hoàn thành',
   delivered: 'Hoàn thành',
   cancelled: 'Đã hủy',
+};
+
+const COMPANY_INFO = {
+  brand: 'SALVIO ROYALE',
+  legalName: 'CÔNG TY TNHH SALVIO ROYALE',
+  taxCode: '0312345678',
+  address: '123 Đường Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh',
+  phone: '1900 1234',
+  email: 'info@salvioroyale.vn',
+  website: 'www.salvioroyale.vn',
+  logoPath: '/images/SalvioRoyale-Logo.png',
+  vatRate: 0.1,
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cod: 'Thanh toán khi nhận hàng (COD)',
+  bank_transfer: 'Chuyển khoản ngân hàng',
+  credit_card: 'Thẻ tín dụng/ghi nợ',
 };
 
 const formatCurrency = (value: number) => {
@@ -159,11 +181,101 @@ const createSheetAndDownload = (rows: Array<Record<string, any>>, sheetName: str
   XLSX.writeFile(workbook, filename);
 };
 
-export const exportOrderStatisticsPdf = (
+const toBase64 = (buffer: ArrayBuffer) => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+};
+
+const ensureMontserratPdfFont = async (): Promise<boolean> => {
+  if (montserratFontReady) {
+    return true;
+  }
+
+  if (montserratFontLoadingPromise) {
+    return montserratFontLoadingPromise;
+  }
+
+  montserratFontLoadingPromise = (async () => {
+    try {
+      const regularUrl = 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Regular.ttf';
+      const boldUrl = 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Bold.ttf';
+
+      const [regularResponse, boldResponse] = await Promise.all([
+        fetch(regularUrl),
+        fetch(boldUrl),
+      ]);
+
+      if (!regularResponse.ok || !boldResponse.ok) {
+        return false;
+      }
+
+      const [regularBuffer, boldBuffer] = await Promise.all([
+        regularResponse.arrayBuffer(),
+        boldResponse.arrayBuffer(),
+      ]);
+
+      pdfMakeAny.vfs = {
+        ...(pdfMakeAny.vfs || {}),
+        'Montserrat-Regular.ttf': toBase64(regularBuffer),
+        'Montserrat-Bold.ttf': toBase64(boldBuffer),
+      };
+
+      pdfMakeAny.addFonts?.({
+        Montserrat: {
+          normal: 'Montserrat-Regular.ttf',
+          bold: 'Montserrat-Bold.ttf',
+          italics: 'Montserrat-Regular.ttf',
+          bolditalics: 'Montserrat-Bold.ttf',
+        },
+      });
+
+      montserratFontReady = true;
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  const isReady = await montserratFontLoadingPromise;
+  if (!isReady) {
+    montserratFontLoadingPromise = null;
+  }
+  return isReady;
+};
+
+const loadImageAsDataUrl = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(String(reader.result || ''));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+export const exportOrderStatisticsPdf = async (
   orders: Array<{ status: string; totalPrice: number; createdAt: string }>,
   period?: ExportPeriod,
   filename = `thong-ke-don-hang-${new Date().toISOString().slice(0, 10)}.pdf`
 ) => {
+  const hasMontserrat = await ensureMontserratPdfFont();
   const scopedOrders = filterOrdersByPeriod(orders, period);
   const statusMap: Record<string, number> = {
     pending: 0,
@@ -215,6 +327,7 @@ export const exportOrderStatisticsPdf = (
     },
     defaultStyle: {
       fontSize: 10,
+      ...(hasMontserrat ? { font: 'Montserrat' } : {}),
     },
   };
 
@@ -259,11 +372,12 @@ export const exportOrderStatisticsExcel = (
   createSheetAndDownload(rows, 'ThongKeDonHang', filename);
 };
 
-export const exportOrdersInvoiceListPdf = (
+export const exportOrdersInvoiceListPdf = async (
   orders: OrderExport[],
   period?: ExportPeriod,
   filename = `danh-sach-hoa-don-${new Date().toISOString().slice(0, 10)}.pdf`
 ) => {
+  const hasMontserrat = await ensureMontserratPdfFont();
   const scopedOrders = filterOrdersByPeriod(orders, period);
 
   const docDefinition = {
@@ -300,6 +414,7 @@ export const exportOrdersInvoiceListPdf = (
     },
     defaultStyle: {
       fontSize: 9,
+      ...(hasMontserrat ? { font: 'Montserrat' } : {}),
     },
   };
 
@@ -326,7 +441,8 @@ export const exportOrdersInvoiceListExcel = (
   createSheetAndDownload(rows, 'DanhSachHoaDon', filename);
 };
 
-export const exportOrderInvoiceDetailPdf = (order: OrderDetailExport) => {
+export const exportOrderInvoiceDetailPdf = async (order: OrderDetailExport) => {
+  const hasMontserrat = await ensureMontserratPdfFont();
   const customerName = order.customerInfo?.fullName || 'Khách lẻ';
   const customerEmail = order.customerInfo?.email || '';
   const customerPhone = order.customerInfo?.phone || '';
@@ -341,23 +457,103 @@ export const exportOrderInvoiceDetailPdf = (order: OrderDetailExport) => {
       .filter(Boolean)
       .join(', ');
 
+  const lineSubtotal = order.items.reduce(
+    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+    0
+  );
+  const shippingFee = 0;
+  const grandTotal = Number(order.totalPrice || 0);
+  const vatAmount = Math.round(grandTotal * (COMPANY_INFO.vatRate / (1 + COMPANY_INFO.vatRate)));
+  const preTaxAmount = Math.max(0, grandTotal - vatAmount);
+
+  const paymentMethodLabel = PAYMENT_METHOD_LABELS[order.paymentMethod || ''] || (order.paymentMethod || '');
+  const logoDataUrl = await loadImageAsDataUrl(COMPANY_INFO.logoPath);
+
+  const headerColumns: Array<Record<string, any>> = [];
+
+  if (logoDataUrl) {
+    headerColumns.push({ image: logoDataUrl, width: 120, margin: [0, 2, 0, 0] });
+  }
+
+  headerColumns.push({
+    width: '*',
+    stack: [
+      { text: COMPANY_INFO.legalName, bold: true, fontSize: 12, alignment: 'right' },
+      { text: `MST: ${COMPANY_INFO.taxCode}`, alignment: 'right', margin: [0, 2, 0, 0] },
+      { text: `Địa chỉ: ${COMPANY_INFO.address}`, alignment: 'right', margin: [0, 2, 0, 0] },
+      { text: `Điện thoại: ${COMPANY_INFO.phone}`, alignment: 'right', margin: [0, 2, 0, 0] },
+      { text: `Email: ${COMPANY_INFO.email}`, alignment: 'right', margin: [0, 2, 0, 0] },
+    ],
+  });
+
   const docDefinition = {
+    pageMargins: [36, 32, 36, 32],
     content: [
-      { text: 'SALVIO ROYALE - HÓA ĐƠN CHI TIẾT', style: 'header' },
-      { text: `Mã đơn hàng: ${order._id}`, margin: [0, 8, 0, 0] },
-      { text: `Ngày đặt: ${formatDateTime(order.createdAt)}` },
-      { text: `Trạng thái: ${STATUS_LABELS[order.status || ''] || order.status || ''}`, margin: [0, 0, 0, 10] },
-      { text: 'Thông tin khách hàng', bold: true },
-      { text: `Họ tên: ${customerName}` },
-      { text: `Email: ${customerEmail}` },
-      { text: `Điện thoại: ${customerPhone}` },
-      { text: `Địa chỉ: ${customerAddress || ''}`, margin: [0, 0, 0, 10] },
+      {
+        columns: headerColumns,
+      },
+      {
+        canvas: [{ type: 'line', x1: 0, y1: 0, x2: 523, y2: 0, lineWidth: 1, lineColor: '#C9A24D' }],
+        margin: [0, 12, 0, 12],
+      },
+      { text: 'HÓA ĐƠN GIÁ TRỊ GIA TĂNG', style: 'header', alignment: 'center' },
+      { text: '(VAT INVOICE)', alignment: 'center', italics: true, margin: [0, 2, 0, 10] },
+      {
+        columns: [
+          {
+            width: '*',
+            stack: [
+              { text: `Mẫu số: 01GTKT0/001` },
+              { text: `Ký hiệu: SR/26E` },
+              { text: `Số hóa đơn: ${order._id}` },
+            ],
+          },
+          {
+            width: '*',
+            stack: [
+              { text: `Ngày lập: ${formatDateOnly(order.createdAt)}`, alignment: 'right' },
+              { text: `Giờ lập: ${formatDateTime(order.createdAt).split(' ')[1] || ''}`, alignment: 'right' },
+              { text: `Trạng thái: ${STATUS_LABELS[order.status || ''] || order.status || ''}`, alignment: 'right' },
+            ],
+          },
+        ],
+        margin: [0, 0, 0, 10],
+      },
+      {
+        table: {
+          widths: ['*', '*'],
+          body: [
+            [
+              {
+                stack: [
+                  { text: 'BÊN MUA (THÔNG TIN KHÁCH HÀNG)', bold: true, margin: [0, 0, 0, 4] },
+                  { text: `Họ tên: ${customerName}` },
+                  { text: `Điện thoại: ${customerPhone}` },
+                  { text: `Email: ${customerEmail}` },
+                  { text: `Địa chỉ: ${customerAddress || ''}` },
+                ],
+              },
+              {
+                stack: [
+                  { text: 'THÔNG TIN THANH TOÁN', bold: true, margin: [0, 0, 0, 4] },
+                  { text: `Phương thức: ${paymentMethodLabel}` },
+                  { text: `Website: ${COMPANY_INFO.website}` },
+                  { text: `Người bán: ${COMPANY_INFO.brand}` },
+                  { text: `Email hỗ trợ: ${COMPANY_INFO.email}` },
+                ],
+              },
+            ],
+          ],
+        },
+        layout: 'noBorders',
+        margin: [0, 0, 0, 10],
+      },
       {
         table: {
           headerRows: 1,
           widths: [30, '*', 55, 95, 95],
           body: [
-            ['STT', 'Sản phẩm', 'Số lượng', 'Đơn giá', 'Thành tiền'],
+            ['STT', 'Tên hàng hóa, dịch vụ', 'SL', 'Đơn giá', 'Thành tiền'],
             ...order.items.map((item, index) => [
               String(index + 1),
               item.productName,
@@ -367,23 +563,71 @@ export const exportOrderInvoiceDetailPdf = (order: OrderDetailExport) => {
             ]),
           ],
         },
-        layout: 'lightHorizontalLines',
+        layout: {
+          fillColor: (rowIndex: number) => (rowIndex === 0 ? '#F5EFE1' : undefined),
+        },
+        margin: [0, 0, 0, 10],
       },
       {
-        text: `Tổng thanh toán: ${formatCurrency(order.totalPrice)}`,
-        alignment: 'right',
-        margin: [0, 12, 0, 0],
-        bold: true,
+        table: {
+          widths: ['*', 180],
+          body: [
+            [
+              {
+                stack: [
+                  { text: 'Ghi chú thuế', bold: true, margin: [0, 0, 0, 4] },
+                  { text: `- Mã số thuế đơn vị bán: ${COMPANY_INFO.taxCode}` },
+                  { text: `- Thuế suất GTGT áp dụng: ${(COMPANY_INFO.vatRate * 100).toFixed(0)}%` },
+                  { text: '- Hóa đơn được tạo tự động từ hệ thống thương mại điện tử.' },
+                ],
+              },
+              {
+                table: {
+                  widths: ['*', 'auto'],
+                  body: [
+                    ['Tạm tính hàng hóa', formatCurrency(lineSubtotal)],
+                    ['Giá trị trước thuế', formatCurrency(preTaxAmount)],
+                    [`Thuế GTGT (${(COMPANY_INFO.vatRate * 100).toFixed(0)}%)`, formatCurrency(vatAmount)],
+                    ['Phí vận chuyển', formatCurrency(shippingFee)],
+                    [{ text: 'TỔNG THANH TOÁN', bold: true }, { text: formatCurrency(grandTotal), bold: true }],
+                  ],
+                },
+                layout: 'lightHorizontalLines',
+              },
+            ],
+          ],
+        },
+        layout: 'noBorders',
+      },
+      {
+        columns: [
+          {
+            width: '*',
+            stack: [
+              { text: 'Người mua hàng', alignment: 'center', margin: [0, 14, 0, 46] },
+              { text: '(Ký, ghi rõ họ tên)', alignment: 'center', fontSize: 9, color: '#6B7280' },
+            ],
+          },
+          {
+            width: '*',
+            stack: [
+              { text: 'Người bán hàng', alignment: 'center', margin: [0, 14, 0, 46] },
+              { text: COMPANY_INFO.brand, alignment: 'center', fontSize: 10, bold: true },
+              { text: '(Ký, đóng dấu, ghi rõ họ tên)', alignment: 'center', fontSize: 9, color: '#6B7280' },
+            ],
+          },
+        ],
       },
     ],
     styles: {
       header: {
-        fontSize: 15,
+        fontSize: 16,
         bold: true,
       },
     },
     defaultStyle: {
       fontSize: 10,
+      ...(hasMontserrat ? { font: 'Montserrat' } : {}),
     },
   };
 

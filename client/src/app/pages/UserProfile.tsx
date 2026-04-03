@@ -167,7 +167,7 @@ export const UserProfile: React.FC = () => {
               onClick={() => toast.info('Tính năng đang phát triển')}
               className="text-[#C9A24D] hover:underline"
             >
-              Nhấn vào đây để thay đổi mật khẩu →
+              Nhấn vào đây để thay đổi mật khẩu (Đang phát triển) →
             </button>
           </div>
         </div>

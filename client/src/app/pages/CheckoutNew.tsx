@@ -557,6 +557,10 @@ export const CheckoutNew: React.FC = () => {
                     <h2 className="text-2xl font-light">Phương thức thanh toán</h2>
                   </div>
 
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Hiện tại chỉ hỗ trợ COD. Các phương thức khác <span className="font-medium">(Đang phát triển)</span>.
+                  </p>
+
                   <RadioGroup
                     value={formData.paymentMethod}
                     onValueChange={(value) => 
@@ -580,15 +584,11 @@ export const CheckoutNew: React.FC = () => {
                       </Label>
                     </div>
 
-                    <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      formData.paymentMethod === 'bank_transfer' 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}>
-                      <Label htmlFor="bank" className="flex items-start gap-3 cursor-pointer">
-                        <RadioGroupItem value="bank_transfer" id="bank" className="mt-1" />
+                    <div className="border-2 rounded-lg p-4 opacity-60 cursor-not-allowed border-gray-200">
+                      <Label htmlFor="bank" className="flex items-start gap-3 cursor-not-allowed">
+                        <RadioGroupItem value="bank_transfer" id="bank" className="mt-1" disabled />
                         <div className="flex-1">
-                          <p className="font-medium mb-1">Chuyển khoản ngân hàng</p>
+                          <p className="font-medium mb-1">Chuyển khoản ngân hàng (Đang phát triển)</p>
                           <p className="text-sm text-muted-foreground">
                             Chuyển khoản trực tiếp đến tài khoản ngân hàng
                           </p>
@@ -596,15 +596,11 @@ export const CheckoutNew: React.FC = () => {
                       </Label>
                     </div>
 
-                    <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      formData.paymentMethod === 'card' 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}>
-                      <Label htmlFor="card" className="flex items-start gap-3 cursor-pointer">
-                        <RadioGroupItem value="card" id="card" className="mt-1" />
+                    <div className="border-2 rounded-lg p-4 opacity-60 cursor-not-allowed border-gray-200">
+                      <Label htmlFor="card" className="flex items-start gap-3 cursor-not-allowed">
+                        <RadioGroupItem value="card" id="card" className="mt-1" disabled />
                         <div className="flex-1">
-                          <p className="font-medium mb-1">Thẻ tín dụng/ghi nợ</p>
+                          <p className="font-medium mb-1">Thẻ tín dụng/ghi nợ (Đang phát triển)</p>
                           <p className="text-sm text-muted-foreground">
                             Thanh toán bằng thẻ Visa, Mastercard, JCB
                           </p>

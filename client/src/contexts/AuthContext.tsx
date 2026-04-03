@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API_CONFIG, API_ENDPOINTS } from '@/config/api';
+import { CurrencyCode, setCurrencyScopeUser, setPreferredCurrency } from '@/utils/constants';
 
 export interface User {
   id: string;
@@ -171,6 +172,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('user');
     }
   }, [user]);
+
+  useEffect(() => {
+    const scopedUserId = user?.id || null;
+    setCurrencyScopeUser(scopedUserId);
+
+    if (scopedUserId && user?.settings?.currency) {
+      setPreferredCurrency(user.settings.currency as CurrencyCode, scopedUserId);
+    }
+  }, [user?.id, user?.settings?.currency]);
 
   useEffect(() => {
     if (token) {
