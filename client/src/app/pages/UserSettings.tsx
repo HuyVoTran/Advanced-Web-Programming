@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { authAPI } from '@/services/api';
+import { getPreferredCurrency, setPreferredCurrency } from '@/utils/constants';
 
 export const UserSettings: React.FC = () => {
   const { user, token, updateUser } = useAuth();
@@ -14,7 +15,9 @@ export const UserSettings: React.FC = () => {
   });
   const [language, setLanguage] = React.useState(user?.settings?.language || 'vi');
   const [timezone, setTimezone] = React.useState(user?.settings?.timezone || 'asia/saigon');
-  const [currency, setCurrency] = React.useState(user?.settings?.currency || 'vnd');
+  const [currency, setCurrency] = React.useState(
+    getPreferredCurrency((user?.settings?.currency as 'vnd' | 'usd') || 'vnd')
+  );
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -25,8 +28,22 @@ export const UserSettings: React.FC = () => {
     });
     setLanguage(user?.settings?.language || 'vi');
     setTimezone(user?.settings?.timezone || 'asia/saigon');
-    setCurrency(user?.settings?.currency || 'vnd');
+    setCurrency(getPreferredCurrency((user?.settings?.currency as 'vnd' | 'usd') || 'vnd'));
   }, [user]);
+
+  React.useEffect(() => {
+    const syncCurrency = () => {
+      setCurrency(getPreferredCurrency((user?.settings?.currency as 'vnd' | 'usd') || 'vnd'));
+    };
+
+    window.addEventListener('storage', syncCurrency);
+    window.addEventListener('luxury_jewelry_currency_change', syncCurrency as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', syncCurrency);
+      window.removeEventListener('luxury_jewelry_currency_change', syncCurrency as EventListener);
+    };
+  }, [user?.settings?.currency]);
 
   const handleSave = async () => {
     if (!token) {
@@ -42,6 +59,8 @@ export const UserSettings: React.FC = () => {
         timezone,
         currency,
       };
+
+      setPreferredCurrency(currency as 'vnd' | 'usd');
 
       const result: any = await authAPI.updateProfile({ settings: settingsPayload }, token);
       const updatedUser = result?.user || result;
@@ -201,7 +220,11 @@ export const UserSettings: React.FC = () => {
                 <label className="block text-sm mb-2 text-gray-700">Tiền tệ</label>
                 <select
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+                  onChange={(e) => {
+                    const nextCurrency = e.target.value as 'vnd' | 'usd';
+                    setCurrency(nextCurrency);
+                    setPreferredCurrency(nextCurrency);
+                  }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
                 >
                   <option value="vnd">VNĐ - Đồng Việt Nam</option>

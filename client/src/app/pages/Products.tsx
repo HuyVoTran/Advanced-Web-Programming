@@ -24,6 +24,7 @@ import { ShoppingBag } from 'lucide-react';
 import { useProducts, useCategories, useBrands } from '@/hooks/useCustomHooks';
 import { useAuth } from '@/contexts/AuthContext';
 import { notify } from '@/utils/notifications';
+import { formatPrice } from '@/utils/constants';
 
 export const Products: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -57,22 +58,17 @@ export const Products: React.FC = () => {
     setPriceRangeDraft(priceRange);
   }, [priceRange]);
 
-  const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }),
-    []
-  );
-
   const formattedMinPrice = useMemo(
-    () => currencyFormatter.format(priceRangeDraft[0]),
-    [currencyFormatter, priceRangeDraft]
+    () => formatPrice(priceRangeDraft[0]),
+    [priceRangeDraft]
   );
 
   const formattedMaxPrice = useMemo(
     () =>
       priceRangeDraft[1] === MAX_PRICE
-        ? '500.000.000+ VND'
-        : currencyFormatter.format(priceRangeDraft[1]),
-    [currencyFormatter, priceRangeDraft, MAX_PRICE]
+        ? `${formatPrice(MAX_PRICE)}+`
+        : formatPrice(priceRangeDraft[1]),
+    [priceRangeDraft, MAX_PRICE]
   );
 
   const activeFilterBreadcrumbs = useMemo(() => {

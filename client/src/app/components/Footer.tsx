@@ -1,8 +1,25 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
+import { getPreferredCurrency, setPreferredCurrency } from '@/utils/constants';
 
 export const Footer: React.FC = () => {
+  const [currency, setCurrency] = React.useState<'vnd' | 'usd'>(getPreferredCurrency('vnd'));
+
+  React.useEffect(() => {
+    const syncCurrency = () => {
+      setCurrency(getPreferredCurrency('vnd'));
+    };
+
+    window.addEventListener('storage', syncCurrency);
+    window.addEventListener('luxury_jewelry_currency_change', syncCurrency as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', syncCurrency);
+      window.removeEventListener('luxury_jewelry_currency_change', syncCurrency as EventListener);
+    };
+  }, []);
+
   return (
     <footer className="bg-gray-900 text-white">
       <div className="container mx-auto px-4 lg:px-8 py-16">
@@ -84,6 +101,22 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
             </ul>
+
+            <div className="mt-6">
+              <label className="block text-xs uppercase tracking-wide text-gray-500 mb-2">Tiền tệ</label>
+              <select
+                value={currency}
+                onChange={(e) => {
+                  const nextCurrency = e.target.value as 'vnd' | 'usd';
+                  setCurrency(nextCurrency);
+                  setPreferredCurrency(nextCurrency);
+                }}
+                className="w-full bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+              >
+                <option value="vnd">VNĐ - Đồng Việt Nam</option>
+                <option value="usd">USD - US Dollar</option>
+              </select>
+            </div>
           </div>
 
           {/* Contact Info */}

@@ -5,14 +5,99 @@ export const APP_NAME = 'Luxury Jewelry Store';
 export const APP_DESCRIPTION = 'Hệ thống thương mại điện tử trang sức cao cấp';
 export const APP_VERSION = '1.0.0';
 
+export type CurrencyCode = 'vnd' | 'usd';
+
+export const CURRENCY_STORAGE_KEY = 'luxury_jewelry_currency';
+export const CURRENCY_CHANGE_EVENT = 'luxury_jewelry_currency_change';
+
+const USD_EXCHANGE_RATE = 25000;
+
+const normalizeCurrency = (value?: string): CurrencyCode =>
+  String(value || '').toLowerCase() === 'usd' ? 'usd' : 'vnd';
+
+export const getPreferredCurrency = (fallback: CurrencyCode = 'vnd'): CurrencyCode => {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+  const stored = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
+  return normalizeCurrency(stored || fallback);
+};
+
+export const setPreferredCurrency = (currency: CurrencyCode): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const normalized = normalizeCurrency(currency);
+  window.localStorage.setItem(CURRENCY_STORAGE_KEY, normalized);
+  window.dispatchEvent(new CustomEvent(CURRENCY_CHANGE_EVENT, { detail: normalized }));
+};
+
+const toPrettyUsd = (rawUsd: number): number => {
+  const safe = Number.isFinite(rawUsd) ? Math.max(0, rawUsd) : 0;
+
+  if (safe >= 1000) {
+    return Math.round(safe / 50) * 50;
+  }
+
+  const roundedInteger = Math.round(safe);
+  const candidates = [
+    roundedInteger,
+    Math.floor(safe) + 0.49,
+    Math.floor(safe) + 0.99,
+  ];
+
+  return candidates.reduce((closest, current) =>
+    Math.abs(current - safe) < Math.abs(closest - safe) ? current : closest
+  );
+};
+
 /**
  * Format price to Vietnamese Dong currency
  */
-export const formatPrice = (value: number): string => {
+export const formatPrice = (value: number, currency?: CurrencyCode): string => {
+  const selectedCurrency = normalizeCurrency(currency || getPreferredCurrency('vnd'));
+  const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
+
+  if (selectedCurrency === 'usd') {
+    const rawUsd = safeValue / USD_EXCHANGE_RATE;
+    const prettyUsd = toPrettyUsd(rawUsd);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(prettyUsd);
+  }
+
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
-  }).format(value);
+    maximumFractionDigits: 0,
+  }).format(safeValue);
+};
+
+export const roundPriceToStep = (value: number, step: number = 1000): number => {
+  const numericValue = Number.isFinite(value) ? value : 0;
+  const numericStep = Number.isFinite(step) && step > 0 ? step : 1000;
+  return Math.max(0, Math.round(numericValue / numericStep) * numericStep);
+};
+
+export const calculateDiscountedPrice = (
+  basePrice: number,
+  salePercent: number,
+  roundingStep: number = 1000
+): number => {
+  const normalizedBasePrice = Number.isFinite(basePrice) ? Math.max(0, basePrice) : 0;
+  const normalizedSalePercent = Number.isFinite(salePercent)
+    ? Math.min(100, Math.max(0, salePercent))
+    : 0;
+
+  if (normalizedSalePercent <= 0) {
+    return roundPriceToStep(normalizedBasePrice, roundingStep);
+  }
+
+  const rawDiscountedPrice = normalizedBasePrice * (1 - normalizedSalePercent / 100);
+  return roundPriceToStep(rawDiscountedPrice, roundingStep);
 };
 
 /**
