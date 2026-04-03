@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
 import { getPreferredCurrency, setPreferredCurrency } from '@/utils/constants';
 
+const PROMOTION_DISMISSED_KEY = 'salvio_promo_header_dismissed';
+const PROMOTION_RESET_EVENT = 'salvio_promo_header_reset';
+
 export const Footer: React.FC = () => {
   const [currency, setCurrency] = React.useState<'vnd' | 'usd'>(getPreferredCurrency('vnd'));
 
@@ -102,7 +105,7 @@ export const Footer: React.FC = () => {
               </li>
             </ul>
 
-            <div className="mt-6">
+            <div className="mt-6 text-center">
               <label className="block text-xs uppercase tracking-wide text-gray-500 mb-2">Tiền tệ</label>
               <select
                 value={currency}
@@ -111,11 +114,22 @@ export const Footer: React.FC = () => {
                   setCurrency(nextCurrency);
                   setPreferredCurrency(nextCurrency);
                 }}
-                className="w-full bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                className="w-full max-w-[260px] mx-auto bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
               >
                 <option value="vnd">VNĐ - Đồng Việt Nam</option>
                 <option value="usd">USD - US Dollar</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  window.localStorage.removeItem(PROMOTION_DISMISSED_KEY);
+                  window.dispatchEvent(new CustomEvent(PROMOTION_RESET_EVENT));
+                }}
+                className="mt-3 text-xs text-[#C9A24D] hover:text-[#D7B56C] transition-colors"
+              >
+                Hiện lại promo header
+              </button>
             </div>
           </div>
 

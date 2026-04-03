@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { formatPrice } from '@/utils/constants';
+import { calculateDiscountedPrice, formatPrice } from '@/utils/constants';
 import { ProductCard } from '@/app/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -82,9 +82,7 @@ export const ProductDetail: React.FC = () => {
   const basePrice = Number(product?.originalPrice || product?.price || 0);
   const salePercent = Number(product?.salePercent || 0);
   const hasSale = salePercent > 0;
-  const salePrice = hasSale
-    ? Math.max(0, Math.round(basePrice * (1 - salePercent / 100)))
-    : basePrice;
+  const salePrice = calculateDiscountedPrice(basePrice, salePercent);
 
   const favoriteProducts = useMemo(() => {
     if (!product) return [];

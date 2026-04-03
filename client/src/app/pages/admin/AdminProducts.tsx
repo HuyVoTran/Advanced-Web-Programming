@@ -5,6 +5,7 @@ import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
 import { toast } from 'sonner';
 import { getPrimaryProductImage } from '@/utils/image';
+import { calculateDiscountedPrice } from '@/utils/constants';
 
 interface Product {
   _id: string;
@@ -206,10 +207,7 @@ export const AdminProducts: React.FC = () => {
                           <div className="text-xs text-gray-500 line-through">{formatPrice(product.price)}</div>
                           <div className="text-red-600">
                             {formatPrice(
-                              Math.max(
-                                0,
-                                Math.round(product.price * (1 - Number(product.salePercent || 0) / 100))
-                              )
+                              calculateDiscountedPrice(product.price, Number(product.salePercent || 0))
                             )}
                           </div>
                         </div>

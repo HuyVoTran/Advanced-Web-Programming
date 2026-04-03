@@ -1,15 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
 import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { Package } from 'lucide-react';
 import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
+import { notify } from '@/utils/notifications';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/app/components/ui/dialog';
+import { Textarea } from '@/app/components/ui/textarea';
+import { Button } from '@/app/components/ui/button';
 
 export const OrderHistory: React.FC = () => {
   const { user } = useAuth();
-  const { getUserOrders } = useOrders();
+  const { getUserOrders, updateOrderStatus } = useOrders();
   const navigate = useNavigate();
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -23,6 +38,35 @@ export const OrderHistory: React.FC = () => {
 
   const userId = user.id || user._id;
   const orders = userId ? getUserOrders(userId) : [];
+
+  const canCancelOrder = (status: string) => ['pending', 'confirmed'].includes(status);
+
+  const openCancelDialog = (orderId: string) => {
+    setOrderToCancel(orderId);
+    setCancelReason('');
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelOrder = async () => {
+    const trimmedReason = cancelReason.trim();
+    if (!orderToCancel || !trimmedReason) {
+      notify.error('Vui lòng nhập lý do hủy đơn');
+      return;
+    }
+
+    try {
+      setCancellingOrderId(orderToCancel);
+      await updateOrderStatus(orderToCancel, 'cancelled', { cancelReason: trimmedReason });
+      notify.orderCancelled(orderToCancel);
+      setCancelDialogOpen(false);
+      setOrderToCancel(null);
+      setCancelReason('');
+    } catch (error) {
+      notify.error('Không thể hủy đơn hàng', 'Vui lòng thử lại sau.');
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
 
   return (
     <UserDashboardLayout
@@ -72,7 +116,17 @@ export const OrderHistory: React.FC = () => {
                 </p>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-gray-200 flex justify-end">
+              <div className="mt-5 pt-4 border-t border-gray-200 flex justify-end gap-3">
+                {canCancelOrder(order.status) && (
+                  <button
+                    type="button"
+                      onClick={() => openCancelDialog(order.id)}
+                    disabled={cancellingOrderId === order.id}
+                    className="inline-block border border-red-300 text-red-600 px-4 py-2 text-sm tracking-wide uppercase hover:bg-red-50 transition-colors duration-300 rounded disabled:opacity-50"
+                  >
+                    {cancellingOrderId === order.id ? 'Đang hủy...' : 'Hủy đơn'}
+                  </button>
+                )}
                 <Link
                   to={`/orders/${order.id}`}
                   className="inline-block bg-[#C9A24D] text-white px-4 py-2 text-sm tracking-wide uppercase hover:bg-[#b8923f] transition-colors duration-300 rounded"
@@ -83,6 +137,54 @@ export const OrderHistory: React.FC = () => {
             </div>
           ))}
         </div>
+
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Hủy đơn hàng</DialogTitle>
+              <DialogDescription>
+                Vui lòng nhập lý do hủy đơn hàng để hệ thống ghi nhận.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <label htmlFor="cancel-reason" className="text-sm text-gray-700">
+                Lý do hủy <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Ví dụ: Tôi muốn đổi sản phẩm khác..."
+                maxLength={500}
+                rows={4}
+              />
+              <p className="text-xs text-gray-500 text-right">{cancelReason.length}/500</p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCancelDialogOpen(false);
+                  setOrderToCancel(null);
+                  setCancelReason('');
+                }}
+              >
+                Đóng
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleCancelOrder}
+                disabled={!cancelReason.trim() || !!cancellingOrderId}
+              >
+                {cancellingOrderId ? 'Đang hủy...' : 'Xác nhận hủy đơn'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </UserDashboardLayout>
   );
 };

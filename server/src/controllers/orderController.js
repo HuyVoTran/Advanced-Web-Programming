@@ -3,6 +3,7 @@ import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination } from '../utils/validators.js';
+import sendEmail from '../utils/sendEmail.js';
 
 /**
  * Transform một Order document thành format chuẩn cho frontend.
@@ -35,6 +36,66 @@ const formatOrder = (order) => {
     shippingAddress,
     note: o.notes || '',
   };
+};
+
+const getClientUrl = () => process.env.CLIENT_URL || 'http://localhost:5173';
+
+const formatCurrency = (value = 0) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(Number(value || 0));
+
+const sendOrderCreatedEmail = async (order) => {
+  const customerEmail = order?.customerInfo?.email;
+  if (!customerEmail) return;
+
+  const orderId = order?._id?.toString() || order?.id || '';
+  const orderCode = `#${orderId}`;
+  const orderDetailUrl = `${getClientUrl()}/orders/${orderId}`;
+
+  const html = `
+    <p>Xin chào ${order?.customerInfo?.fullName || 'Quý khách'},</p>
+    <p>Đơn hàng <strong>${orderCode}</strong> của bạn đã được tạo thành công.</p>
+    <p><strong>Tổng thanh toán:</strong> ${formatCurrency(order?.totalPrice)}</p>
+    <p>Bạn có thể theo dõi trạng thái đơn hàng tại nút bên dưới:</p>
+    <p style="margin:18px 0;">
+      <a href="${orderDetailUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Xem chi tiết đơn hàng</a>
+    </p>
+    <p>Cảm ơn bạn đã mua sắm tại Salvio Royale.</p>
+  `;
+
+  await sendEmail({
+    to: customerEmail,
+    subject: `Đặt hàng thành công ${orderCode}`,
+    html,
+  });
+};
+
+const sendOrderCancelledEmail = async (order, reason = '') => {
+  const customerEmail = order?.customerInfo?.email;
+  if (!customerEmail) return;
+
+  const orderId = order?._id?.toString() || order?.id || '';
+  const orderCode = `#${orderId}`;
+  const orderDetailUrl = `${getClientUrl()}/orders/${orderId}`;
+  const finalReason = String(reason || order?.cancelReason || '').trim();
+
+  const html = `
+    <p>Xin chào ${order?.customerInfo?.fullName || 'Quý khách'},</p>
+    <p>Đơn hàng <strong>${orderCode}</strong> đã được cập nhật sang trạng thái <strong>Đã hủy</strong>.</p>
+    ${finalReason ? `<p><strong>Lý do hủy:</strong> ${finalReason}</p>` : ''}
+    <p>Bạn có thể xem lại thông tin đơn hàng tại nút bên dưới:</p>
+    <p style="margin:18px 0;">
+      <a href="${orderDetailUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Xem chi tiết đơn hàng</a>
+    </p>
+  `;
+
+  await sendEmail({
+    to: customerEmail,
+    subject: `Đơn hàng ${orderCode} đã bị hủy`,
+    html,
+  });
 };
 
 export const createOrder = async (req, res, next) => {
@@ -90,6 +151,8 @@ export const createOrder = async (req, res, next) => {
 
     await order.save();
 
+    const populatedOrder = await Order.findById(order._id).populate('items.product').populate('user');
+
     // Xóa giỏ hàng nếu người dùng đã đăng nhập
     if (req.user) {
       const cart = await Cart.findOne({ user: req.user.id });
@@ -99,7 +162,14 @@ export const createOrder = async (req, res, next) => {
       }
     }
 
-    return sendResponse(res, 201, 'Đơn hàng được tạo thành công', order);
+    try {
+      await sendOrderCreatedEmail(populatedOrder || order);
+    } catch (emailError) {
+      // eslint-disable-next-line no-console
+      console.error('[Order] Failed to send order-created email:', emailError);
+    }
+
+    return sendResponse(res, 201, 'Đơn hàng được tạo thành công', populatedOrder || order);
   } catch (error) {
     next(error);
   }
@@ -159,6 +229,11 @@ export const getOrderById = async (req, res, next) => {
 export const cancelOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const cancelReason = String(req.body?.cancelReason || '').trim();
+
+    if (!cancelReason) {
+      return sendError(res, 400, 'Vui lòng cung cấp lý do hủy đơn hàng');
+    }
 
     const order = await Order.findById(id);
 
@@ -171,7 +246,7 @@ export const cancelOrder = async (req, res, next) => {
       return sendError(res, 403, 'Bạn không có quyền hủy đơn hàng này');
     }
 
-    if (!['pending', 'processing'].includes(order.status)) {
+    if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
       return sendError(res, 400, 'Đơn hàng không thể bị hủy ở giai đoạn này');
     }
 
@@ -185,9 +260,19 @@ export const cancelOrder = async (req, res, next) => {
     }
 
     order.status = 'cancelled';
+    order.cancelReason = cancelReason;
     await order.save();
 
-    return sendResponse(res, 200, 'Đơn hàng được hủy thành công', order);
+    const updatedOrder = await Order.findById(order._id).populate('items.product').populate('user');
+
+    try {
+      await sendOrderCancelledEmail(updatedOrder || order, cancelReason);
+    } catch (emailError) {
+      // eslint-disable-next-line no-console
+      console.error('[Order] Failed to send order-cancelled email:', emailError);
+    }
+
+    return sendResponse(res, 200, 'Đơn hàng được hủy thành công', formatOrder(updatedOrder || order));
   } catch (error) {
     next(error);
   }

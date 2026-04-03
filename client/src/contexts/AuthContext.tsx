@@ -50,6 +50,7 @@ export interface Order {
   }>;
   total: number;
   status: 'pending' | 'confirmed' | 'shipping' | 'completed' | 'cancelled';
+  cancelReason?: string;
   paymentMethod?: 'cod' | 'card' | 'bank_transfer';
   shippingAddress: Address;
   createdAt: string;

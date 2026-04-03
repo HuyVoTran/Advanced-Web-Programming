@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, MapPin, ShoppingBag, Settings, LogOut, ArrowLeft, Heart } from 'lucide-react';
+import { User, MapPin, ShoppingBag, Settings, LogOut, ArrowLeft, Heart, LayoutDashboard } from 'lucide-react';
 import { formatPrice, getStatusText, getStatusColor } from '@/utils/constants';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -24,6 +24,7 @@ export const UserDashboard: React.FC = () => {
   const favoriteCount = user?.favoriteProductIds?.length || 0;
 
   const menuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', description: 'Tổng quan tài khoản của bạn' },
     { icon: User, label: 'Thông tin cá nhân', path: '/profile', description: 'Cập nhật thông tin tài khoản' },
     { icon: MapPin, label: 'Sổ địa chỉ', path: '/addresses', description: 'Quản lý địa chỉ giao hàng' },
     { icon: ShoppingBag, label: 'Đơn hàng của tôi', path: '/orders', description: 'Xem lịch sử đơn hàng' },
@@ -147,7 +148,8 @@ export const UserDashboard: React.FC = () => {
                   {userOrders.map((order) => (
                     <div
                       key={order.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-[#C9A24D] transition-colors"
+                      className="border border-gray-200 rounded-lg p-4 hover:border-[#C9A24D] transition-colors cursor-pointer"
+                      onClick={() => navigate(`/orders/${order.id}`)}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -172,6 +174,10 @@ export const UserDashboard: React.FC = () => {
                       <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                         <div className="text-sm text-gray-600">Tổng tiền:</div>
                         <div className="text-[#C9A24D]">{formatPrice(order.total)}</div>
+                      </div>
+
+                      <div className="pt-3 mt-3 border-t border-gray-200 text-right">
+                        <span className="text-sm text-[#C9A24D]">Xem chi tiết →</span>
                       </div>
                     </div>
                   ))}

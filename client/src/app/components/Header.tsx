@@ -1,17 +1,33 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, ShoppingBag, User, Search, ChevronDown } from 'lucide-react';
+import { Menu, ShoppingBag, User, Search, ChevronDown, X } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { SearchBar } from './shared/SearchBar';
 import { useProducts, useClickOutside, useNews, useCategories } from '@/hooks/useCustomHooks';
+import { AnimatePresence, motion } from 'motion/react';
+
+const PROMOTION_ITEMS = [
+  {
+    to: '/products?sale=1',
+    label: 'Giảm giá lên đến 50% - Mua ngay',
+  },
+  {
+    to: '/products',
+    label: 'Miễn phí ship toàn bộ sản phẩm',
+  },
+];
+const PROMOTION_DISMISSED_KEY = 'salvio_promo_header_dismissed';
+const PROMOTION_RESET_EVENT = 'salvio_promo_header_reset';
 
 export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileCatsOpen, setMobileCatsOpen] = useState(false);
+  const [promotionIndex, setPromotionIndex] = useState(0);
+  const [isPromotionVisible, setIsPromotionVisible] = useState(true);
   const searchRef = useRef<HTMLDivElement>(null!);
   const { itemCount } = useCart();
   const { user, logout } = useAuth();
@@ -38,6 +54,52 @@ export const Header: React.FC = () => {
   };
 
   useClickOutside(searchRef, () => setSearchOpen(false));
+
+  useEffect(() => {
+    const syncPromotionVisibility = () => {
+      const isDismissed = window.localStorage.getItem(PROMOTION_DISMISSED_KEY) === '1';
+      setIsPromotionVisible(!isDismissed);
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (!event.key || event.key === PROMOTION_DISMISSED_KEY) {
+        syncPromotionVisibility();
+      }
+    };
+
+    const handlePromoReset = () => {
+      setPromotionIndex(0);
+      setIsPromotionVisible(true);
+    };
+
+    syncPromotionVisibility();
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener(PROMOTION_RESET_EVENT, handlePromoReset as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener(PROMOTION_RESET_EVENT, handlePromoReset as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPromotionVisible) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setPromotionIndex((prev) => (prev + 1) % PROMOTION_ITEMS.length);
+    }, 10000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isPromotionVisible]);
+
+  const handleDismissPromotion = () => {
+    setIsPromotionVisible(false);
+    window.localStorage.setItem(PROMOTION_DISMISSED_KEY, '1');
+  };
 
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -71,8 +133,47 @@ export const Header: React.FC = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+      {isPromotionVisible && (
+        <div className="bg-[#111827] text-white">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="h-7 grid grid-cols-[24px_1fr_24px] items-center text-[10px] sm:text-xs tracking-wide">
+              <div className="w-6" aria-hidden="true" />
+
+              <div className="overflow-hidden text-center">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={promotionIndex}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.35 }}
+                    className="text-center"
+                  >
+                    <Link
+                      to={PROMOTION_ITEMS[promotionIndex].to}
+                      className="hover:text-[#F6D365] transition-colors duration-300"
+                    >
+                      {PROMOTION_ITEMS[promotionIndex].label}
+                    </Link>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDismissPromotion}
+                className="justify-self-end p-1 text-white/70 hover:text-white transition-colors"
+                aria-label="Tắt thông báo khuyến mãi"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-[60px]">
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <img

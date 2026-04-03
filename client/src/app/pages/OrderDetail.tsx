@@ -1,16 +1,32 @@
 import React from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
 import { formatPrice, getStatusColor, getStatusText } from '@/utils/constants';
 import { ArrowLeft, Package } from 'lucide-react';
 import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
+import { notify } from '@/utils/notifications';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/app/components/ui/dialog';
+import { Textarea } from '@/app/components/ui/textarea';
+import { Button } from '@/app/components/ui/button';
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getOrderById } = useOrders();
+  const { getOrderById, updateOrderStatus } = useOrders();
+  const [cancelling, setCancelling] = React.useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
+  const [cancelReason, setCancelReason] = React.useState('');
+  const hasAutoOpenedCancelDialog = React.useRef(false);
 
   const order = id ? getOrderById(id) : undefined;
 
@@ -47,6 +63,42 @@ export const OrderDetail: React.FC = () => {
     );
   }
 
+  const canCancelOrder = ['pending', 'confirmed'].includes(order.status);
+  const shouldOpenCancelFromQuery = ['1', 'true', 'yes'].includes(
+    String(searchParams.get('cancel') || '').toLowerCase()
+  );
+
+  React.useEffect(() => {
+    if (hasAutoOpenedCancelDialog.current) {
+      return;
+    }
+
+    if (order && canCancelOrder && shouldOpenCancelFromQuery) {
+      setCancelDialogOpen(true);
+      hasAutoOpenedCancelDialog.current = true;
+    }
+  }, [order, canCancelOrder, shouldOpenCancelFromQuery]);
+
+  const handleCancelOrder = async () => {
+    const trimmedReason = cancelReason.trim();
+    if (!trimmedReason) {
+      notify.error('Vui lòng nhập lý do hủy đơn');
+      return;
+    }
+
+    try {
+      setCancelling(true);
+      await updateOrderStatus(order.id, 'cancelled', { cancelReason: trimmedReason });
+      notify.orderCancelled(order.id);
+      setCancelDialogOpen(false);
+      setCancelReason('');
+    } catch (error) {
+      notify.error('Không thể hủy đơn hàng', 'Vui lòng thử lại sau.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
     <UserDashboardLayout
       title="Chi tiết đơn hàng"
@@ -69,9 +121,21 @@ export const OrderDetail: React.FC = () => {
               <p className="text-sm text-gray-500">Mã đơn hàng</p>
               <p className="text-lg font-medium">{order.id}</p>
             </div>
-            <span className={`px-3 py-1 rounded text-sm w-fit ${getStatusColor(order.status)}`}>
-              {getStatusText(order.status)}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded text-sm w-fit ${getStatusColor(order.status)}`}>
+                {getStatusText(order.status)}
+              </span>
+              {canCancelOrder && (
+                <button
+                  type="button"
+                  onClick={() => setCancelDialogOpen(true)}
+                  disabled={cancelling}
+                  className="px-4 py-2 rounded text-sm border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -115,7 +179,61 @@ export const OrderDetail: React.FC = () => {
             <p className="text-sm text-gray-500">Phương thức thanh toán</p>
             <p>{order.paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : order.paymentMethod || 'N/A'}</p>
           </div>
+
+          {order.status === 'cancelled' && order.cancelReason && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-sm text-gray-500">Lý do hủy đơn</p>
+              <p className="text-gray-700 whitespace-pre-wrap">{order.cancelReason}</p>
+            </div>
+          )}
         </div>
+
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Hủy đơn hàng</DialogTitle>
+              <DialogDescription>
+                Vui lòng nhập lý do hủy đơn hàng trước khi xác nhận.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <label htmlFor="cancel-reason-detail" className="text-sm text-gray-700">
+                Lý do hủy <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                id="cancel-reason-detail"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Ví dụ: Tôi đặt nhầm sản phẩm..."
+                maxLength={500}
+                rows={4}
+              />
+              <p className="text-xs text-gray-500 text-right">{cancelReason.length}/500</p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCancelDialogOpen(false);
+                  setCancelReason('');
+                }}
+              >
+                Đóng
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleCancelOrder}
+                disabled={!cancelReason.trim() || cancelling}
+              >
+                {cancelling ? 'Đang hủy...' : 'Xác nhận hủy đơn'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </UserDashboardLayout>
   );
 };

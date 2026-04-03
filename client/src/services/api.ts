@@ -178,9 +178,10 @@ export const ordersAPI = {
       ...(token && { token }),
     }),
 
-  cancel: (id: string, token: string) =>
+  cancel: (id: string, token: string, cancelReason: string) =>
     apiCall(`/orders/${id}/cancel`, {
       method: 'PUT',
+      body: JSON.stringify({ cancelReason }),
       token,
     }),
 };

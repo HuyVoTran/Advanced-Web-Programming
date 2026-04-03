@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { resolveImageSrc } from '@/utils/image';
+import { calculateDiscountedPrice } from '@/utils/constants';
 
 export interface Product {
   _id?: string;
@@ -91,9 +92,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       : product.image || '';
     const basePrice = Number(product.originalPrice || product.price || 0);
     const salePercent = Number(product.salePercent || 0);
-    const finalPrice = salePercent > 0
-      ? Math.max(0, Math.round(basePrice * (1 - salePercent / 100)))
-      : basePrice;
+    const finalPrice = calculateDiscountedPrice(basePrice, salePercent);
 
     if (!productId) {
       return;

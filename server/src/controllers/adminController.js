@@ -46,6 +46,58 @@ const formatOrder = (order) => {
   };
 };
 
+const getClientUrl = () => process.env.CLIENT_URL || 'http://localhost:5173';
+
+const sendOrderStatusEmail = async (order, status) => {
+  const customerEmail = order?.customerInfo?.email || order?.user?.email;
+  if (!customerEmail) return;
+
+  const orderId = order?._id?.toString() || order?.id || '';
+  const orderCode = `#${orderId}`;
+  const orderDetailUrl = `${getClientUrl()}/orders/${orderId}`;
+  const cancelFormUrl = `${getClientUrl()}/orders/${orderId}?cancel=1`;
+
+  if (status === 'confirmed') {
+    const html = `
+      <p>Xin chào ${order?.customerInfo?.fullName || order?.user?.fullName || 'Quý khách'},</p>
+      <p>Đơn hàng <strong>${orderCode}</strong> của bạn đã được <strong>xác nhận</strong>.</p>
+      <p>Nếu cần hủy đơn, bạn có thể dùng nút bên dưới để mở trang nhập lý do hủy:</p>
+      <p style="margin:18px 0;">
+        <a href="${cancelFormUrl}" style="display:inline-block;background:#b91c1c;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Yêu cầu hủy đơn</a>
+      </p>
+      <p>Hoặc xem chi tiết đơn hàng tại đây:</p>
+      <p style="margin:18px 0;">
+        <a href="${orderDetailUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Xem chi tiết đơn hàng</a>
+      </p>
+    `;
+
+    await sendEmail({
+      to: customerEmail,
+      subject: `Đơn hàng ${orderCode} đã được xác nhận`,
+      html,
+    });
+    return;
+  }
+
+  if (status === 'cancelled') {
+    const reason = String(order?.cancelReason || order?.rejectionReason || order?.notes || '').trim();
+    const html = `
+      <p>Xin chào ${order?.customerInfo?.fullName || order?.user?.fullName || 'Quý khách'},</p>
+      <p>Đơn hàng <strong>${orderCode}</strong> đã được cập nhật sang trạng thái <strong>Đã hủy</strong>.</p>
+      ${reason ? `<p><strong>Lý do:</strong> ${reason}</p>` : ''}
+      <p style="margin:18px 0;">
+        <a href="${orderDetailUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Xem chi tiết đơn hàng</a>
+      </p>
+    `;
+
+    await sendEmail({
+      to: customerEmail,
+      subject: `Đơn hàng ${orderCode} đã bị hủy`,
+      html,
+    });
+  }
+};
+
 // Bảng điều khiển
 export const getDashboard = async (req, res, next) => {
   try {
@@ -295,14 +347,26 @@ export const updateOrderStatus = async (req, res, next) => {
       return sendError(res, 400, 'Trạng thái không hợp lệ');
     }
 
-    const order = await Order.findByIdAndUpdate(
-      id,
-      { status, notes: notes || undefined },
-      { new: true }
-    ).populate('user').populate('items.product');
+    const updatePayload = {
+      status,
+      ...(notes ? { notes } : {}),
+      ...(status === 'cancelled' && notes ? { cancelReason: notes } : {}),
+    };
+
+    const order = await Order.findByIdAndUpdate(id, updatePayload, { new: true })
+      .populate('user')
+      .populate('items.product');
 
     if (!order) {
       return sendError(res, 404, 'Đơn hàng không tìm thấy');
+    }
+
+    if (status === 'confirmed' || status === 'cancelled') {
+      try {
+        await sendOrderStatusEmail(order, status);
+      } catch (emailError) {
+        console.error('[Admin] Lỗi gửi email trạng thái đơn hàng:', emailError);
+      }
     }
 
     return sendResponse(res, 200, 'Trạng thái đơn hàng được cập nhật thành công', formatOrder(order));
@@ -341,9 +405,18 @@ export const rejectOrder = async (req, res, next) => {
 
     order.status = 'cancelled';
     order.rejectionReason = rejectionReason;
+    order.cancelReason = rejectionReason;
     await order.save();
 
-    return sendResponse(res, 200, 'Đơn hàng đã bị từ chối thành công', order);
+    const populatedOrder = await Order.findById(order._id).populate('user').populate('items.product');
+
+    try {
+      await sendOrderStatusEmail(populatedOrder || order, 'cancelled');
+    } catch (emailError) {
+      console.error('[Admin] Lỗi gửi email hủy đơn:', emailError);
+    }
+
+    return sendResponse(res, 200, 'Đơn hàng đã bị từ chối thành công', populatedOrder || order);
   } catch (error) {
     next(error);
   }

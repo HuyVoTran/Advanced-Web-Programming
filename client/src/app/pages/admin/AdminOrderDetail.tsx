@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Package, MapPin, CreditCard, User, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, Package, MapPin, CreditCard, User, AlertCircle, X, Download } from 'lucide-react';
 import { useAdminFetch, useAdminMutation } from '../../../hooks/useCustomHooks';
 import { adminApi } from '../../../services/adminApi';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Textarea } from '../../components/ui/textarea';
+import { exportOrderInvoiceDetailPdf } from '@/utils/adminExport';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -177,9 +178,26 @@ export const AdminOrderDetail: React.FC = () => {
             <h1 className="text-3xl mb-2 tracking-wide">Chi Tiết Đơn Hàng</h1>
             <p className="text-gray-600">Mã đơn: {order._id}</p>
           </div>
-          <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
-            {STATUS_TEXT[order.status] || order.status}
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  exportOrderInvoiceDetailPdf(order);
+                  toast.success('Đã xuất hóa đơn chi tiết PDF');
+                } catch (error: any) {
+                  toast.error(error?.message || 'Không thể xuất hóa đơn chi tiết');
+                }
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Xuất hóa đơn chi tiết PDF
+            </button>
+            <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
+              {STATUS_TEXT[order.status] || order.status}
+            </span>
+          </div>
         </div>
       </div>
 

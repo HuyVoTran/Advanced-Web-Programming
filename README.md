@@ -90,16 +90,20 @@ Không nằm trong phạm vi hiện tại:
 - Quản lý giỏ hàng, cập nhật số lượng, xóa sản phẩm.
 - Thanh toán theo hình thức COD.
 - Theo dõi lịch sử đơn hàng và chi tiết đơn hàng.
+- Hủy đơn hàng ở trạng thái `pending`/`confirmed` với form nhập lý do hủy.
 - Cập nhật hồ sơ cá nhân.
 - Quản lý sổ địa chỉ (thêm, sửa, xóa, đặt mặc định).
 - Cập nhật cài đặt tài khoản (notifications, ngôn ngữ, múi giờ, tiền tệ).
 - Xem tin tức, danh mục, thương hiệu, chính sách.
+- Header promotion dạng carousel 1 dòng, tự động chuyển, có nút tắt và nút hiện lại ở footer.
 
 ### 5.2 Chức năng quản trị viên
 - Dashboard tổng quan.
 - Quản lý sản phẩm (CRUD) và ảnh sản phẩm.
 - Quản lý danh mục và ảnh danh mục.
 - Quản lý đơn hàng và cập nhật trạng thái.
+- Xuất thống kê đơn hàng PDF, xuất danh sách hóa đơn PDF.
+- Xuất hóa đơn chi tiết PDF tại trang chi tiết đơn hàng.
 - Quản lý người dùng và vai trò.
 - Quản lý tin tức (CRUD, publish, thumbnail).
 - Gửi newsletter.
@@ -191,6 +195,25 @@ npm run dev
 cd client
 npm run build
 ```
+
+### 8.5 Biến môi trường backend khuyến nghị
+Để các chức năng email đơn hàng hoạt động đầy đủ (đặt hàng thành công, đã xác nhận, đã hủy), cấu hình thêm trong backend:
+
+```env
+EMAIL_USER=your_email@example.com
+EMAIL_PASS=your_app_password
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+
+CLIENT_URL=http://localhost:5173
+SERVER_URL=http://localhost:5000
+EMAIL_LOGO_URL=https://your-public-logo-url
+```
+
+Ghi chú:
+- `CLIENT_URL` dùng để tạo link trong email (xem đơn, mở form hủy).
+- `EMAIL_LOGO_URL` nên là URL public để email client hiển thị logo ổn định.
 
 ## 9. Trạng thái kiểm thử smoke (user flow)
 

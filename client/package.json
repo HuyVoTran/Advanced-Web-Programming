@@ -1,5 +1,5 @@
 {
-  "name": "SalvioRoyale",
+  "name": "salvio-royale",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -52,6 +52,8 @@
     "embla-carousel-react": "8.6.0",
     "express": "^5.2.1",
     "input-otp": "1.4.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "0.487.0",
     "motion": "12.23.24",
     "next-themes": "0.4.6",
@@ -65,6 +67,7 @@
     "react-router-dom": "^7.13.0",
     "react-slick": "^0.31.0",
     "recharts": "2.15.2",
+    "server": "file:../server",
     "slick-carousel": "^1.8.1",
     "sonner": "2.0.3",
     "tailwind-merge": "3.2.0",

@@ -6,7 +6,7 @@ import { Heart, ShoppingCart } from 'lucide-react';
 import { Button } from './ui/button';
 import { useCart } from '../../contexts/CartContext';
 import { toast } from 'sonner';
-import { formatPrice } from '@/utils/constants';
+import { calculateDiscountedPrice, formatPrice } from '@/utils/constants';
 import { getPrimaryProductImage } from '@/utils/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { notify } from '@/utils/notifications';
@@ -31,9 +31,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const basePrice = Number(product.originalPrice || product.price || 0);
   const salePercent = Number(product.salePercent || 0);
   const hasSale = salePercent > 0;
-  const salePrice = hasSale
-    ? Math.max(0, Math.round(basePrice * (1 - salePercent / 100)))
-    : basePrice;
+  const salePrice = calculateDiscountedPrice(basePrice, salePercent);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

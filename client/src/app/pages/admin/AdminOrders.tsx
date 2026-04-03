@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Eye, AlertCircle } from 'lucide-react';
+import { Search, Eye, AlertCircle, Download } from 'lucide-react';
 import { useAdminFetch } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { toast } from 'sonner';
+import { exportOrderStatisticsPdf, exportOrdersInvoiceListPdf } from '@/utils/adminExport';
 
 interface Order {
   _id: string;
@@ -64,6 +66,24 @@ export const AdminOrders: React.FC = () => {
     return sum;
   }, 0);
 
+  const handleExportStatistics = () => {
+    try {
+      exportOrderStatisticsPdf(filteredOrders);
+      toast.success('Đã xuất thống kê đơn hàng PDF');
+    } catch (error) {
+      toast.error('Xuất thống kê thất bại');
+    }
+  };
+
+  const handleExportInvoices = () => {
+    try {
+      exportOrdersInvoiceListPdf(filteredOrders);
+      toast.success('Đã xuất danh sách hóa đơn PDF');
+    } catch (error) {
+      toast.error('Xuất danh sách hóa đơn thất bại');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch(status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -97,10 +117,33 @@ export const AdminOrders: React.FC = () => {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl mb-2 tracking-wide">Quản Lý Đơn Hàng</h1>
-        <div className="flex gap-6 text-sm">
-          <p className="text-gray-600">Tổng số: {(allOrders || []).length} đơn hàng</p>
-          <p className="text-gray-600">Doanh thu: {formatPrice(totalRevenue)}</p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl mb-2 tracking-wide">Quản Lý Đơn Hàng</h1>
+            <div className="flex gap-6 text-sm">
+              <p className="text-gray-600">Tổng số: {(allOrders || []).length} đơn hàng</p>
+              <p className="text-gray-600">Doanh thu: {formatPrice(totalRevenue)}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleExportStatistics}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Xuất thống kê PDF
+            </button>
+            <button
+              type="button"
+              onClick={handleExportInvoices}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C9A24D] text-white hover:bg-[#B8923D] transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Xuất hóa đơn PDF
+            </button>
+          </div>
         </div>
       </div>
 

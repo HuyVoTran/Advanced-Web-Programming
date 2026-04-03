@@ -78,6 +78,12 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    cancelReason: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [500, 'Lý do hủy tối đa 500 ký tự'],
+    },
     notes: {
       type: String,
       default: '',

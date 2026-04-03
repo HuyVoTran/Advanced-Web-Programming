@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface OrderContextType {
   orders: Order[];
   addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<string>;
-  updateOrderStatus: (orderId: string, status: Order['status']) => void;
+  updateOrderStatus: (orderId: string, status: Order['status'], options?: { cancelReason?: string }) => Promise<void>;
   getUserOrders: (userId: string) => Order[];
   getOrderById: (orderId: string) => Order | undefined;
   getAllOrders: () => Order[];
@@ -50,6 +50,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       items,
       total: raw?.totalPrice ?? raw?.total ?? 0,
       status: raw?.status || 'pending',
+      cancelReason: raw?.cancelReason || '',
       paymentMethod: raw?.paymentMethod || 'cod',
       shippingAddress: {
         id: 'server',
@@ -127,27 +128,34 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     throw new Error('Tạo đơn hàng thất bại');
   };
 
-  const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    // If cancelling and token available, call backend
+  const updateOrderStatus = async (
+    orderId: string,
+    status: Order['status'],
+    options?: { cancelReason?: string }
+  ): Promise<void> => {
     if (token && status === 'cancelled') {
-      (async () => {
-        try {
-          const res: any = await ordersAPI.cancel(orderId, token);
-          const updated = res?.data ?? res ?? null;
-          if (updated) {
-            const normalized = normalizeOrder(updated);
-            setOrders(prev => prev.map(o => (o.id === normalized.id ? normalized : o)));
-            return;
-          }
-        } catch (err) {
-          // ignore and fall through to local update
-          // eslint-disable-next-line no-console
-          console.debug('[OrderContext] cancel order failed', err);
-        }
-      })();
+      const cancelReason = String(options?.cancelReason || '').trim();
+
+      const res: any = await ordersAPI.cancel(orderId, token, cancelReason);
+      const updated = res?.data ?? res ?? null;
+      if (updated) {
+        const normalized = normalizeOrder(updated);
+        setOrders(prev => prev.map(o => (o.id === normalized.id ? normalized : o)));
+        return;
+      }
     }
 
-    setOrders(prev => prev.map(order => (order.id === orderId ? { ...order, status } : order)));
+    setOrders(prev =>
+      prev.map(order =>
+        order.id === orderId
+          ? {
+              ...order,
+              status,
+              ...(status === 'cancelled' ? { cancelReason: String(options?.cancelReason || '').trim() } : {}),
+            }
+          : order
+      )
+    );
   };
 
   const getUserOrders = (userId: string): Order[] => {

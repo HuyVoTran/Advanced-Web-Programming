@@ -31,6 +31,8 @@ export const Products: React.FC = () => {
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const brandParam = searchParams.get('brand');
+  const saleParam = searchParams.get('sale');
+  const saleParamEnabled = saleParam === '1' || saleParam === 'true';
 
   // Fetch dữ liệu từ API
   const { products: apiProducts, loading: loadingProducts, error: errorProducts } = useProducts({ limit: 200 });
@@ -51,7 +53,7 @@ export const Products: React.FC = () => {
   const [priceRangeDraft, setPriceRangeDraft] = useState<[number, number]>([0, MAX_PRICE]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [saleOnly, setSaleOnly] = useState(false);
+  const [saleOnly, setSaleOnly] = useState(saleParamEnabled);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
@@ -61,6 +63,18 @@ export const Products: React.FC = () => {
   useEffect(() => {
     setPriceRangeDraft(priceRange);
   }, [priceRange]);
+
+  useEffect(() => {
+    setSelectedCategories(categoryParam ? [categoryParam] : []);
+  }, [categoryParam]);
+
+  useEffect(() => {
+    setSelectedBrands(brandParam ? [brandParam] : []);
+  }, [brandParam]);
+
+  useEffect(() => {
+    setSaleOnly(saleParamEnabled);
+  }, [saleParamEnabled]);
 
   const formattedMinPrice = useMemo(
     () => formatPrice(priceRangeDraft[0]),
