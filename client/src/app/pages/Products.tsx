@@ -223,13 +223,20 @@ export const Products: React.FC = () => {
       return searchMatch && categoryMatch && brandMatch && priceMatch && materialMatch && favoriteMatch && saleMatch;
     });
 
+    const getEffectivePrice = (product: any) => {
+      const basePrice = Number(product?.price || 0);
+      const salePercentValue = Number(product?.salePercent || 0);
+      const safeSalePercent = Math.max(0, Math.min(100, salePercentValue));
+      return Math.round(basePrice * (1 - safeSalePercent / 100));
+    };
+
     // Sorting
     switch (sortBy) {
       case 'price-asc':
-        filtered.sort((a: any, b: any) => (a.price || 0) - (b.price || 0));
+        filtered.sort((a: any, b: any) => getEffectivePrice(a) - getEffectivePrice(b));
         break;
       case 'price-desc':
-        filtered.sort((a: any, b: any) => (b.price || 0) - (a.price || 0));
+        filtered.sort((a: any, b: any) => getEffectivePrice(b) - getEffectivePrice(a));
         break;
       case 'name-asc':
         filtered.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
@@ -279,6 +286,15 @@ export const Products: React.FC = () => {
       setLoadingMore(false);
     }, 350);
   }, [loadingMore, hasMoreProducts, ITEMS_PER_BATCH, filteredProducts.length]);
+
+  const handleCollapseProducts = useCallback(() => {
+    if (loadMoreTimeoutRef.current) {
+      window.clearTimeout(loadMoreTimeoutRef.current);
+      loadMoreTimeoutRef.current = null;
+    }
+    setLoadingMore(false);
+    setVisibleCount(ITEMS_PER_BATCH);
+  }, [ITEMS_PER_BATCH]);
 
   const toggleCategory = useCallback((categoryId: string) => {
     setSelectedCategories(prev =>
@@ -731,6 +747,18 @@ export const Products: React.FC = () => {
                   {loadingMore
                     ? 'Đang tải thêm...'
                     : `Xem thêm ${Math.min(ITEMS_PER_BATCH, filteredProducts.length - visibleCount)} sản phẩm`}
+                </Button>
+              </div>
+            )}
+
+            {!loadingProducts && !errorProducts && visibleProducts.length > ITEMS_PER_BATCH && !hasMoreProducts && (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCollapseProducts}
+                >
+                  Thu gọn
                 </Button>
               </div>
             )}

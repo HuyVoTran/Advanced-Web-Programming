@@ -39,6 +39,7 @@ export const AdminProductForm: React.FC = () => {
 
   const [uploadingImages, setUploadingImages] = useState(false);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [saleEnabled, setSaleEnabled] = useState(false);
 
   // Fetch product if editing
   const { data: product, loading: productLoading } = useAdminFetch(
@@ -73,10 +74,11 @@ export const AdminProductForm: React.FC = () => {
 
   useEffect(() => {
     if (product) {
+      const nextSalePercent = String(product.salePercent || 0);
       setFormData({
         name: product.name,
         price: product.price.toString(),
-        salePercent: String(product.salePercent || 0),
+        salePercent: nextSalePercent,
         // product.category/brand may be populated objects or just IDs
         category: typeof product.category === 'object' ? product.category._id : product.category,
         brand: typeof product.brand === 'object' ? product.brand._id : product.brand,
@@ -86,6 +88,7 @@ export const AdminProductForm: React.FC = () => {
         stock: product.stock?.toString() || '0',
         images: product.images || [],
       });
+      setSaleEnabled(Number(nextSalePercent) > 0);
       setPendingImages([]);
     }
   }, [product]);
@@ -320,24 +323,49 @@ export const AdminProductForm: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 text-gray-700">
-                    Giảm giá (%)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      name="salePercent"
-                      value={formData.salePercent}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:opacity-50"
-                      min="0"
-                      max="100"
-                      step="1"
-                      disabled={savingLoading}
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
-                      %
-                    </span>
+                  <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <span className="text-sm text-gray-700">Bật giảm giá</span>
+                      <input
+                        type="checkbox"
+                        checked={saleEnabled}
+                        onChange={(e) => {
+                          const enabled = e.target.checked;
+                          setSaleEnabled(enabled);
+                          if (!enabled) {
+                            setFormData((prev) => ({ ...prev, salePercent: '0' }));
+                          } else if (Number(formData.salePercent || 0) <= 0) {
+                            setFormData((prev) => ({ ...prev, salePercent: '10' }));
+                          }
+                        }}
+                        className="w-5 h-5 rounded border-gray-300 text-[#C9A24D] focus:ring-[#C9A24D]"
+                        disabled={savingLoading}
+                      />
+                    </label>
+
+                    {saleEnabled && (
+                      <div>
+                        <label className="block text-sm mb-2 text-gray-700">
+                          Giảm giá (%)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            name="salePercent"
+                            value={formData.salePercent}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:opacity-50"
+                            min="1"
+                            max="100"
+                            step="1"
+                            disabled={savingLoading}
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
+                            %
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
