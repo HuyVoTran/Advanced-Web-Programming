@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 interface FormData {
   name: string;
   price: string;
+  salePercent: string;
   category: string;
   brand: string;
   material: string;
@@ -26,6 +27,7 @@ export const AdminProductForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     price: '',
+    salePercent: '0',
     category: '',
     brand: '',
     material: '',
@@ -74,6 +76,7 @@ export const AdminProductForm: React.FC = () => {
       setFormData({
         name: product.name,
         price: product.price.toString(),
+        salePercent: String(product.salePercent || 0),
         // product.category/brand may be populated objects or just IDs
         category: typeof product.category === 'object' ? product.category._id : product.category,
         brand: typeof product.brand === 'object' ? product.brand._id : product.brand,
@@ -94,6 +97,7 @@ export const AdminProductForm: React.FC = () => {
         ...formData,
         images: formData.images || [],
         price: Number(formData.price),
+        salePercent: Number(formData.salePercent || 0),
         stock: Number(formData.stock),
       });
 
@@ -311,6 +315,28 @@ export const AdminProductForm: React.FC = () => {
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
                       VNĐ
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 text-gray-700">
+                    Giảm giá (%)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="salePercent"
+                      value={formData.salePercent}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:opacity-50"
+                      min="0"
+                      max="100"
+                      step="1"
+                      disabled={savingLoading}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
+                      %
                     </span>
                   </div>
                 </div>

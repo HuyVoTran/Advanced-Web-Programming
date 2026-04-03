@@ -17,6 +17,12 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Vui lòng cung cấp giá'],
       min: [0, 'Giá không thể âm'],
     },
+    salePercent: {
+      type: Number,
+      default: 0,
+      min: [0, 'Phần trăm giảm giá không thể âm'],
+      max: [100, 'Phần trăm giảm giá không được vượt quá 100'],
+    },
     originalPrice: {
       type: Number,
       default: null,

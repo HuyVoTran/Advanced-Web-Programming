@@ -4,7 +4,7 @@ import { validatePagination } from '../utils/validators.js';
 
 export const getProducts = async (req, res, next) => {
   try {
-    const { page = 1, limit = 12, category, brand, minPrice, maxPrice, search } = req.query;
+    const { page = 1, limit = 12, category, brand, minPrice, maxPrice, search, sale } = req.query;
     const { page: pageNum, limit: limitNum } = validatePagination(page, limit);
 
     // Xây dựng đối tượng filter
@@ -29,6 +29,10 @@ export const getProducts = async (req, res, next) => {
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
       ];
+    }
+
+    if (sale === 'true' || sale === '1') {
+      filter.salePercent = { $gt: 0 };
     }
 
     const total = await Product.countDocuments(filter);

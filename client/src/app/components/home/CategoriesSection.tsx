@@ -10,6 +10,14 @@ interface CategoriesSectionProps {
 }
 
 export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ categories, loading, error }) => {
+  const displayCategories = categories
+    .filter((category) => {
+      const normalizedName = String(category?.name || '').trim().toLowerCase();
+      const normalizedSlug = String(category?.slug || '').trim().toLowerCase();
+      return normalizedName !== 'sale' && normalizedSlug !== 'sale';
+    })
+    .slice(0, 4);
+
   return (
     <section className="py-24 bg-gray-50">
       <div className="container mx-auto px-4 lg:px-8">
@@ -28,8 +36,8 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ categories
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {categories.length > 0 ? (
-              categories.slice(0, 4).map((category) => (
+            {displayCategories.length > 0 ? (
+              displayCategories.map((category) => (
                 <CategoryCard key={category._id || category.id} category={category} />
               ))
             ) : (

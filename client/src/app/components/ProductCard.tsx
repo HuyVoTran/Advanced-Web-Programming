@@ -28,6 +28,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const imageUrl = getPrimaryProductImage(product) || 'https://source.unsplash.com/600x800/?jewelry';
   const favorite = isFavorite(productId);
   const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
+  const salePercent = Number(product.salePercent || 0);
+  const hasSale = salePercent > 0;
+  const salePrice = hasSale
+    ? Math.max(0, Math.round(Number(product.price || 0) * (1 - salePercent / 100)))
+    : Number(product.price || 0);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -55,7 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
     addItem({
       productId,
       name: product.name,
-      price: product.price,
+      price: salePrice,
       image: imageUrl,
       quantity: 1,
     });
@@ -118,6 +123,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
                   NỔI BẬT
                 </span>
               )}
+              {hasSale && (
+                <span className="bg-red-600 text-white text-xs px-2 py-0.5 tracking-wider">
+                  Sale {salePercent}%
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -142,7 +152,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
               <p className="text-sm text-muted-foreground">{product.material}</p>
             </div>
             <div className="flex items-center justify-between mt-4">
-              <p className="text-xl text-primary">{formatPrice(product.price)}</p>
+              <div className="flex flex-col">
+                {hasSale && (
+                  <span className="text-sm text-gray-500 line-through">{formatPrice(product.price)}</span>
+                )}
+                <p className={`text-xl ${hasSale ? 'text-red-600' : 'text-primary'}`}>{formatPrice(salePrice)}</p>
+              </div>
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -190,6 +205,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
                 NỔI BẬT
               </span>
             )}
+            {hasSale && (
+              <span className="bg-red-600 text-white text-xs px-3 py-1 tracking-wider">
+                Sale {salePercent}%
+              </span>
+            )}
           </div>
 
           <button
@@ -209,9 +229,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center text-white p-6">
             <h3 className="text-xl mb-2 text-center line-clamp-2">{product.name}</h3>
             <p className="text-sm text-white/80 mb-1">{categoryName}</p>
-            <p className="text-lg text-[#C9A24D] font-light tracking-wide mb-4">
-              {formatPrice(product.price)}
-            </p>
+            <div className="mb-4 text-center">
+              {hasSale && (
+                <p className="text-sm text-white/70 line-through">{formatPrice(product.price)}</p>
+              )}
+              <p className={`text-lg font-light tracking-wide ${hasSale ? 'text-red-400' : 'text-[#C9A24D]'}`}>
+                {formatPrice(salePrice)}
+              </p>
+            </div>
             <Button
               size="sm"
               onClick={handleAddToCart}
@@ -227,7 +252,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
         <div className="mt-4 space-y-1">
           <p className="text-xs text-gray-500 tracking-wide uppercase truncate">{typeof product.brand === 'object' ? product.brand.name : product.brand}</p>
           <h3 className="text-sm text-gray-900 line-clamp-1">{product.name}</h3>
-          <p className="text-base text-[#C9A24D]">{formatPrice(product.price)}</p>
+          <div className="space-y-0.5">
+            {hasSale && (
+              <p className="text-xs text-gray-500 line-through">{formatPrice(product.price)}</p>
+            )}
+            <p className={`text-base ${hasSale ? 'text-red-600' : 'text-[#C9A24D]'}`}>{formatPrice(salePrice)}</p>
+          </div>
         </div>
       </Link>
     </motion.div>

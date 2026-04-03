@@ -10,6 +10,7 @@ interface Product {
   _id: string;
   name: string;
   price: number;
+  salePercent?: number;
   // the admin API populates category/brand objects, but other parts of the
   // codebase sometimes treat them as strings.  Accept either and we'll
   // normalize when rendering/filtering.
@@ -199,7 +200,22 @@ export const AdminProducts: React.FC = () => {
                       {normalizeBrand(product.brand)}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
-                      {formatPrice(product.price)}
+                      {Number(product.salePercent || 0) > 0 ? (
+                        <div>
+                          <div className="text-xs text-red-600 font-semibold mb-1">Sale {product.salePercent}%</div>
+                          <div className="text-xs text-gray-500 line-through">{formatPrice(product.price)}</div>
+                          <div className="text-red-600">
+                            {formatPrice(
+                              Math.max(
+                                0,
+                                Math.round(product.price * (1 - Number(product.salePercent || 0) / 100))
+                              )
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        formatPrice(product.price)
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>

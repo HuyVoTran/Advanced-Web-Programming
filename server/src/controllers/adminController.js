@@ -142,7 +142,7 @@ export const createNews = async (req, res, next) => {
 // Quản lý sản phẩm
 export const createProduct = async (req, res, next) => {
   try {
-    const { name, price, description, material, images, category, brand, isFeatured, stock } = req.body;
+    const { name, price, description, material, images, category, brand, isFeatured, stock, salePercent } = req.body;
 
     const errors = validateProductData(req.body);
     if (errors.length > 0) {
@@ -159,6 +159,7 @@ export const createProduct = async (req, res, next) => {
       brand,
       isFeatured: isFeatured || false,
       stock: stock || 0,
+      salePercent: salePercent || 0,
     });
 
     await product.save();
@@ -172,7 +173,7 @@ export const createProduct = async (req, res, next) => {
 export const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, price, description, material, images, category, brand, isFeatured, stock, isActive } =
+    const { name, price, description, material, images, category, brand, isFeatured, stock, isActive, salePercent } =
       req.body;
 
     const product = await Product.findByIdAndUpdate(
@@ -188,6 +189,7 @@ export const updateProduct = async (req, res, next) => {
         isFeatured,
         stock,
         isActive,
+        salePercent,
       },
       { new: true, runValidators: true }
     );

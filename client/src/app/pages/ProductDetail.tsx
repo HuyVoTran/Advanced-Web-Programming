@@ -79,6 +79,12 @@ export const ProductDetail: React.FC = () => {
       : product.material;
   }, [product]);
 
+  const salePercent = Number(product?.salePercent || 0);
+  const hasSale = salePercent > 0;
+  const salePrice = hasSale
+    ? Math.max(0, Math.round(Number(product?.price || 0) * (1 - salePercent / 100)))
+    : Number(product?.price || 0);
+
   const favoriteProducts = useMemo(() => {
     if (!product) return [];
     const favoriteIds = user?.favoriteProductIds || [];
@@ -230,9 +236,15 @@ export const ProductDetail: React.FC = () => {
               <h1 className="text-4xl font-light mb-4 tracking-wide">
                 {product.name}
               </h1>
-              <p className="text-3xl text-[#C9A24D] mb-6">
-                {formatPrice(product.price)}
-              </p>
+              <div className="mb-6">
+                {hasSale && (
+                  <p className="text-lg text-gray-500 line-through mb-1">{formatPrice(product.price)}</p>
+                )}
+                <p className={`text-3xl ${hasSale ? 'text-red-600' : 'text-[#C9A24D]'}`}>
+                  {formatPrice(salePrice)}
+                </p>
+                {hasSale && <p className="text-sm text-red-600 mt-1">Sale {salePercent}%</p>}
+              </div>
             </div>
 
             <div className="border-t border-b border-gray-200 py-6 space-y-4">

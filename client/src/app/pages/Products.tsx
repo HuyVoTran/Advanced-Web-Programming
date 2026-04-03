@@ -31,7 +31,7 @@ export const Products: React.FC = () => {
   const brandParam = searchParams.get('brand');
 
   // Fetch dữ liệu từ API
-  const { products: apiProducts, loading: loadingProducts, error: errorProducts } = useProducts();
+  const { products: apiProducts, loading: loadingProducts, error: errorProducts } = useProducts({ limit: 200 });
   const { categories } = useCategories();
   const { brands: apiBrands } = useBrands();
   const { user, isFavorite } = useAuth();
@@ -159,6 +159,20 @@ export const Products: React.FC = () => {
   })));
 
   const filteredProducts = useMemo(() => {
+    const selectedCategoryObjects = selectedCategories
+      .map((catId) => categories.find(c => (c._id || c.id) === catId))
+      .filter(Boolean) as any[];
+    const hasSaleCategory = selectedCategoryObjects.some((category) => {
+      const normalizedName = String(category?.name || '').trim().toLowerCase();
+      const normalizedSlug = String(category?.slug || '').trim().toLowerCase();
+      return normalizedName === 'sale' || normalizedSlug === 'sale';
+    });
+    const nonSaleSelectedCategories = selectedCategoryObjects.filter((category) => {
+      const normalizedName = String(category?.name || '').trim().toLowerCase();
+      const normalizedSlug = String(category?.slug || '').trim().toLowerCase();
+      return normalizedName !== 'sale' && normalizedSlug !== 'sale';
+    });
+
     let filtered = apiProducts.filter((product: any) => {
       const brandName = typeof product.brand === 'object' ? product.brand?.name : product.brand;
       const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
@@ -177,11 +191,12 @@ export const Products: React.FC = () => {
       const productCategoryName = typeof product.category === 'object'
         ? product.category?.name
         : product.category;
-      const categoryMatch = selectedCategories.length === 0 || 
-        selectedCategories.some(catId => {
-          const category = categories.find(c => (c._id || c.id) === catId);
-          return category && (productCategoryId === category._id || productCategoryName === category.name);
+      const categoryMatch = nonSaleSelectedCategories.length === 0 || 
+        nonSaleSelectedCategories.some(category => {
+          return productCategoryId === category._id || productCategoryName === category.name;
         });
+
+      const saleMatch = !hasSaleCategory || Number(product.salePercent || 0) > 0;
 
       const productBrandId = typeof product.brand === 'object'
         ? product.brand?._id
@@ -199,7 +214,7 @@ export const Products: React.FC = () => {
 
       const favoriteMatch = !favoritesOnly || isFavorite(String(product._id || product.id));
 
-      return searchMatch && categoryMatch && brandMatch && priceMatch && materialMatch && favoriteMatch;
+      return searchMatch && categoryMatch && brandMatch && priceMatch && materialMatch && favoriteMatch && saleMatch;
     });
 
     // Sorting
