@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth, type Address } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Checkbox } from '@/app/components/ui/checkbox';
 import { authAPI, couponAPI } from '@/services/api';
 import { resolveImageSrc } from '@/utils/image';
+import { getVietnamProvinces, type VietnamProvince } from '@/services/vietnamAddress';
 import { 
   CreditCard, 
   Truck, 
@@ -55,6 +56,12 @@ export const CheckoutNew: React.FC = () => {
   const [addressMode, setAddressMode] = useState<'saved' | 'new'>(initialAddressMode);
   const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddress?.id || '');
   const [saveAddressForLater, setSaveAddressForLater] = useState(false);
+  const [provinces, setProvinces] = useState<VietnamProvince[]>([]);
+  const [addressDataLoading, setAddressDataLoading] = useState(false);
+  const [addressDataError, setAddressDataError] = useState<string | null>(null);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<string>('');
+  const [selectedDistrictCode, setSelectedDistrictCode] = useState<string>('');
+  const [selectedWardCode, setSelectedWardCode] = useState<string>('');
 
   // Coupon state
   const [couponInput, setCouponInput] = useState('');
@@ -66,6 +73,20 @@ export const CheckoutNew: React.FC = () => {
     oneTimePerUser?: boolean;
   } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+
+  const selectedProvince = useMemo(
+    () => provinces.find((province) => String(province.code) === selectedProvinceCode) || null,
+    [provinces, selectedProvinceCode]
+  );
+
+  const availableDistricts = selectedProvince?.districts || [];
+
+  const selectedDistrict = useMemo(
+    () => availableDistricts.find((district) => String(district.code) === selectedDistrictCode) || null,
+    [availableDistricts, selectedDistrictCode]
+  );
+
+  const availableWards = selectedDistrict?.wards || [];
 
   const [formData, setFormData] = useState({
     fullName: defaultAddress?.fullName || user?.fullName || user?.name || '',
@@ -145,6 +166,53 @@ export const CheckoutNew: React.FC = () => {
     }
   }, [addressMode, selectedAddressId, user]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchAddressData = async () => {
+      try {
+        setAddressDataLoading(true);
+        setAddressDataError(null);
+        const data = await getVietnamProvinces();
+        if (mounted) {
+          setProvinces(data);
+        }
+      } catch (error) {
+        if (mounted) {
+          setAddressDataError('Không thể tải dữ liệu tỉnh/thành. Vui lòng thử lại.');
+        }
+      } finally {
+        if (mounted) {
+          setAddressDataLoading(false);
+        }
+      }
+    };
+
+    fetchAddressData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!provinces.length) return;
+
+    const matchedProvince = provinces.find((province) => province.name === formData.city) || null;
+    const nextProvinceCode = matchedProvince ? String(matchedProvince.code) : '';
+
+    const matchedDistrict =
+      matchedProvince?.districts.find((district) => district.name === formData.district) || null;
+    const nextDistrictCode = matchedDistrict ? String(matchedDistrict.code) : '';
+
+    const matchedWard = matchedDistrict?.wards.find((ward) => ward.name === formData.ward) || null;
+    const nextWardCode = matchedWard ? String(matchedWard.code) : '';
+
+    setSelectedProvinceCode(nextProvinceCode);
+    setSelectedDistrictCode(nextDistrictCode);
+    setSelectedWardCode(nextWardCode);
+  }, [provinces, formData.city, formData.district, formData.ward]);
+
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -161,6 +229,7 @@ export const CheckoutNew: React.FC = () => {
       if (!formData.address.trim()) newErrors.address = 'Vui lòng nhập địa chỉ';
       if (!formData.city.trim()) newErrors.city = 'Vui lòng chọn tỉnh/thành phố';
       if (!formData.district.trim()) newErrors.district = 'Vui lòng chọn quận/huyện';
+      if (!formData.ward.trim()) newErrors.ward = 'Vui lòng chọn phường/xã';
     }
 
     setErrors(newErrors);
@@ -174,6 +243,49 @@ export const CheckoutNew: React.FC = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const provinceCode = e.target.value;
+    const province = provinces.find((item) => String(item.code) === provinceCode);
+
+    setSelectedProvinceCode(provinceCode);
+    setSelectedDistrictCode('');
+    setSelectedWardCode('');
+
+    setFormData((prev) => ({
+      ...prev,
+      city: province?.name || '',
+      district: '',
+      ward: '',
+    }));
+
+    setErrors((prev) => ({ ...prev, city: '', district: '', ward: '' }));
+  };
+
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const districtCode = e.target.value;
+    const district = availableDistricts.find((item) => String(item.code) === districtCode);
+
+    setSelectedDistrictCode(districtCode);
+    setSelectedWardCode('');
+
+    setFormData((prev) => ({
+      ...prev,
+      district: district?.name || '',
+      ward: '',
+    }));
+
+    setErrors((prev) => ({ ...prev, district: '', ward: '' }));
+  };
+
+  const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const wardCode = e.target.value;
+    const ward = availableWards.find((item) => String(item.code) === wardCode);
+
+    setSelectedWardCode(wardCode);
+    setFormData((prev) => ({ ...prev, ward: ward?.name || '' }));
+    setErrors((prev) => ({ ...prev, ward: '' }));
   };
 
   const handleNext = () => {
@@ -502,26 +614,46 @@ export const CheckoutNew: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label htmlFor="ward">Phường/Xã</Label>
-                            <Input
+                            <select
                               id="ward"
                               name="ward"
-                              value={formData.ward}
-                              onChange={handleChange}
-                              className="mt-2"
-                              placeholder="Phường Bến Nghé"
-                            />
+                              value={selectedWardCode}
+                              onChange={handleWardChange}
+                              disabled={!selectedDistrictCode || addressDataLoading}
+                              className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.ward ? 'border-destructive' : 'border-gray-300'}`}
+                            >
+                              <option value="">Chọn phường/xã</option>
+                              {availableWards.map((ward) => (
+                                <option key={ward.code} value={ward.code}>
+                                  {ward.name}
+                                </option>
+                              ))}
+                            </select>
+                            {errors.ward && (
+                              <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {errors.ward}
+                              </p>
+                            )}
                           </div>
 
                           <div>
                             <Label htmlFor="city">Tỉnh/Thành phố *</Label>
-                            <Input
+                            <select
                               id="city"
                               name="city"
-                              value={formData.city}
-                              onChange={handleChange}
-                              className={`mt-2 ${errors.city ? 'border-destructive' : ''}`}
-                              placeholder="TP. Hồ Chí Minh"
-                            />
+                              value={selectedProvinceCode}
+                              onChange={handleProvinceChange}
+                              disabled={addressDataLoading}
+                              className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.city ? 'border-destructive' : 'border-gray-300'}`}
+                            >
+                              <option value="">Chọn tỉnh/thành phố</option>
+                              {provinces.map((province) => (
+                                <option key={province.code} value={province.code}>
+                                  {province.name}
+                                </option>
+                              ))}
+                            </select>
                             {errors.city && (
                               <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                 <AlertCircle className="w-3 h-3" />
@@ -532,14 +664,21 @@ export const CheckoutNew: React.FC = () => {
 
                           <div>
                             <Label htmlFor="district">Quận/Huyện *</Label>
-                            <Input
+                            <select
                               id="district"
                               name="district"
-                              value={formData.district}
-                              onChange={handleChange}
-                              className={`mt-2 ${errors.district ? 'border-destructive' : ''}`}
-                              placeholder="Quận 1"
-                            />
+                              value={selectedDistrictCode}
+                              onChange={handleDistrictChange}
+                              disabled={!selectedProvinceCode || addressDataLoading}
+                              className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.district ? 'border-destructive' : 'border-gray-300'}`}
+                            >
+                              <option value="">Chọn quận/huyện</option>
+                              {availableDistricts.map((district) => (
+                                <option key={district.code} value={district.code}>
+                                  {district.name}
+                                </option>
+                              ))}
+                            </select>
                             {errors.district && (
                               <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                 <AlertCircle className="w-3 h-3" />
@@ -548,6 +687,12 @@ export const CheckoutNew: React.FC = () => {
                             )}
                           </div>
                         </div>
+                        {addressDataError && (
+                          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {addressDataError}
+                          </p>
+                        )}
 
                         {user && addressMode === 'new' && (
                           <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
