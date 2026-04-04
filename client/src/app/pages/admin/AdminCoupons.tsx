@@ -27,6 +27,16 @@ const formatDate = (dateStr?: string) => {
   return new Date(dateStr).toLocaleDateString('vi-VN');
 };
 
+const rankBadgeClass = (rank?: string) => {
+  const key = String(rank || '').toLowerCase();
+  if (key === 'diamond') return 'bg-cyan-100 text-cyan-700';
+  if (key === 'platinum') return 'bg-violet-100 text-violet-700';
+  if (key === 'gold') return 'bg-amber-100 text-amber-700';
+  if (key === 'silver') return 'bg-slate-100 text-slate-700';
+  if (key === 'member') return 'bg-gray-100 text-gray-700';
+  return 'bg-gray-100 text-gray-700';
+};
+
 const EMPTY_FORM = {
   code: '',
   description: '',
@@ -201,7 +211,7 @@ export const AdminCoupons: React.FC = () => {
                     <td className="px-4 py-3">{coupon.minOrderAmount > 0 ? formatPrice(coupon.minOrderAmount) : '—'}</td>
                     <td className="px-4 py-3">
                       {coupon.requiredRank && coupon.requiredRank !== 'all' ? (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs uppercase">
+                        <span className={`px-2 py-0.5 rounded-full text-xs uppercase ${rankBadgeClass(coupon.requiredRank)}`}>
                           {coupon.requiredRank}
                         </span>
                       ) : 'Tất cả'}
