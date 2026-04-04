@@ -9,13 +9,41 @@ const stripHtml = (value = '') =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const DEFAULT_PUBLIC_LOGO_URL =
+  'https://cdn.jsdelivr.net/gh/HuyVoTran/Advanced-Web-Programming@main/client/public/images/SalvioRoyale-Logo.png';
+
+const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
+
+const isLocalAddress = (value = '') => /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(String(value || ''));
+
+const resolveEmailLogoUrl = () => {
+  const configuredLogoUrl = String(process.env.EMAIL_LOGO_URL || '').trim();
+  const serverUrl = trimTrailingSlash(process.env.SERVER_URL || 'http://localhost:5000');
+
+  if (configuredLogoUrl) {
+    if (/^https?:\/\//i.test(configuredLogoUrl)) {
+      return configuredLogoUrl;
+    }
+    if (configuredLogoUrl.startsWith('/')) {
+      return `${serverUrl}${configuredLogoUrl}`;
+    }
+  }
+
+  try {
+    const parsedServerUrl = new URL(serverUrl);
+    if (!isLocalAddress(parsedServerUrl.hostname)) {
+      return `${serverUrl}/client/public/images/SalvioRoyale-Logo.png`;
+    }
+  } catch {
+    return DEFAULT_PUBLIC_LOGO_URL;
+  }
+
+  return DEFAULT_PUBLIC_LOGO_URL;
+};
+
 const buildBrandedHtml = ({ title, contentHtml }) => {
   const siteUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  // Serve logo từ server (luôn accessible với email client trong cùng mạng)
-  const serverUrl = process.env.SERVER_URL || 'http://localhost:5000';
-  const logoUrl =
-    process.env.EMAIL_LOGO_URL ||
-    `${serverUrl}/client/public/images/SalvioRoyale-Logo.png`;
+  const logoUrl = resolveEmailLogoUrl();
   const year = new Date().getFullYear();
 
   return `
