@@ -11,6 +11,11 @@ const orderItemSchema = new mongoose.Schema({
     required: true,
     min: [1, 'Số lượng phải ít nhất là 1'],
   },
+  size: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   price: {
     type: Number,
     required: true,

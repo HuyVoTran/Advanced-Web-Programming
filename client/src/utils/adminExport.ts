@@ -196,19 +196,6 @@ const createSheetAndDownload = (rows: Array<Record<string, any>>, sheetName: str
   XLSX.writeFile(workbook, filename);
 };
 
-const toBase64 = (buffer: ArrayBuffer) => {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    const chunk = bytes.subarray(index, index + chunkSize);
-    binary += String.fromCharCode(...chunk);
-  }
-
-  return btoa(binary);
-};
-
 const ensureMontserratPdfFont = async (): Promise<boolean> => {
   if (montserratFontReady) {
     return true;
@@ -220,35 +207,16 @@ const ensureMontserratPdfFont = async (): Promise<boolean> => {
 
   montserratFontLoadingPromise = (async () => {
     try {
-      const regularUrl = 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Regular.ttf';
-      const boldUrl = 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Bold.ttf';
-
-      const [regularResponse, boldResponse] = await Promise.all([
-        fetch(regularUrl),
-        fetch(boldUrl),
-      ]);
-
-      if (!regularResponse.ok || !boldResponse.ok) {
+      if (!pdfMakeAny.addFonts) {
         return false;
       }
 
-      const [regularBuffer, boldBuffer] = await Promise.all([
-        regularResponse.arrayBuffer(),
-        boldResponse.arrayBuffer(),
-      ]);
-
-      pdfMakeAny.vfs = {
-        ...(pdfMakeAny.vfs || {}),
-        'Montserrat-Regular.ttf': toBase64(regularBuffer),
-        'Montserrat-Bold.ttf': toBase64(boldBuffer),
-      };
-
       pdfMakeAny.addFonts?.({
         Montserrat: {
-          normal: 'Montserrat-Regular.ttf',
-          bold: 'Montserrat-Bold.ttf',
-          italics: 'Montserrat-Regular.ttf',
-          bolditalics: 'Montserrat-Bold.ttf',
+          normal: 'Roboto-Regular.ttf',
+          bold: 'Roboto-Medium.ttf',
+          italics: 'Roboto-Italic.ttf',
+          bolditalics: 'Roboto-MediumItalic.ttf',
         },
       });
 

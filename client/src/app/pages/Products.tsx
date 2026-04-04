@@ -244,6 +244,17 @@ export const Products: React.FC = () => {
       return Math.round(basePrice * (1 - safeSalePercent / 100));
     };
 
+    const getAvailableStock = (product: any) => {
+      const hasSizes = Boolean(product?.hasSizes) && Array.isArray(product?.sizeStocks);
+      if (hasSizes) {
+        return (product.sizeStocks || []).reduce(
+          (sum: number, entry: any) => sum + Math.max(0, Number(entry?.quantity || 0)),
+          0
+        );
+      }
+      return Math.max(0, Number(product?.stock || 0));
+    };
+
     // Sorting
     switch (sortBy) {
       case 'price-asc':
@@ -266,6 +277,12 @@ export const Products: React.FC = () => {
         filtered.sort((a: any, b: any) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
         break;
     }
+
+    filtered.sort((a: any, b: any) => {
+      const aOut = getAvailableStock(a) <= 0 ? 1 : 0;
+      const bOut = getAvailableStock(b) <= 0 ? 1 : 0;
+      return aOut - bOut;
+    });
 
     return filtered;
   }, [searchQuery, selectedCategories, selectedBrands, priceRange, selectedMaterials, favoritesOnly, saleOnly, sortBy, apiProducts, categories, isFavorite]);
@@ -723,6 +740,7 @@ export const Products: React.FC = () => {
                         product={product} 
                         index={index}
                         viewMode={viewMode}
+                        enableQuickQuantityPopup
                       />
                     </motion.div>
                   ))}

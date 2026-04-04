@@ -53,6 +53,76 @@ const formatOrder = (order) => {
 
 const getClientUrl = () => process.env.CLIENT_URL || 'http://localhost:5173';
 
+const normalizeSizeStocks = (rawSizeStocks = []) => {
+  if (!Array.isArray(rawSizeStocks)) {
+    return [];
+  }
+
+  const mergedBySize = new Map();
+
+  for (const item of rawSizeStocks) {
+    const normalizedSize = String(item?.size || '').trim();
+    const normalizedQuantity = Math.max(0, Number(item?.quantity || 0));
+
+    if (!normalizedSize) {
+      continue;
+    }
+
+    mergedBySize.set(
+      normalizedSize,
+      (mergedBySize.get(normalizedSize) || 0) + normalizedQuantity
+    );
+  }
+
+  return Array.from(mergedBySize.entries()).map(([size, quantity]) => ({
+    size,
+    quantity,
+  }));
+};
+
+const sumSizeStock = (sizeStocks = []) =>
+  sizeStocks.reduce((sum, item) => sum + Math.max(0, Number(item?.quantity || 0)), 0);
+
+const restoreOrderItemsStock = async (orderItems = []) => {
+  for (const item of orderItems) {
+    const productId = item?.product?._id || item?.product;
+    const quantity = Math.max(0, Number(item?.quantity || 0));
+
+    if (!productId || quantity <= 0) {
+      continue;
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      continue;
+    }
+
+    const orderedSize = String(item?.size || '').trim();
+
+    if (product.hasSizes && orderedSize) {
+      const sizeStocks = Array.isArray(product.sizeStocks) ? product.sizeStocks : [];
+      const matchedSize = sizeStocks.find(
+        (sizeStock) => String(sizeStock?.size || '').trim().toLowerCase() === orderedSize.toLowerCase()
+      );
+
+      if (matchedSize) {
+        matchedSize.quantity = Math.max(0, Number(matchedSize.quantity || 0)) + quantity;
+      } else {
+        sizeStocks.push({ size: orderedSize, quantity });
+      }
+
+      product.stock = sizeStocks.reduce(
+        (sum, sizeStock) => sum + Math.max(0, Number(sizeStock?.quantity || 0)),
+        0
+      );
+    } else {
+      product.stock += quantity;
+    }
+
+    await product.save();
+  }
+};
+
 const sendOrderStatusEmail = async (order, status) => {
   const customerEmail = order?.customerInfo?.email || order?.user?.email;
   if (!customerEmail) return;
@@ -235,13 +305,35 @@ export const createNews = async (req, res, next) => {
 // Quản lý sản phẩm
 export const createProduct = async (req, res, next) => {
   try {
-    const { name, price, description, material, images, category, brand, isFeatured, stock, salePercent } = req.body;
+    const {
+      name,
+      price,
+      description,
+      material,
+      images,
+      category,
+      brand,
+      isFeatured,
+      stock,
+      salePercent,
+      hasSizes,
+      sizeStocks,
+    } = req.body;
     const parsedPrice = Number(price);
     const parsedSalePercent = Math.max(0, Math.min(100, Number(salePercent || 0)));
+    const isSizeMode = Boolean(hasSizes);
+    const normalizedSizeStocks = isSizeMode ? normalizeSizeStocks(sizeStocks) : [];
+    const resolvedStock = isSizeMode
+      ? sumSizeStock(normalizedSizeStocks)
+      : Math.max(0, Number(stock || 0));
 
     const errors = validateProductData(req.body);
     if (errors.length > 0) {
       return sendError(res, 400, errors.join(', '));
+    }
+
+    if (isSizeMode && normalizedSizeStocks.length === 0) {
+      return sendError(res, 400, 'Vui lòng thêm ít nhất một size khi bật quản lý theo size');
     }
 
     const product = new Product({
@@ -253,7 +345,9 @@ export const createProduct = async (req, res, next) => {
       category,
       brand,
       isFeatured: isFeatured || false,
-      stock: stock || 0,
+      stock: resolvedStock,
+      hasSizes: isSizeMode,
+      sizeStocks: normalizedSizeStocks,
       salePercent: parsedSalePercent,
       originalPrice: parsedSalePercent > 0 ? parsedPrice : null,
     });
@@ -269,10 +363,32 @@ export const createProduct = async (req, res, next) => {
 export const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, price, description, material, images, category, brand, isFeatured, stock, isActive, salePercent } =
-      req.body;
+    const {
+      name,
+      price,
+      description,
+      material,
+      images,
+      category,
+      brand,
+      isFeatured,
+      stock,
+      isActive,
+      salePercent,
+      hasSizes,
+      sizeStocks,
+    } = req.body;
     const parsedPrice = Number(price);
     const parsedSalePercent = Math.max(0, Math.min(100, Number(salePercent || 0)));
+    const isSizeMode = Boolean(hasSizes);
+    const normalizedSizeStocks = isSizeMode ? normalizeSizeStocks(sizeStocks) : [];
+    const resolvedStock = isSizeMode
+      ? sumSizeStock(normalizedSizeStocks)
+      : Math.max(0, Number(stock || 0));
+
+    if (isSizeMode && normalizedSizeStocks.length === 0) {
+      return sendError(res, 400, 'Vui lòng thêm ít nhất một size khi bật quản lý theo size');
+    }
 
     const product = await Product.findByIdAndUpdate(
       id,
@@ -285,7 +401,9 @@ export const updateProduct = async (req, res, next) => {
         category,
         brand,
         isFeatured,
-        stock,
+        stock: resolvedStock,
+        hasSizes: isSizeMode,
+        sizeStocks: normalizedSizeStocks,
         isActive,
         salePercent: parsedSalePercent,
         originalPrice: parsedSalePercent > 0 ? parsedPrice : null,
@@ -419,6 +537,10 @@ export const updateOrderStatus = async (req, res, next) => {
       }
     }
 
+    if (status === 'cancelled' && previousStatus !== 'cancelled') {
+      await restoreOrderItemsStock(order.items || []);
+    }
+
     await order.save();
 
     if (order.user?._id) {
@@ -474,13 +596,7 @@ export const rejectOrder = async (req, res, next) => {
     }
 
     // Khôi phục kho hàng sản phẩm
-    for (const item of order.items) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        product.stock += item.quantity;
-        await product.save();
-      }
-    }
+    await restoreOrderItemsStock(order.items || []);
 
     order.status = 'cancelled';
     order.rejectionReason = rejectionReason;

@@ -33,6 +33,7 @@ const formatOrder = (order) => {
   const items = (o.items || []).map((item) => ({
     productId: item.product?._id || item.product,
     productName: item.product?.name || 'Sản phẩm không còn tồn tại',
+    size: item.size || '',
     price: item.price,
     originalPrice: item.originalPrice ?? item.price,
     salePercent: item.salePercent ?? 0,
@@ -183,8 +184,38 @@ export const createOrder = async (req, res, next) => {
         return sendError(res, 404, `Sản phẩm với ID ${item.productId} không tìm thấy`);
       }
 
-      if (product.stock < item.quantity) {
-        return sendError(res, 400, `Hàng không đủ cho ${product.name}`);
+      const requestedSize = String(item?.size || '').trim();
+      let resolvedSize = '';
+
+      if (product.hasSizes) {
+        const sizeStocks = Array.isArray(product.sizeStocks) ? product.sizeStocks : [];
+
+        if (!requestedSize) {
+          return sendError(res, 400, `Vui lòng chọn size cho ${product.name}`);
+        }
+
+        const matchedSize = sizeStocks.find(
+          (sizeStock) => String(sizeStock?.size || '').trim().toLowerCase() === requestedSize.toLowerCase()
+        );
+
+        if (!matchedSize) {
+          return sendError(res, 400, `Size ${requestedSize} không tồn tại cho ${product.name}`);
+        }
+
+        const sizeQuantity = Math.max(0, Number(matchedSize.quantity || 0));
+        if (sizeQuantity < item.quantity) {
+          return sendError(res, 400, `Size ${matchedSize.size} không đủ hàng cho ${product.name}`);
+        }
+
+        matchedSize.quantity = sizeQuantity - item.quantity;
+        product.stock = sizeStocks.reduce((sum, sizeStock) => sum + Math.max(0, Number(sizeStock?.quantity || 0)), 0);
+        resolvedSize = String(matchedSize.size || '').trim();
+      } else {
+        if (product.stock < item.quantity) {
+          return sendError(res, 400, `Hàng không đủ cho ${product.name}`);
+        }
+
+        product.stock -= item.quantity;
       }
 
       const originalPrice = Number(product.originalPrice || product.price || 0);
@@ -195,6 +226,7 @@ export const createOrder = async (req, res, next) => {
       orderItems.push({
         product: product._id,
         quantity: item.quantity,
+        size: resolvedSize,
         price: finalPrice,
         originalPrice,
         salePercent,
@@ -207,7 +239,6 @@ export const createOrder = async (req, res, next) => {
       totalDiscount += discountAmount * item.quantity;
 
       // Giảm kho hàng
-      product.stock -= item.quantity;
       await product.save();
     }
 
@@ -403,7 +434,31 @@ export const cancelOrder = async (req, res, next) => {
     for (const item of order.items) {
       const product = await Product.findById(item.product);
       if (product) {
-        product.stock += item.quantity;
+        const orderedSize = String(item?.size || '').trim();
+
+        if (product.hasSizes && orderedSize) {
+          const sizeStocks = Array.isArray(product.sizeStocks) ? product.sizeStocks : [];
+          const matchedSize = sizeStocks.find(
+            (sizeStock) => String(sizeStock?.size || '').trim().toLowerCase() === orderedSize.toLowerCase()
+          );
+
+          if (matchedSize) {
+            matchedSize.quantity = Math.max(0, Number(matchedSize.quantity || 0)) + item.quantity;
+            product.stock = sizeStocks.reduce(
+              (sum, sizeStock) => sum + Math.max(0, Number(sizeStock?.quantity || 0)),
+              0
+            );
+          } else {
+            sizeStocks.push({ size: orderedSize, quantity: item.quantity });
+            product.stock = sizeStocks.reduce(
+              (sum, sizeStock) => sum + Math.max(0, Number(sizeStock?.quantity || 0)),
+              0
+            );
+          }
+        } else {
+          product.stock += item.quantity;
+        }
+
         await product.save();
       }
     }

@@ -109,7 +109,7 @@ export const validateCoupon = async (req, res, next) => {
       return sendError(res, 400, reason);
     }
 
-    const discountAmount = calculateCouponDiscount(coupon, total);
+    const discountAmount = calculateCouponDiscount(coupon, orderTotal);
 
     return sendResponse(res, 200, 'Mã giảm giá hợp lệ', {
       code: coupon.code,

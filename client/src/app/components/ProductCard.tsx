@@ -4,6 +4,14 @@ import { motion } from 'motion/react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Heart, ShoppingCart } from 'lucide-react';
 import { Button } from './ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import { useCart } from '../../contexts/CartContext';
 import { toast } from 'sonner';
 import { calculateDiscountedPrice, formatPrice } from '@/utils/constants';
@@ -15,10 +23,19 @@ interface ProductCardProps {
   product: any;
   index?: number;
   viewMode?: 'grid' | 'list';
+  enableQuickQuantityPopup?: boolean;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode = 'grid' }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  index = 0,
+  viewMode = 'grid',
+  enableQuickQuantityPopup = false,
+}) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [sizeDialogOpen, setSizeDialogOpen] = useState(false);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
   const cardRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
   const { user, isFavorite, toggleFavorite } = useAuth();
@@ -32,6 +49,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
   const salePercent = Number(product.salePercent || 0);
   const hasSale = salePercent > 0;
   const salePrice = calculateDiscountedPrice(basePrice, salePercent);
+  const normalizedSizeStocks = Array.isArray(product?.sizeStocks)
+    ? product.sizeStocks
+        .map((entry: any) => ({
+          size: String(entry?.size || '').trim(),
+          quantity: Math.max(0, Number(entry?.quantity || 0)),
+        }))
+        .filter((entry: { size: string; quantity: number }) => entry.size.length > 0)
+    : [];
+  const hasSizeOptions = Boolean(product?.hasSizes) && normalizedSizeStocks.length > 0;
+  const totalStock = hasSizeOptions
+    ? normalizedSizeStocks.reduce((sum: number, entry: { size: string; quantity: number }) => sum + Math.max(0, Number(entry.quantity || 0)), 0)
+    : Math.max(0, Number(product?.stock || 0));
+  const isSoldOut = totalStock <= 0;
+
+  const selectedSizeStock = normalizedSizeStocks.find((entry: { size: string; quantity: number }) => entry.size === selectedSize);
+  const availableStockForSelection = hasSizeOptions
+    ? Math.max(0, Number(selectedSizeStock?.quantity || 0))
+    : Math.max(0, Number(product?.stock || 0));
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -54,10 +89,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
     };
   }, []);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const addCurrentSelectionToCart = (quantity = 1, size = '') => {
+    const normalizedSize = String(size || '').trim();
     addItem({
       productId,
+      size: normalizedSize,
       name: product.name,
       price: salePrice,
       originalPrice: basePrice,
@@ -65,11 +101,78 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
       discountAmount: Math.max(0, basePrice - salePrice),
       finalPrice: salePrice,
       image: imageUrl,
-      quantity: 1,
+      quantity,
     });
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    if (isSoldOut) {
+      toast.error('Sản phẩm hiện đã hết hàng');
+      return;
+    }
+
+    if (hasSizeOptions || enableQuickQuantityPopup) {
+      const firstAvailableSize = normalizedSizeStocks.find((entry: { size: string; quantity: number }) => entry.quantity > 0);
+
+      if (hasSizeOptions && !firstAvailableSize) {
+        toast.error('Sản phẩm hiện đã hết hàng');
+        return;
+      }
+
+      if (hasSizeOptions) {
+        setSelectedSize((prev) => prev || firstAvailableSize?.size || '');
+      } else {
+        setSelectedSize('');
+      }
+      setSelectedQuantity(1);
+      setSizeDialogOpen(true);
+      return;
+    }
+
+    addCurrentSelectionToCart(1, '');
     toast.success('Đã thêm vào giỏ hàng', {
       description: product.name,
     });
+  };
+
+  const handleConfirmAddToCart = () => {
+    if (hasSizeOptions && !selectedSize) {
+      toast.error('Vui lòng chọn size');
+      return;
+    }
+
+    if (availableStockForSelection <= 0) {
+      toast.error('Size đã chọn hiện đã hết hàng');
+      return;
+    }
+
+    const safeQuantity = Math.max(1, Math.min(selectedQuantity, availableStockForSelection));
+    addCurrentSelectionToCart(safeQuantity, selectedSize);
+    toast.success('Đã thêm vào giỏ hàng', {
+      description: hasSizeOptions
+        ? `${product.name} - Size ${selectedSize}`
+        : `${product.name} - SL ${safeQuantity}`,
+    });
+    setSizeDialogOpen(false);
+  };
+
+  const handleConfirmBuyNow = () => {
+    if (hasSizeOptions && !selectedSize) {
+      toast.error('Vui lòng chọn size');
+      return;
+    }
+
+    if (availableStockForSelection <= 0) {
+      toast.error('Size đã chọn hiện đã hết hàng');
+      return;
+    }
+
+    const safeQuantity = Math.max(1, Math.min(selectedQuantity, availableStockForSelection));
+    addCurrentSelectionToCart(safeQuantity, selectedSize);
+    setSizeDialogOpen(false);
+    navigate('/cart');
   };
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
@@ -99,14 +202,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
 
   if (viewMode === 'list') {
     return (
-      <motion.div
-        ref={cardRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-        transition={{ duration: 0.6, delay: index * 0.1 }}
-        className="group"
-      >
-        <Link to={`/product/${product._id || product.id}`} className="flex gap-6 bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+      <>
+        <motion.div
+          ref={cardRef}
+          initial={{ opacity: 0, y: 20 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6, delay: index * 0.1 }}
+          className="group"
+        >
+          <Link to={`/product/${product._id || product.id}`} className="flex gap-6 bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
           {/* Image */}
           <div className="relative w-48 h-48 flex-shrink-0 bg-gray-100">
             <ImageWithFallback
@@ -114,6 +218,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
+            {isSoldOut && (
+              <div className="absolute inset-0 bg-black/55 flex items-center justify-center z-20">
+                <span className="px-3 py-1.5 rounded border border-white/70 text-white text-xs tracking-[0.16em] uppercase">Sold Out!</span>
+              </div>
+            )}
             {/* Badges */}
             <div className="absolute top-2 left-2 z-10 flex flex-col space-y-1">
               {product.new && (
@@ -166,6 +275,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
                   size="sm"
                   variant="outline"
                   onClick={handleAddToCart}
+                  disabled={isSoldOut}
                   className="border-primary text-primary hover:bg-primary hover:text-white"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
@@ -174,20 +284,102 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
               </div>
             </div>
           </div>
-        </Link>
-      </motion.div>
+          </Link>
+        </motion.div>
+        <Dialog open={sizeDialogOpen} onOpenChange={setSizeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{hasSizeOptions ? 'Chọn size trước khi mua' : 'Chọn số lượng'}</DialogTitle>
+              <DialogDescription>
+                {hasSizeOptions ? product.name : `Sản phẩm: ${product.name}`}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {hasSizeOptions && (
+                <div>
+                  <p className="text-sm text-gray-700 mb-2">Size</p>
+                  <div className="flex flex-wrap gap-2">
+                    {normalizedSizeStocks.map((entry: { size: string; quantity: number }) => {
+                      const isOutOfStock = entry.quantity <= 0;
+                      const isSelected = selectedSize === entry.size;
+                      return (
+                        <button
+                          key={entry.size}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSize(entry.size);
+                            setSelectedQuantity(1);
+                          }}
+                          disabled={isOutOfStock}
+                          className={`px-3 py-2 rounded border text-sm transition-colors ${
+                            isSelected
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-gray-300 text-gray-700 hover:border-primary/60'
+                          } ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {entry.size} {isOutOfStock ? '(Hết hàng)' : `(Còn ${entry.quantity})`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <p className="text-sm text-gray-700 mb-2">Số lượng</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedQuantity((prev) => Math.max(1, prev - 1))}
+                    className="w-9 h-9 border border-gray-300 rounded"
+                    disabled={availableStockForSelection <= 0}
+                  >
+                    -
+                  </button>
+                  <span className="w-10 text-center">{selectedQuantity}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedQuantity((prev) => Math.min(prev + 1, Math.max(1, availableStockForSelection)))
+                    }
+                    className="w-9 h-9 border border-gray-300 rounded"
+                    disabled={availableStockForSelection <= 0 || selectedQuantity >= availableStockForSelection}
+                  >
+                    +
+                  </button>
+                  <span className="text-xs text-muted-foreground">Tối đa: {availableStockForSelection}</span>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setSizeDialogOpen(false)}>
+                Đóng
+              </Button>
+              <Button type="button" variant="outline" onClick={handleConfirmAddToCart}>
+                Thêm vào giỏ
+              </Button>
+              <Button type="button" onClick={handleConfirmBuyNow}>
+                Mua ngay
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
   // Grid view (default)
   return (
-    <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
-    >
-      <Link to={`/product/${product._id || product.id}`} className="group block">
+    <>
+      <motion.div
+        ref={cardRef}
+        initial={{ opacity: 0, y: 20 }}
+        animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+        transition={{ duration: 0.6, delay: index * 0.1 }}
+      >
+        <Link to={`/product/${product._id || product.id}`} className="group block">
         <div className="relative overflow-hidden bg-gray-100 aspect-[3/4] rounded-sm">
           {/* Product Image */}
           <ImageWithFallback
@@ -195,6 +387,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
+          {isSoldOut && (
+            <div className="absolute inset-0 bg-black/55 flex items-center justify-center z-20">
+              <span className="px-4 py-2 rounded border border-white/70 text-white text-sm tracking-[0.18em] uppercase">Sold Out!</span>
+            </div>
+          )}
 
           {/* Badges */}
           <div className="absolute top-4 left-4 z-10 flex flex-col space-y-2">
@@ -243,6 +440,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
             <Button
               size="sm"
               onClick={handleAddToCart}
+              disabled={isSoldOut}
               className="bg-primary hover:bg-primary/90 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100"
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
@@ -262,7 +460,88 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, vi
             <p className={`text-base ${hasSale ? 'text-red-600' : 'text-[#C9A24D]'}`}>{formatPrice(salePrice)}</p>
           </div>
         </div>
-      </Link>
-    </motion.div>
+        </Link>
+      </motion.div>
+      <Dialog open={sizeDialogOpen} onOpenChange={setSizeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{hasSizeOptions ? 'Chọn size trước khi mua' : 'Chọn số lượng'}</DialogTitle>
+            <DialogDescription>
+              {hasSizeOptions ? product.name : `Sản phẩm: ${product.name}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {hasSizeOptions && (
+              <div>
+                <p className="text-sm text-gray-700 mb-2">Size</p>
+                <div className="flex flex-wrap gap-2">
+                  {normalizedSizeStocks.map((entry: { size: string; quantity: number }) => {
+                    const isOutOfStock = entry.quantity <= 0;
+                    const isSelected = selectedSize === entry.size;
+                    return (
+                      <button
+                        key={entry.size}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSize(entry.size);
+                          setSelectedQuantity(1);
+                        }}
+                        disabled={isOutOfStock}
+                        className={`px-3 py-2 rounded border text-sm transition-colors ${
+                          isSelected
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-gray-300 text-gray-700 hover:border-primary/60'
+                        } ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {entry.size} {isOutOfStock ? '(Hết hàng)' : `(Còn ${entry.quantity})`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-sm text-gray-700 mb-2">Số lượng</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuantity((prev) => Math.max(1, prev - 1))}
+                  className="w-9 h-9 border border-gray-300 rounded"
+                  disabled={availableStockForSelection <= 0}
+                >
+                  -
+                </button>
+                <span className="w-10 text-center">{selectedQuantity}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedQuantity((prev) => Math.min(prev + 1, Math.max(1, availableStockForSelection)))
+                  }
+                  className="w-9 h-9 border border-gray-300 rounded"
+                  disabled={availableStockForSelection <= 0 || selectedQuantity >= availableStockForSelection}
+                >
+                  +
+                </button>
+                <span className="text-xs text-muted-foreground">Tối đa: {availableStockForSelection}</span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setSizeDialogOpen(false)}>
+              Đóng
+            </Button>
+            <Button type="button" variant="outline" onClick={handleConfirmAddToCart}>
+              Thêm vào giỏ
+            </Button>
+            <Button type="button" onClick={handleConfirmBuyNow}>
+              Mua ngay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

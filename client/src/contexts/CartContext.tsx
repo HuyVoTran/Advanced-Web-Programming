@@ -22,6 +22,7 @@ export interface Product {
 export interface CartItem {
   id: string;
   productId: string;
+  size?: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -35,7 +36,7 @@ export interface CartItem {
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'id'>) => void;
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, size?: string) => void;
   removeFromCart: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -77,13 +78,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setItems(prevItems => {
-      const existingItem = prevItems.find(i => i.productId === normalizedItem.productId);
+      const normalizedSize = String(normalizedItem.size || '').trim();
+      const existingItem = prevItems.find(
+        (i) => i.productId === normalizedItem.productId && String(i.size || '').trim() === normalizedSize
+      );
       if (existingItem) {
         return prevItems.map(i =>
-          i.productId === normalizedItem.productId
+          i.productId === normalizedItem.productId && String(i.size || '').trim() === normalizedSize
             ? {
                 ...i,
                 quantity: i.quantity + normalizedItem.quantity,
+                size: normalizedSize,
                 image: normalizedItem.image,
                 price: normalizedItem.price,
                 originalPrice: normalizedItem.originalPrice,
@@ -94,11 +99,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : i
         );
       }
-      return [...prevItems, { ...normalizedItem, id: Date.now().toString() }];
+      return [...prevItems, { ...normalizedItem, size: normalizedSize, id: Date.now().toString() }];
     });
   };
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (product: Product, quantity: number = 1, size?: string) => {
     const productId = product._id || product.id || '';
     const primaryImage = Array.isArray(product.images) && product.images.length > 0
       ? product.images[0]
@@ -113,6 +118,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     addItem({
       productId,
+      size: String(size || '').trim(),
       name: product.name,
       price: finalPrice,
       originalPrice: basePrice,

@@ -43,6 +43,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return {
         productId: product?._id || item?.productId || item?.product || '',
         productName: product?.name || item?.productName || '',
+        size: item?.size || '',
         price: rawPrice,
         originalPrice,
         salePercent,
@@ -133,6 +134,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         items: order.items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
+          size: String((item as any).size || '').trim(),
         })),
         paymentMethod: normalizedPaymentMethod,
         notes: '',

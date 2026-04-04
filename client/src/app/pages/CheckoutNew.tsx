@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth, type Address } from '@/contexts/AuthContext';
@@ -43,7 +43,27 @@ const STEPS = [
 type StockSnapshot = {
   productId: string;
   stock: number;
+  hasSizes?: boolean;
+  sizeStocks?: Array<{ size: string; quantity: number }>;
   isActive: boolean;
+};
+
+const normalizeSizeKey = (value?: string) => String(value || '').trim().toLowerCase();
+
+const getAvailableStockForItem = (item: { size?: string }, stockInfo?: StockSnapshot) => {
+  if (!stockInfo) {
+    return 0;
+  }
+
+  const selectedSizeKey = normalizeSizeKey(item.size);
+  if (stockInfo.hasSizes && selectedSizeKey) {
+    const matchedSize = (stockInfo.sizeStocks || []).find(
+      (entry) => normalizeSizeKey(entry?.size) === selectedSizeKey
+    );
+    return Math.max(0, Number(matchedSize?.quantity || 0));
+  }
+
+  return Math.max(0, Number(stockInfo.stock || 0));
 };
 
 export const CheckoutNew: React.FC = () => {
@@ -95,6 +115,19 @@ export const CheckoutNew: React.FC = () => {
 
   const availableWards = selectedDistrict?.wards || [];
 
+  const fetchAddressData = useCallback(async () => {
+    try {
+      setAddressDataLoading(true);
+      setAddressDataError(null);
+      const data = await getVietnamProvinces();
+      setProvinces(data);
+    } catch {
+      setAddressDataError('Không thể tải dữ liệu tỉnh/thành. Vui lòng thử lại.');
+    } finally {
+      setAddressDataLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (items.length === 0) {
       setStockByProductId({});
@@ -116,6 +149,13 @@ export const CheckoutNew: React.FC = () => {
           acc[productId] = {
             productId,
             stock: Math.max(0, Number(stockItem?.stock || 0)),
+            hasSizes: Boolean(stockItem?.hasSizes),
+            sizeStocks: Array.isArray(stockItem?.sizeStocks)
+              ? stockItem.sizeStocks.map((entry: any) => ({
+                  size: String(entry?.size || '').trim(),
+                  quantity: Math.max(0, Number(entry?.quantity || 0)),
+                }))
+              : [],
             isActive: Boolean(stockItem?.isActive),
           };
           return acc;
@@ -143,7 +183,7 @@ export const CheckoutNew: React.FC = () => {
       .map((item) => {
         const stockInfo = stockByProductId[item.productId];
         if (!stockInfo) return null;
-        const availableStock = Math.max(0, Number(stockInfo.stock || 0));
+        const availableStock = getAvailableStockForItem(item, stockInfo);
         const isInactive = !stockInfo.isActive;
         const isOutOfStock = availableStock <= 0 || isInactive;
         const isExceeded = !isOutOfStock && item.quantity > availableStock;
@@ -246,33 +286,12 @@ export const CheckoutNew: React.FC = () => {
   }, [addressMode, selectedAddressId, user]);
 
   useEffect(() => {
-    let mounted = true;
+    void fetchAddressData();
+  }, [fetchAddressData]);
 
-    const fetchAddressData = async () => {
-      try {
-        setAddressDataLoading(true);
-        setAddressDataError(null);
-        const data = await getVietnamProvinces();
-        if (mounted) {
-          setProvinces(data);
-        }
-      } catch (error) {
-        if (mounted) {
-          setAddressDataError('Không thể tải dữ liệu tỉnh/thành. Vui lòng thử lại.');
-        }
-      } finally {
-        if (mounted) {
-          setAddressDataLoading(false);
-        }
-      }
-    };
-
-    fetchAddressData();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const handleRetryAddressData = () => {
+    void fetchAddressData();
+  };
 
   useEffect(() => {
     if (!provinces.length) return;
@@ -461,6 +480,7 @@ export const CheckoutNew: React.FC = () => {
           discountAmount: Number(item.discountAmount ?? Math.max(0, Number(item.originalPrice ?? item.price ?? 0) - Number(item.finalPrice ?? item.price ?? 0))),
           finalPrice: Number(item.finalPrice ?? item.price ?? 0),
           quantity: item.quantity,
+          size: String(item.size || '').trim(),
         })),
         total,
         couponCode: appliedCoupon?.code || '',
@@ -696,86 +716,158 @@ export const CheckoutNew: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="ward">Phường/Xã</Label>
-                            <select
-                              id="ward"
-                              name="ward"
-                              value={selectedWardCode}
-                              onChange={handleWardChange}
-                              disabled={!selectedDistrictCode || addressDataLoading}
-                              className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.ward ? 'border-destructive' : 'border-gray-300'}`}
-                            >
-                              <option value="">Chọn phường/xã</option>
-                              {availableWards.map((ward) => (
-                                <option key={ward.code} value={ward.code}>
-                                  {ward.name}
-                                </option>
-                              ))}
-                            </select>
-                            {errors.ward && (
-                              <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                {errors.ward}
-                              </p>
-                            )}
-                          </div>
+                          {addressDataError ? (
+                            <>
+                              <div>
+                                <Label htmlFor="city">Tỉnh/Thành phố *</Label>
+                                <Input
+                                  id="city"
+                                  name="city"
+                                  value={formData.city}
+                                  onChange={handleChange}
+                                  className={`mt-2 ${errors.city ? 'border-destructive' : ''}`}
+                                  placeholder="Ví dụ: Hồ Chí Minh"
+                                />
+                                {errors.city && (
+                                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {errors.city}
+                                  </p>
+                                )}
+                              </div>
 
-                          <div>
-                            <Label htmlFor="city">Tỉnh/Thành phố *</Label>
-                            <select
-                              id="city"
-                              name="city"
-                              value={selectedProvinceCode}
-                              onChange={handleProvinceChange}
-                              disabled={addressDataLoading}
-                              className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.city ? 'border-destructive' : 'border-gray-300'}`}
-                            >
-                              <option value="">Chọn tỉnh/thành phố</option>
-                              {provinces.map((province) => (
-                                <option key={province.code} value={province.code}>
-                                  {province.name}
-                                </option>
-                              ))}
-                            </select>
-                            {errors.city && (
-                              <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                {errors.city}
-                              </p>
-                            )}
-                          </div>
+                              <div>
+                                <Label htmlFor="district">Quận/Huyện *</Label>
+                                <Input
+                                  id="district"
+                                  name="district"
+                                  value={formData.district}
+                                  onChange={handleChange}
+                                  className={`mt-2 ${errors.district ? 'border-destructive' : ''}`}
+                                  placeholder="Ví dụ: Quận 1"
+                                />
+                                {errors.district && (
+                                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {errors.district}
+                                  </p>
+                                )}
+                              </div>
 
-                          <div>
-                            <Label htmlFor="district">Quận/Huyện *</Label>
-                            <select
-                              id="district"
-                              name="district"
-                              value={selectedDistrictCode}
-                              onChange={handleDistrictChange}
-                              disabled={!selectedProvinceCode || addressDataLoading}
-                              className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.district ? 'border-destructive' : 'border-gray-300'}`}
-                            >
-                              <option value="">Chọn quận/huyện</option>
-                              {availableDistricts.map((district) => (
-                                <option key={district.code} value={district.code}>
-                                  {district.name}
-                                </option>
-                              ))}
-                            </select>
-                            {errors.district && (
-                              <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                {errors.district}
-                              </p>
-                            )}
-                          </div>
+                              <div>
+                                <Label htmlFor="ward">Phường/Xã *</Label>
+                                <Input
+                                  id="ward"
+                                  name="ward"
+                                  value={formData.ward}
+                                  onChange={handleChange}
+                                  className={`mt-2 ${errors.ward ? 'border-destructive' : ''}`}
+                                  placeholder="Ví dụ: Phường Bến Nghé"
+                                />
+                                {errors.ward && (
+                                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {errors.ward}
+                                  </p>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div>
+                                <Label htmlFor="city">Tỉnh/Thành phố *</Label>
+                                <select
+                                  id="city"
+                                  name="city"
+                                  value={selectedProvinceCode}
+                                  onChange={handleProvinceChange}
+                                  disabled={addressDataLoading}
+                                  className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.city ? 'border-destructive' : 'border-gray-300'}`}
+                                >
+                                  <option value="">Chọn tỉnh/thành phố</option>
+                                  {provinces.map((province) => (
+                                    <option key={province.code} value={province.code}>
+                                      {province.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                {errors.city && (
+                                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {errors.city}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label htmlFor="district">Quận/Huyện *</Label>
+                                <select
+                                  id="district"
+                                  name="district"
+                                  value={selectedDistrictCode}
+                                  onChange={handleDistrictChange}
+                                  disabled={!selectedProvinceCode || addressDataLoading}
+                                  className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.district ? 'border-destructive' : 'border-gray-300'}`}
+                                >
+                                  <option value="">Chọn quận/huyện</option>
+                                  {availableDistricts.map((district) => (
+                                    <option key={district.code} value={district.code}>
+                                      {district.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                {errors.district && (
+                                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {errors.district}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label htmlFor="ward">Phường/Xã *</Label>
+                                <select
+                                  id="ward"
+                                  name="ward"
+                                  value={selectedWardCode}
+                                  onChange={handleWardChange}
+                                  disabled={!selectedDistrictCode || addressDataLoading}
+                                  className={`mt-2 w-full rounded-md border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 ${errors.ward ? 'border-destructive' : 'border-gray-300'}`}
+                                >
+                                  <option value="">Chọn phường/xã</option>
+                                  {availableWards.map((ward) => (
+                                    <option key={ward.code} value={ward.code}>
+                                      {ward.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                {errors.ward && (
+                                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {errors.ward}
+                                  </p>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                         {addressDataError && (
-                          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            {addressDataError}
-                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {addressDataError} · Đã chuyển sang nhập địa chỉ thủ công.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-xs"
+                              onClick={handleRetryAddressData}
+                              disabled={addressDataLoading}
+                            >
+                              {addressDataLoading ? 'Đang thử lại...' : 'Thử tải lại'}
+                            </Button>
+                          </div>
                         )}
 
                         {user && addressMode === 'new' && (
@@ -987,7 +1079,7 @@ export const CheckoutNew: React.FC = () => {
                           <div className="flex-1 flex justify-between">
                             {(() => {
                               const stockInfo = stockByProductId[item.productId];
-                              const availableStock = Math.max(0, Number(stockInfo?.stock ?? 0));
+                              const availableStock = getAvailableStockForItem(item, stockInfo);
                               const isInactive = stockInfo ? !stockInfo.isActive : false;
                               const isOutOfStock = stockInfo ? availableStock <= 0 || isInactive : false;
                               const isExceeded = stockInfo ? !isOutOfStock && item.quantity > availableStock : false;
@@ -1000,6 +1092,9 @@ export const CheckoutNew: React.FC = () => {
                                 <>
                                   <div>
                                     <p className="font-light">{item.name}</p>
+                                    {item.size && (
+                                      <p className="text-sm text-muted-foreground mt-1">Size: {item.size}</p>
+                                    )}
                                     <p className="text-sm text-muted-foreground mt-1">Số lượng: {item.quantity}</p>
                                     {stockInfo && (
                                       <p className={`text-xs mt-1 ${isOutOfStock || isExceeded ? 'text-red-600' : 'text-emerald-600'}`}>
@@ -1197,6 +1292,7 @@ export const CheckoutNew: React.FC = () => {
                           <>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm truncate">{item.name}</p>
+                              {item.size && <p className="text-xs text-muted-foreground">Size: {item.size}</p>}
                               <p className="text-xs text-muted-foreground">SL: {item.quantity}</p>
                               {hasSale && <p className="text-[11px] text-red-600">Sale {salePercent}%</p>}
                             </div>

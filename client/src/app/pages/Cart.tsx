@@ -17,7 +17,27 @@ import { productsAPI } from '@/services/api';
 type StockSnapshot = {
   productId: string;
   stock: number;
+  hasSizes?: boolean;
+  sizeStocks?: Array<{ size: string; quantity: number }>;
   isActive: boolean;
+};
+
+const normalizeSizeKey = (value?: string) => String(value || '').trim().toLowerCase();
+
+const getAvailableStockForItem = (item: { size?: string }, stockInfo?: StockSnapshot) => {
+  if (!stockInfo) {
+    return 0;
+  }
+
+  const selectedSizeKey = normalizeSizeKey(item.size);
+  if (stockInfo.hasSizes && selectedSizeKey) {
+    const matchedSize = (stockInfo.sizeStocks || []).find(
+      (entry) => normalizeSizeKey(entry?.size) === selectedSizeKey
+    );
+    return Math.max(0, Number(matchedSize?.quantity || 0));
+  }
+
+  return Math.max(0, Number(stockInfo.stock || 0));
 };
 
 export const Cart: React.FC = () => {
@@ -50,6 +70,13 @@ export const Cart: React.FC = () => {
           acc[productId] = {
             productId,
             stock: Math.max(0, Number(stockItem?.stock || 0)),
+            hasSizes: Boolean(stockItem?.hasSizes),
+            sizeStocks: Array.isArray(stockItem?.sizeStocks)
+              ? stockItem.sizeStocks.map((entry: any) => ({
+                  size: String(entry?.size || '').trim(),
+                  quantity: Math.max(0, Number(entry?.quantity || 0)),
+                }))
+              : [],
             isActive: Boolean(stockItem?.isActive),
           };
           return acc;
@@ -77,7 +104,7 @@ export const Cart: React.FC = () => {
       .map((item) => {
         const stockInfo = stockByProductId[item.productId];
         if (!stockInfo) return null;
-        const availableStock = Number(stockInfo.stock || 0);
+        const availableStock = getAvailableStockForItem(item, stockInfo);
         const isInactive = !stockInfo.isActive;
         const isOutOfStock = availableStock <= 0 || isInactive;
         const isExceeded = !isOutOfStock && item.quantity > availableStock;
@@ -136,7 +163,7 @@ export const Cart: React.FC = () => {
     if (!item) return;
 
     const stockInfo = stockByProductId[item.productId];
-    const availableStock = Math.max(0, Number(stockInfo?.stock || 0));
+    const availableStock = getAvailableStockForItem(item, stockInfo);
     const isInactive = stockInfo ? !stockInfo.isActive : false;
 
     if (stockInfo && (isInactive || availableStock <= 0)) {
@@ -218,7 +245,7 @@ export const Cart: React.FC = () => {
             <AnimatePresence mode="popLayout">
               {items.map((item) => {
                 const stockInfo = stockByProductId[item.productId];
-                const availableStock = Math.max(0, Number(stockInfo?.stock ?? 0));
+                const availableStock = getAvailableStockForItem(item, stockInfo);
                 const isInactive = stockInfo ? !stockInfo.isActive : false;
                 const isOutOfStock = stockInfo ? availableStock <= 0 || isInactive : false;
                 const isExceeded = stockInfo ? !isOutOfStock && item.quantity > availableStock : false;
@@ -269,6 +296,9 @@ export const Cart: React.FC = () => {
                           {item.name}
                         </Link>
                         <div className="mt-2">
+                          {item.size && (
+                            <p className="text-sm text-muted-foreground">Size: {item.size}</p>
+                          )}
                           {hasSale ? (
                             <>
                               <p className="text-sm text-muted-foreground line-through">

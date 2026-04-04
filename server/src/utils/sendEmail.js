@@ -1,4 +1,7 @@
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const stripHtml = (value = '') =>
   String(value)
@@ -11,6 +14,12 @@ const stripHtml = (value = '') =>
 
 const DEFAULT_PUBLIC_LOGO_URL =
   'https://cdn.jsdelivr.net/gh/HuyVoTran/Advanced-Web-Programming@main/client/public/images/SalvioRoyale-Logo.png';
+const DEFAULT_LOGO_CID = 'salvio-royale-logo@salvio-mail';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '../../..');
+const DEFAULT_LOCAL_LOGO_PATH = path.join(projectRoot, 'client', 'public', 'images', 'SalvioRoyale-Logo.png');
 
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
@@ -41,9 +50,35 @@ const resolveEmailLogoUrl = () => {
   return DEFAULT_PUBLIC_LOGO_URL;
 };
 
-const buildBrandedHtml = ({ title, contentHtml }) => {
+const resolveEmailLogoAsset = () => {
+  const configuredLogoPath = String(process.env.EMAIL_LOGO_PATH || '').trim();
+  const localLogoPath = configuredLogoPath
+    ? path.isAbsolute(configuredLogoPath)
+      ? configuredLogoPath
+      : path.join(projectRoot, configuredLogoPath)
+    : DEFAULT_LOCAL_LOGO_PATH;
+
+  if (localLogoPath && fs.existsSync(localLogoPath)) {
+    return {
+      logoSrc: `cid:${DEFAULT_LOGO_CID}`,
+      attachments: [
+        {
+          filename: path.basename(localLogoPath),
+          path: localLogoPath,
+          cid: DEFAULT_LOGO_CID,
+        },
+      ],
+    };
+  }
+
+  return {
+    logoSrc: resolveEmailLogoUrl(),
+    attachments: [],
+  };
+};
+
+const buildBrandedHtml = ({ title, contentHtml, logoSrc }) => {
   const siteUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  const logoUrl = resolveEmailLogoUrl();
   const year = new Date().getFullYear();
 
   return `
@@ -55,7 +90,7 @@ const buildBrandedHtml = ({ title, contentHtml }) => {
               <tr>
                 <td style="background:#ffffff;padding:20px 28px;text-align:center;border-bottom:1px solid #ece7dd;">
                   <a href="${siteUrl}" style="text-decoration:none;display:inline-block;">
-                    <img src="${logoUrl}" alt="Salvio Royale" style="height:48px;max-width:240px;object-fit:contain;display:block;margin:0 auto;" />
+                    <img src="${logoSrc}" alt="Salvio Royale" style="height:48px;max-width:240px;object-fit:contain;display:block;margin:0 auto;" />
                   </a>
                 </td>
               </tr>
@@ -108,9 +143,11 @@ const sendEmail = async ({ to, subject, html, text }) => {
   });
 
   const baseHtml = html || `<p>${String(text || '').replace(/\n/g, '<br />')}</p>`;
+  const { logoSrc, attachments } = resolveEmailLogoAsset();
   const brandedHtml = buildBrandedHtml({
     title: subject || 'Thông báo từ Salvio Royale',
     contentHtml: baseHtml,
+    logoSrc,
   });
 
   const fallbackText = text || stripHtml(baseHtml) || 'Thông báo từ Salvio Royale';
@@ -121,6 +158,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
     subject,
     html: brandedHtml,
     text: fallbackText,
+    ...(attachments.length > 0 ? { attachments } : {}),
   };
 
   try {

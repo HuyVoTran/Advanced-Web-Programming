@@ -27,10 +27,12 @@ export const ProductDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState('');
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewContent, setReviewContent] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [stock, setStock] = useState<number | null>(null);
+  const [sizeStocks, setSizeStocks] = useState<Array<{ size: string; quantity: number }>>([]);
   const [stockLoading, setStockLoading] = useState(false);
 
   useEffect(() => {
@@ -81,9 +83,20 @@ export const ProductDetail: React.FC = () => {
         if (!mounted) return;
         const nextStock = Math.max(0, Number(data?.stock || 0));
         setStock(nextStock);
+        setSizeStocks(
+          Array.isArray(data?.sizeStocks)
+            ? data.sizeStocks
+                .map((entry: any) => ({
+                  size: String(entry?.size || '').trim(),
+                  quantity: Math.max(0, Number(entry?.quantity || 0)),
+                }))
+                .filter((entry: { size: string; quantity: number }) => entry.size.length > 0)
+            : []
+        );
       } catch {
         if (!mounted) return;
         setStock(null);
+        setSizeStocks([]);
       } finally {
         if (!silent && mounted) {
           setStockLoading(false);
@@ -154,9 +167,38 @@ export const ProductDetail: React.FC = () => {
 
   const currentProductId = product ? String(product._id || product.id || '') : '';
   const favorite = currentProductId ? isFavorite(currentProductId) : false;
-  const availableStock = stock ?? Math.max(0, Number(product?.stock || 0));
+  const normalizedProductSizeStocks = Array.isArray(product?.sizeStocks)
+    ? product.sizeStocks
+        .map((entry: any) => ({
+          size: String(entry?.size || '').trim(),
+          quantity: Math.max(0, Number(entry?.quantity || 0)),
+        }))
+        .filter((entry: { size: string; quantity: number }) => entry.size.length > 0)
+    : [];
+  const effectiveSizeStocks = sizeStocks.length > 0 ? sizeStocks : normalizedProductSizeStocks;
+  const hasSizeOptions = Boolean(product?.hasSizes) && effectiveSizeStocks.length > 0;
+  const selectedSizeStock = effectiveSizeStocks.find((entry) => entry.size === selectedSize);
+  const availableStock = hasSizeOptions
+    ? Math.max(0, Number(selectedSizeStock?.quantity || 0))
+    : stock ?? Math.max(0, Number(product?.stock || 0));
   const isOutOfStock = availableStock <= 0;
   const isLowStock = !isOutOfStock && availableStock <= 5;
+
+  useEffect(() => {
+    if (!hasSizeOptions) {
+      setSelectedSize('');
+      return;
+    }
+
+    const hasCurrentSelection = effectiveSizeStocks.some((entry) => entry.size === selectedSize && entry.quantity > 0);
+    if (hasCurrentSelection) {
+      return;
+    }
+
+    const firstAvailableSize = effectiveSizeStocks.find((entry) => entry.quantity > 0);
+    setSelectedSize(firstAvailableSize?.size || '');
+    setQuantity(1);
+  }, [hasSizeOptions, effectiveSizeStocks, selectedSize]);
 
   if (error) {
     return (
@@ -203,6 +245,10 @@ export const ProductDetail: React.FC = () => {
   }
 
   const handleAddToCart = () => {
+    if (hasSizeOptions && !selectedSize) {
+      toast.error('Vui lòng chọn size');
+      return;
+    }
     if (isOutOfStock) {
       toast.error('Sản phẩm hiện đã hết hàng');
       return;
@@ -211,11 +257,15 @@ export const ProductDetail: React.FC = () => {
       toast.error(`Chỉ còn ${availableStock} sản phẩm trong kho`);
       return;
     }
-    addToCart(product, quantity);
+    addToCart(product, quantity, selectedSize);
     toast.success('Đã thêm vào giỏ hàng');
   };
 
   const handleBuyNow = () => {
+    if (hasSizeOptions && !selectedSize) {
+      toast.error('Vui lòng chọn size');
+      return;
+    }
     if (isOutOfStock) {
       toast.error('Sản phẩm hiện đã hết hàng');
       return;
@@ -224,7 +274,7 @@ export const ProductDetail: React.FC = () => {
       toast.error(`Chỉ còn ${availableStock} sản phẩm trong kho`);
       return;
     }
-    addToCart(product, quantity);
+    addToCart(product, quantity, selectedSize);
     navigate('/cart');
   };
 
@@ -400,6 +450,35 @@ export const ProductDetail: React.FC = () => {
 
             {/* Quantity */}
             <div>
+              {hasSizeOptions && (
+                <div className="mb-4">
+                  <p className="text-sm mb-2">Size</p>
+                  <div className="flex flex-wrap gap-2">
+                    {effectiveSizeStocks.map((entry) => {
+                      const isSizeOutOfStock = entry.quantity <= 0;
+                      const isSelected = selectedSize === entry.size;
+                      return (
+                        <button
+                          key={entry.size}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSize(entry.size);
+                            setQuantity(1);
+                          }}
+                          disabled={isSizeOutOfStock}
+                          className={`px-3 py-2 rounded border text-sm transition-colors ${
+                            isSelected
+                              ? 'border-[#C9A24D] bg-[#C9A24D]/10 text-[#C9A24D]'
+                              : 'border-gray-300 text-gray-700 hover:border-[#C9A24D]/60'
+                          } ${isSizeOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {entry.size} {isSizeOutOfStock ? '(Hết hàng)' : `(Còn ${entry.quantity})`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <p className="text-sm mb-2">Số lượng</p>
               <div className="mb-3">
                 {stockLoading ? (

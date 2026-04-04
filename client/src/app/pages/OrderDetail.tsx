@@ -6,6 +6,7 @@ import { formatPrice, getStatusColor, getStatusText } from '@/utils/constants';
 import { ArrowLeft, Package } from 'lucide-react';
 import { UserDashboardLayout } from '@/app/components/shared/UserDashboardLayout';
 import { notify } from '@/utils/notifications';
+import { productsAPI } from '@/services/api';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,16 @@ import {
 import { Textarea } from '@/app/components/ui/textarea';
 import { Button } from '@/app/components/ui/button';
 
+type StockSnapshot = {
+  productId: string;
+  stock: number;
+  hasSizes?: boolean;
+  sizeStocks?: Array<{ size: string; quantity: number }>;
+  isActive: boolean;
+};
+
+const normalizeSizeKey = (value?: string) => String(value || '').trim().toLowerCase();
+
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -26,6 +37,7 @@ export const OrderDetail: React.FC = () => {
   const [cancelling, setCancelling] = React.useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState('');
+  const [stockByProductId, setStockByProductId] = React.useState<Record<string, StockSnapshot>>({});
   const hasAutoOpenedCancelDialog = React.useRef(false);
 
   const order = id ? getOrderById(id) : undefined;
@@ -50,6 +62,55 @@ export const OrderDetail: React.FC = () => {
       navigate('/login');
     }
   }, [user, navigate]);
+
+  React.useEffect(() => {
+    if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+      setStockByProductId({});
+      return;
+    }
+
+    let mounted = true;
+
+    const fetchStocks = async () => {
+      try {
+        const productIds = Array.from(new Set(order.items.map((item) => String(item.productId || '')).filter(Boolean)));
+        const stocks: any[] = await productsAPI.getBulkStock(productIds);
+        if (!mounted) return;
+
+        const nextMap = (Array.isArray(stocks) ? stocks : []).reduce<Record<string, StockSnapshot>>((acc, stockItem: any) => {
+          const productId = String(stockItem?.productId || '');
+          if (!productId) return acc;
+
+          acc[productId] = {
+            productId,
+            stock: Math.max(0, Number(stockItem?.stock || 0)),
+            hasSizes: Boolean(stockItem?.hasSizes),
+            sizeStocks: Array.isArray(stockItem?.sizeStocks)
+              ? stockItem.sizeStocks.map((entry: any) => ({
+                  size: String(entry?.size || '').trim(),
+                  quantity: Math.max(0, Number(entry?.quantity || 0)),
+                }))
+              : [],
+            isActive: Boolean(stockItem?.isActive),
+          };
+
+          return acc;
+        }, {});
+
+        setStockByProductId(nextMap);
+      } catch {
+        // ignore stock polling errors in order detail
+      }
+    };
+
+    fetchStocks();
+    const timer = window.setInterval(fetchStocks, 15000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, [order]);
 
   if (!user) {
     return null;
@@ -162,6 +223,16 @@ export const OrderDetail: React.FC = () => {
               const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
               const salePercent = Number(item.salePercent || 0);
               const hasSale = salePercent > 0 && originalUnitPrice > finalUnitPrice;
+              const selectedSize = String((item as any).size || '').trim();
+              const stockInfo = stockByProductId[String(item.productId || '')];
+              const sizeQuantity = selectedSize
+                ? (stockInfo?.sizeStocks || []).find(
+                    (entry) => normalizeSizeKey(entry?.size) === normalizeSizeKey(selectedSize)
+                  )?.quantity
+                : undefined;
+              const showSizeStock = Boolean(selectedSize) && Boolean(stockInfo?.hasSizes);
+              const currentSizeStock = showSizeStock ? Math.max(0, Number(sizeQuantity || 0)) : null;
+              const isSizeOutOfStock = showSizeStock && (currentSizeStock === 0 || !stockInfo?.isActive);
 
               return (
                 <div key={index} className="flex items-center justify-between border-b border-gray-100 pb-3 last:border-0 last:pb-0">
@@ -169,7 +240,13 @@ export const OrderDetail: React.FC = () => {
                     <Package className="w-5 h-5 text-gray-400" />
                     <div>
                       <p>{item.productName}</p>
+                      {selectedSize && <p className="text-sm text-gray-500">Size: {selectedSize}</p>}
                       <p className="text-sm text-gray-500">SL: {item.quantity}</p>
+                      {showSizeStock && (
+                        <p className={`text-sm ${isSizeOutOfStock ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {isSizeOutOfStock ? 'Hiện tại: size đã hết hàng' : `Hiện tại: còn ${currentSizeStock} sản phẩm cho size này`}
+                        </p>
+                      )}
                       {hasSale && (
                         <p className="text-sm text-gray-500">Giá gốc: {formatPrice(originalUnitPrice)}</p>
                       )}

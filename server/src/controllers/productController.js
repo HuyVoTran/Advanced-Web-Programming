@@ -225,7 +225,7 @@ export const getProductStockBySlug = async (req, res, next) => {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 
     const query = isObjectId ? { _id: slug } : { slug };
-    const product = await Product.findOne(query).select('_id name stock isActive updatedAt');
+    const product = await Product.findOne(query).select('_id name stock hasSizes sizeStocks isActive updatedAt');
 
     if (!product) {
       return sendError(res, 404, 'Sản phẩm không tìm thấy');
@@ -235,6 +235,13 @@ export const getProductStockBySlug = async (req, res, next) => {
       productId: String(product._id),
       name: product.name,
       stock: Number(product.stock || 0),
+      hasSizes: Boolean(product.hasSizes),
+      sizeStocks: Array.isArray(product.sizeStocks)
+        ? product.sizeStocks.map((item) => ({
+            size: String(item?.size || '').trim(),
+            quantity: Math.max(0, Number(item?.quantity || 0)),
+          }))
+        : [],
       isActive: Boolean(product.isActive),
       updatedAt: product.updatedAt,
     });
@@ -257,7 +264,7 @@ export const getProductsStock = async (req, res, next) => {
     }
 
     const products = await Product.find({ _id: { $in: ids } })
-      .select('_id name stock isActive updatedAt')
+      .select('_id name stock hasSizes sizeStocks isActive updatedAt')
       .lean();
 
     const stockById = new Map(
@@ -265,6 +272,13 @@ export const getProductsStock = async (req, res, next) => {
         productId: String(product._id),
         name: product.name,
         stock: Number(product.stock || 0),
+        hasSizes: Boolean(product.hasSizes),
+        sizeStocks: Array.isArray(product.sizeStocks)
+          ? product.sizeStocks.map((item) => ({
+              size: String(item?.size || '').trim(),
+              quantity: Math.max(0, Number(item?.quantity || 0)),
+            }))
+          : [],
         isActive: Boolean(product.isActive),
         updatedAt: product.updatedAt,
       }])
@@ -275,6 +289,8 @@ export const getProductsStock = async (req, res, next) => {
         productId,
         name: '',
         stock: 0,
+        hasSizes: false,
+        sizeStocks: [],
         isActive: false,
         updatedAt: null,
       }

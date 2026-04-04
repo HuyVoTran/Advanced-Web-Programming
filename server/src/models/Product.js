@@ -61,6 +61,24 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Số lượng không thể âm'],
     },
+    hasSizes: {
+      type: Boolean,
+      default: false,
+    },
+    sizeStocks: [
+      {
+        size: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        quantity: {
+          type: Number,
+          default: 0,
+          min: [0, 'Số lượng size không thể âm'],
+        },
+      },
+    ],
     isActive: {
       type: Boolean,
       default: true,
@@ -77,6 +95,23 @@ productSchema.pre('save', function (next) {
       .replace(/\s+/g, '-')
       .replace(/[^\w-]/g, '');
   }
+
+  if (this.hasSizes) {
+    const normalizedSizeStocks = Array.isArray(this.sizeStocks)
+      ? this.sizeStocks
+          .map((item) => ({
+            size: String(item?.size || '').trim(),
+            quantity: Math.max(0, Number(item?.quantity || 0)),
+          }))
+          .filter((item) => item.size.length > 0)
+      : [];
+
+    this.sizeStocks = normalizedSizeStocks;
+    this.stock = normalizedSizeStocks.reduce((sum, item) => sum + item.quantity, 0);
+  } else {
+    this.sizeStocks = [];
+  }
+
   next();
 });
 

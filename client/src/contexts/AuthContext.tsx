@@ -48,6 +48,7 @@ export interface Order {
   items: Array<{
     productId: string;
     productName: string;
+    size?: string;
     price: number;
     originalPrice?: number;
     salePercent?: number;

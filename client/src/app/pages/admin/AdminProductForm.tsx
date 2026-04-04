@@ -16,6 +16,11 @@ interface FormData {
   description: string;
   isFeatured: boolean;
   stock: string;
+  hasSizes: boolean;
+  sizeStocks: Array<{
+    size: string;
+    quantity: string;
+  }>;
   images?: string[];
 }
 
@@ -34,6 +39,8 @@ export const AdminProductForm: React.FC = () => {
     description: '',
     isFeatured: false,
     stock: '0',
+    hasSizes: false,
+    sizeStocks: [],
     images: [],
   });
 
@@ -86,6 +93,13 @@ export const AdminProductForm: React.FC = () => {
         description: product.description,
         isFeatured: product.isFeatured,
         stock: product.stock?.toString() || '0',
+        hasSizes: Boolean(product.hasSizes),
+        sizeStocks: Array.isArray(product.sizeStocks)
+          ? product.sizeStocks.map((item: any) => ({
+              size: String(item?.size || ''),
+              quantity: String(item?.quantity ?? 0),
+            }))
+          : [],
         images: product.images || [],
       });
       setSaleEnabled(Number(nextSalePercent) > 0);
@@ -96,12 +110,26 @@ export const AdminProductForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const normalizedSizeStocks = formData.hasSizes
+        ? formData.sizeStocks
+            .map((item) => ({
+              size: String(item.size || '').trim(),
+              quantity: Math.max(0, Number(item.quantity || 0)),
+            }))
+            .filter((item) => item.size.length > 0)
+        : [];
+
+      const resolvedStock = formData.hasSizes
+        ? normalizedSizeStocks.reduce((sum, item) => sum + item.quantity, 0)
+        : Number(formData.stock);
+
       const savedProduct = await saveProduct({
         ...formData,
         images: formData.images || [],
         price: Number(formData.price),
         salePercent: Number(formData.salePercent || 0),
-        stock: Number(formData.stock),
+        stock: resolvedStock,
+        sizeStocks: normalizedSizeStocks,
       });
 
       const productId = savedProduct?._id || savedProduct?.id || id;
@@ -138,6 +166,38 @@ export const AdminProductForm: React.FC = () => {
     });
     toast.info('Ảnh sẽ được lưu khi bạn bấm thêm/cập nhật sản phẩm');
   };
+
+  const updateSizeStockRow = (
+    rowIndex: number,
+    field: 'size' | 'quantity',
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      sizeStocks: prev.sizeStocks.map((row, index) =>
+        index === rowIndex ? { ...row, [field]: value } : row
+      ),
+    }));
+  };
+
+  const addSizeStockRow = () => {
+    setFormData((prev) => ({
+      ...prev,
+      sizeStocks: [...prev.sizeStocks, { size: '', quantity: '0' }],
+    }));
+  };
+
+  const removeSizeStockRow = (rowIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      sizeStocks: prev.sizeStocks.filter((_, index) => index !== rowIndex),
+    }));
+  };
+
+  const totalSizeStock = formData.sizeStocks.reduce(
+    (sum, item) => sum + Math.max(0, Number(item.quantity || 0)),
+    0
+  );
 
   if (productLoading) {
     return (
@@ -370,19 +430,90 @@ export const AdminProductForm: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 text-gray-700">
-                    Số lượng kho <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:opacity-50"
-                    min="0"
-                    required
-                    disabled={savingLoading}
-                  />
+                  <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <span className="text-sm text-gray-700">Bật quản lý nhiều size</span>
+                      <input
+                        type="checkbox"
+                        checked={formData.hasSizes}
+                        onChange={(e) => {
+                          const enabled = e.target.checked;
+                          setFormData((prev) => ({
+                            ...prev,
+                            hasSizes: enabled,
+                            sizeStocks:
+                              enabled && prev.sizeStocks.length === 0
+                                ? [{ size: '', quantity: '0' }]
+                                : prev.sizeStocks,
+                          }));
+                        }}
+                        className="w-5 h-5 rounded border-gray-300 text-[#C9A24D] focus:ring-[#C9A24D]"
+                        disabled={savingLoading}
+                      />
+                    </label>
+
+                    {formData.hasSizes ? (
+                      <div className="space-y-3">
+                        {formData.sizeStocks.map((sizeStock, index) => (
+                          <div key={`size-stock-${index}`} className="grid grid-cols-12 gap-2">
+                            <input
+                              type="text"
+                              value={sizeStock.size}
+                              onChange={(e) => updateSizeStockRow(index, 'size', e.target.value)}
+                              className="col-span-6 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                              placeholder="Size (VD: S, M, 16, 17...)"
+                              disabled={savingLoading}
+                            />
+                            <input
+                              type="number"
+                              value={sizeStock.quantity}
+                              onChange={(e) => updateSizeStockRow(index, 'quantity', e.target.value)}
+                              className="col-span-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                              placeholder="Số lượng"
+                              min="0"
+                              disabled={savingLoading}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeSizeStockRow(index)}
+                              className="col-span-2 px-2 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
+                              disabled={savingLoading || formData.sizeStocks.length <= 1}
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        ))}
+
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={addSizeStockRow}
+                            className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm"
+                            disabled={savingLoading}
+                          >
+                            + Thêm size
+                          </button>
+                          <span className="text-sm text-gray-600">Tổng kho: {totalSizeStock}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm mb-2 text-gray-700">
+                          Số lượng kho <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="stock"
+                          value={formData.stock}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D] disabled:opacity-50"
+                          min="0"
+                          required
+                          disabled={savingLoading}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
