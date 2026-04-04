@@ -6,6 +6,22 @@ import { calculateCouponDiscount } from './couponController.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination } from '../utils/validators.js';
 import sendEmail from '../utils/sendEmail.js';
+import { getMembershipLevelBySpent } from '../utils/membership.js';
+
+const RANK_ORDER = {
+  member: 0,
+  silver: 1,
+  gold: 2,
+  platinum: 3,
+  diamond: 4,
+};
+
+const isRankEligible = (currentRank = 'member', requiredRank = 'all') => {
+  if (!requiredRank || requiredRank === 'all') return true;
+  const current = RANK_ORDER[String(currentRank || 'member').toLowerCase()] ?? 0;
+  const required = RANK_ORDER[String(requiredRank || 'member').toLowerCase()] ?? 0;
+  return current >= required;
+};
 
 /**
  * Transform một Order document thành format chuẩn cho frontend.
@@ -200,6 +216,38 @@ export const createOrder = async (req, res, next) => {
 
     if (couponCode && typeof couponCode === 'string' && couponCode.trim()) {
       const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase() });
+
+      let isEligible = false;
+
+      if (coupon && coupon.requiredRank && coupon.requiredRank !== 'all') {
+        if (!req.user) {
+          return sendError(res, 400, 'Mã giảm giá này yêu cầu đăng nhập tài khoản thành viên');
+        }
+        const currentRank = getMembershipLevelBySpent(Number(req.user.totalSpent || 0)).rank;
+        if (!isRankEligible(currentRank, coupon.requiredRank)) {
+          return sendError(
+            res,
+            400,
+            `Mã giảm giá yêu cầu hạng từ ${String(coupon.requiredRank).toUpperCase()} trở lên`
+          );
+        }
+      }
+
+      if (coupon && coupon.oneTimePerUser) {
+        if (!req.user) {
+          return sendError(res, 400, 'Mã giảm giá này chỉ dùng 1 lần cho mỗi tài khoản. Vui lòng đăng nhập.');
+        }
+
+        const alreadyUsed = await Order.exists({
+          user: req.user.id,
+          couponCode: coupon.code,
+          status: { $ne: 'cancelled' },
+        });
+        if (alreadyUsed) {
+          return sendError(res, 400, 'Tài khoản của bạn đã sử dụng mã giảm giá này');
+        }
+      }
+
       if (
         coupon &&
         coupon.isActive &&
@@ -207,6 +255,10 @@ export const createOrder = async (req, res, next) => {
         (coupon.usageLimit === 0 || coupon.usedCount < coupon.usageLimit) &&
         (coupon.minOrderAmount === 0 || totalPrice >= coupon.minOrderAmount)
       ) {
+        isEligible = true;
+      }
+
+      if (isEligible) {
         couponDiscount = calculateCouponDiscount(coupon, totalPrice);
         appliedCouponCode = coupon.code;
         coupon.usedCount += 1;

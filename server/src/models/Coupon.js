@@ -38,6 +38,15 @@ const couponSchema = new mongoose.Schema(
       default: 0, // 0 = unlimited
       min: 0,
     },
+    requiredRank: {
+      type: String,
+      enum: ['all', 'member', 'silver', 'gold', 'platinum', 'diamond'],
+      default: 'all',
+    },
+    oneTimePerUser: {
+      type: Boolean,
+      default: false,
+    },
     usedCount: {
       type: Number,
       default: 0,

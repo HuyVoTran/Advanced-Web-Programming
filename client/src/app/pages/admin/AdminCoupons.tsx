@@ -14,6 +14,8 @@ interface Coupon {
   minOrderAmount: number;
   maxDiscount: number;
   usageLimit: number;
+  requiredRank?: 'all' | 'member' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  oneTimePerUser?: boolean;
   usedCount: number;
   isActive: boolean;
   expiresAt?: string;
@@ -33,6 +35,8 @@ const EMPTY_FORM = {
   minOrderAmount: 0,
   maxDiscount: 0,
   usageLimit: 0,
+  requiredRank: 'all' as 'all' | 'member' | 'silver' | 'gold' | 'platinum' | 'diamond',
+  oneTimePerUser: false,
   isActive: true,
   expiresAt: '',
 };
@@ -65,6 +69,8 @@ export const AdminCoupons: React.FC = () => {
       minOrderAmount: coupon.minOrderAmount,
       maxDiscount: coupon.maxDiscount,
       usageLimit: coupon.usageLimit,
+      requiredRank: coupon.requiredRank || 'all',
+      oneTimePerUser: Boolean(coupon.oneTimePerUser),
       isActive: coupon.isActive,
       expiresAt: coupon.expiresAt ? coupon.expiresAt.substring(0, 10) : '',
     });
@@ -167,6 +173,8 @@ export const AdminCoupons: React.FC = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Loại giảm</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Giá trị</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Đơn tối thiểu</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Rank yêu cầu</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">1 lần/tài khoản</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Đã dùng</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Hết hạn</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Trạng thái</th>
@@ -191,6 +199,20 @@ export const AdminCoupons: React.FC = () => {
                         : formatPrice(coupon.discountValue)}
                     </td>
                     <td className="px-4 py-3">{coupon.minOrderAmount > 0 ? formatPrice(coupon.minOrderAmount) : '—'}</td>
+                    <td className="px-4 py-3">
+                      {coupon.requiredRank && coupon.requiredRank !== 'all' ? (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs uppercase">
+                          {coupon.requiredRank}
+                        </span>
+                      ) : 'Tất cả'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {coupon.oneTimePerUser ? (
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs">Có</span>
+                      ) : (
+                        <span className="text-gray-400">Không</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {coupon.usedCount}
                       {coupon.usageLimit > 0 && <span className="text-gray-400"> / {coupon.usageLimit}</span>}
@@ -339,6 +361,22 @@ export const AdminCoupons: React.FC = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium mb-1">Hạng thành viên tối thiểu</label>
+                  <select
+                    name="requiredRank"
+                    value={formData.requiredRank}
+                    onChange={handleChange}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A24D]/30"
+                  >
+                    <option value="all">Tất cả hạng</option>
+                    <option value="member">Member</option>
+                    <option value="silver">Silver</option>
+                    <option value="gold">Gold</option>
+                    <option value="platinum">Platinum</option>
+                    <option value="diamond">Diamond</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1">Ngày hết hạn</label>
                   <input
                     type="date"
@@ -361,6 +399,20 @@ export const AdminCoupons: React.FC = () => {
                   className="w-4 h-4 accent-[#C9A24D]"
                 />
                 <label htmlFor="isActive" className="text-sm font-medium cursor-pointer">Kích hoạt mã giảm giá</label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  name="oneTimePerUser"
+                  id="oneTimePerUser"
+                  checked={formData.oneTimePerUser}
+                  onChange={handleChange}
+                  className="w-4 h-4 accent-[#C9A24D]"
+                />
+                <label htmlFor="oneTimePerUser" className="text-sm font-medium cursor-pointer">
+                  Chỉ dùng 1 lần cho mỗi tài khoản
+                </label>
               </div>
             </div>
 
