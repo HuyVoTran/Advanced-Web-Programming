@@ -194,7 +194,12 @@ export const adminApi = {
     return response.data.data;
   },
 
-  sendNewsletter: async (payload: { subject: string; content: string; audience: 'all' | 'users' | 'subscribers' }) => {
+  sendNewsletter: async (payload: {
+    subject: string;
+    content: string;
+    audience: 'all' | 'users' | 'subscribers';
+    membershipRank?: 'all' | 'member' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  }) => {
     const response = await apiClient.post('/admin/newsletter/send', payload);
     return response.data.data;
   },

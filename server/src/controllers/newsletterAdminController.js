@@ -2,6 +2,9 @@ import NewsletterSubscription from '../models/NewsletterSubscription.js';
 import User from '../models/User.js';
 import { sendResponse, sendError } from '../utils/response.js';
 import sendEmail from '../utils/sendEmail.js';
+import { getMembershipLevelBySpent } from '../utils/membership.js';
+
+const ALLOWED_MEMBERSHIP_RANKS = ['all', 'member', 'silver', 'gold', 'platinum', 'diamond'];
 
 const normalizeContent = (content = '') => {
   const safe = String(content).trim();
@@ -26,7 +29,7 @@ export const getNewsletterSubscribers = async (req, res, next) => {
 export const getNewsletterUsers = async (req, res, next) => {
   try {
     const users = await User.find({ role: 'user', isActive: true })
-      .select('email fullName createdAt')
+      .select('email fullName totalSpent createdAt')
       .sort({ createdAt: -1 });
 
     return sendResponse(res, 200, 'Danh sách người dùng', users);
@@ -37,10 +40,15 @@ export const getNewsletterUsers = async (req, res, next) => {
 
 export const sendNewsletterBroadcast = async (req, res, next) => {
   try {
-    const { subject, content, audience = 'all' } = req.body;
+    const { subject, content, audience = 'all', membershipRank = 'all' } = req.body;
 
     if (!subject || !content) {
       return sendError(res, 400, 'Vui lòng cung cấp tiêu đề và nội dung');
+    }
+
+    const normalizedRank = String(membershipRank || 'all').toLowerCase();
+    if (!ALLOWED_MEMBERSHIP_RANKS.includes(normalizedRank)) {
+      return sendError(res, 400, 'Hạng membership không hợp lệ');
     }
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -59,8 +67,11 @@ export const sendNewsletterBroadcast = async (req, res, next) => {
     }
 
     if (audience === 'users' || audience === 'all') {
-      const users = await User.find({ role: 'user', isActive: true }).select('email');
-      emails = emails.concat(users.map((u) => u.email));
+      const users = await User.find({ role: 'user', isActive: true }).select('email totalSpent');
+      const filteredUsers = normalizedRank === 'all'
+        ? users
+        : users.filter((user) => getMembershipLevelBySpent(Number(user.totalSpent || 0)).rank === normalizedRank);
+      emails = emails.concat(filteredUsers.map((u) => u.email));
     }
 
     const uniqueEmails = Array.from(
@@ -98,7 +109,11 @@ export const sendNewsletterBroadcast = async (req, res, next) => {
       return sendError(res, 502, `Gửi email thất bại: ${sendErr?.message || 'SMTP error'}`);
     }
 
-    return sendResponse(res, 200, 'Đã gửi thông báo', { count: uniqueEmails.length });
+    return sendResponse(res, 200, 'Đã gửi thông báo', {
+      count: uniqueEmails.length,
+      audience,
+      membershipRank: normalizedRank,
+    });
   } catch (error) {
     next(error);
   }

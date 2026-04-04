@@ -10,13 +10,33 @@ interface Subscriber {
   email: string;
   createdAt: string;
   fullName?: string;
+  totalSpent?: number;
 }
+
+const getMembershipRankBySpent = (totalSpent = 0) => {
+  const spent = Number(totalSpent || 0);
+  if (spent >= 100_000_000) return 'diamond';
+  if (spent >= 50_000_000) return 'platinum';
+  if (spent >= 20_000_000) return 'gold';
+  if (spent >= 5_000_000) return 'silver';
+  return 'member';
+};
+
+const RANK_OPTIONS = [
+  { value: 'all', label: 'Tất cả hạng' },
+  { value: 'member', label: 'Member' },
+  { value: 'silver', label: 'Silver' },
+  { value: 'gold', label: 'Gold' },
+  { value: 'platinum', label: 'Platinum' },
+  { value: 'diamond', label: 'Diamond' },
+] as const;
 
 export const AdminNewsletter: React.FC = () => {
   const [formData, setFormData] = useState({
     subject: '',
     content: '',
     audience: 'all' as 'all' | 'users' | 'subscribers',
+    membershipRank: 'all' as 'all' | 'member' | 'silver' | 'gold' | 'platinum' | 'diamond',
   });
 
   const { data: subscribers = [], loading: loadingSubscribers, error: errorSubscribers } = useAdminFetch<Subscriber[]>(
@@ -59,6 +79,20 @@ export const AdminNewsletter: React.FC = () => {
   const error = errorSubscribers || errorUsers;
   const safeUsers = users ?? [];
   const safeSubscribers = subscribers ?? [];
+  const rankStats = safeUsers.reduce(
+    (acc, user) => {
+      const rank = getMembershipRankBySpent(user.totalSpent || 0);
+      acc[rank] = (acc[rank] || 0) + 1;
+      return acc;
+    },
+    {
+      member: 0,
+      silver: 0,
+      gold: 0,
+      platinum: 0,
+      diamond: 0,
+    } as Record<string, number>
+  );
 
   return (
     <div>
@@ -127,6 +161,26 @@ export const AdminNewsletter: React.FC = () => {
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm mb-2 text-gray-700">Lọc theo hạng membership</label>
+              <select
+                name="membershipRank"
+                value={formData.membershipRank}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
+                disabled={sending || formData.audience === 'subscribers'}
+              >
+                {RANK_OPTIONS.map((rank) => (
+                  <option key={rank.value} value={rank.value}>
+                    {rank.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Lọc này áp dụng cho người dùng có tài khoản (audience: users/all).
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={sending}
@@ -146,6 +200,15 @@ export const AdminNewsletter: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">
               Tổng: {isLoading ? '...' : safeUsers.length}
             </p>
+            {!isLoading && (
+              <div className="grid grid-cols-2 gap-2 mb-4 text-xs text-gray-600">
+                <div>Member: {rankStats.member}</div>
+                <div>Silver: {rankStats.silver}</div>
+                <div>Gold: {rankStats.gold}</div>
+                <div>Platinum: {rankStats.platinum}</div>
+                <div>Diamond: {rankStats.diamond}</div>
+              </div>
+            )}
             <div className="space-y-2 max-h-48 overflow-auto">
               {safeUsers.slice(0, 10).map((user) => (
                 <div key={user._id} className="text-xs text-gray-500">
