@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, ShoppingBag, User, Search, ChevronDown, X } from 'lucide-react';
+import { Bell, Menu, ShoppingBag, User, Search, ChevronDown, X } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { SearchBar } from './shared/SearchBar';
-import { useProducts, useClickOutside, useNews, useCategories } from '@/hooks/useCustomHooks';
+import { useProducts, useClickOutside, useNews, useCategories, useDebounce } from '@/hooks/useCustomHooks';
 import { AnimatePresence, motion } from 'motion/react';
 import { isPromoHeaderDismissed, PROMOTION_RESET_EVENT, setPromoHeaderDismissed } from '@/utils/constants';
+import { notificationsAPI, productsAPI } from '@/services/api';
+
+const NOTIFICATIONS_UPDATED_EVENT = 'notifications-updated';
 
 const PROMOTION_ITEMS = [
   {
@@ -26,13 +29,16 @@ export const Header: React.FC = () => {
   const [mobileCatsOpen, setMobileCatsOpen] = useState(false);
   const [promotionIndex, setPromotionIndex] = useState(0);
   const [isPromotionVisible, setIsPromotionVisible] = useState(true);
+  const [suggestedProducts, setSuggestedProducts] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null!);
   const { itemCount } = useCart();
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
   const { products } = useProducts();
   const { news } = useNews();
   const { categories } = useCategories();
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const menuItems = [
     { name: 'Trang chủ', path: '/' },
@@ -120,6 +126,51 @@ export const Header: React.FC = () => {
 
     return { products: matchedProducts, posts: matchedPosts };
   }, [products, searchQuery]);
+
+  const displayedProducts = suggestedProducts.length > 0 ? suggestedProducts : searchResults.products;
+
+  useEffect(() => {
+    const query = debouncedSearchQuery.trim();
+
+    if (query.length < 2) {
+      setSuggestedProducts([]);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const data = await productsAPI.getSearchSuggestions(query);
+        setSuggestedProducts(Array.isArray(data) ? data : []);
+      } catch {
+        setSuggestedProducts([]);
+      }
+    };
+
+    fetchSuggestions();
+  }, [debouncedSearchQuery]);
+
+  useEffect(() => {
+    if (!token) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const loadUnreadCount = async () => {
+      try {
+        const data: any = await notificationsAPI.getUnreadCount(token);
+        setUnreadCount(Number(data?.unreadCount || 0));
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+
+    loadUnreadCount();
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, loadUnreadCount);
+
+    return () => {
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, loadUnreadCount);
+    };
+  }, [token]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
@@ -248,13 +299,13 @@ export const Header: React.FC = () => {
                     <div className="mt-4 space-y-4">
                       <div>
                         <p className="text-xs uppercase text-gray-500 tracking-wider mb-2">Sản phẩm</p>
-                        {searchResults.products.length > 0 ? (
+                        {displayedProducts.length > 0 ? (
                           <div className="space-y-2">
-                            {searchResults.products.map((product: any) => (
+                            {displayedProducts.map((product: any) => (
                               <button
                                 key={product._id || product.id}
                                 onClick={() => {
-                                  navigate(`/product/${product._id || product.id}`);
+                                  navigate(`/product/${product.slug || product._id || product.id}`);
                                   setSearchOpen(false);
                                 }}
                                 className="w-full text-left text-sm text-gray-700 hover:text-[#C9A24D] transition-colors"
@@ -306,6 +357,17 @@ export const Header: React.FC = () => {
               )}
             </Link>
 
+            {user && (
+              <Link to="/notifications" className={iconButtonClass} aria-label="Thông báo">
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 bg-[#C9A24D] text-white text-[10px] min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+            )}
+
             <div className="relative group flex items-center">
               <button className={iconButtonClass}>
                 <User className="w-5 h-5" />
@@ -339,6 +401,24 @@ export const Header: React.FC = () => {
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
                           Đơn hàng
+                        </Link>
+                        <Link
+                          to="/chat"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          Chat hỗ trợ
+                        </Link>
+                        <Link
+                          to="/returns"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          Trả hàng
+                        </Link>
+                        <Link
+                          to="/notifications"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          Thông báo
                         </Link>
                       </>
                     )}

@@ -40,6 +40,16 @@ import {
   syncUserMembershipAdmin,
   updateRewardItemAdmin,
 } from '../controllers/membershipController.js';
+import {
+  getAllReturnRequestsAdmin,
+  updateReturnRequestStatusAdmin,
+} from '../controllers/returnController.js';
+import {
+  getAllConversationsAdmin,
+  getConversationMessages,
+  sendMessageToConversation,
+  updateConversationStatusAdmin,
+} from '../controllers/chatController.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import { adminOnly } from '../middlewares/role.middleware.js';
 
@@ -104,5 +114,15 @@ router.put('/membership/rewards/:id', updateRewardItemAdmin);
 router.delete('/membership/rewards/:id', deleteRewardItemAdmin);
 router.get('/membership/stats', getRewardRedemptionStatsAdmin);
 router.post('/membership/sync/:userId', syncUserMembershipAdmin);
+
+// Return Requests Management
+router.get('/returns', getAllReturnRequestsAdmin);
+router.put('/returns/:id/status', updateReturnRequestStatusAdmin);
+
+// Chat Management
+router.get('/chats', getAllConversationsAdmin);
+router.get('/chats/:conversationId/messages', getConversationMessages);
+router.post('/chats/:conversationId/messages', sendMessageToConversation);
+router.put('/chats/:conversationId/status', updateConversationStatusAdmin);
 
 export default router;

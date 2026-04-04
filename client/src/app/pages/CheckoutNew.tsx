@@ -15,7 +15,7 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { authAPI, couponAPI } from '@/services/api';
+import { authAPI, couponAPI, productsAPI } from '@/services/api';
 import { resolveImageSrc } from '@/utils/image';
 import { getVietnamProvinces, type VietnamProvince } from '@/services/vietnamAddress';
 import { 
@@ -39,6 +39,12 @@ const STEPS = [
   { id: 'payment', label: 'Thanh toán', description: 'Phương thức thanh toán' },
   { id: 'review', label: 'Xác nhận', description: 'Xem lại đơn hàng' },
 ];
+
+type StockSnapshot = {
+  productId: string;
+  stock: number;
+  isActive: boolean;
+};
 
 export const CheckoutNew: React.FC = () => {
   const navigate = useNavigate();
@@ -73,6 +79,7 @@ export const CheckoutNew: React.FC = () => {
     oneTimePerUser?: boolean;
   } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [stockByProductId, setStockByProductId] = useState<Record<string, StockSnapshot>>({});
 
   const selectedProvince = useMemo(
     () => provinces.find((province) => String(province.code) === selectedProvinceCode) || null,
@@ -87,6 +94,78 @@ export const CheckoutNew: React.FC = () => {
   );
 
   const availableWards = selectedDistrict?.wards || [];
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setStockByProductId({});
+      return;
+    }
+
+    let mounted = true;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const fetchStocks = async () => {
+      try {
+        const ids = Array.from(new Set(items.map((item) => item.productId).filter(Boolean)));
+        const stocks: any[] = await productsAPI.getBulkStock(ids);
+        if (!mounted) return;
+
+        const nextMap = (Array.isArray(stocks) ? stocks : []).reduce<Record<string, StockSnapshot>>((acc, stockItem: any) => {
+          const productId = String(stockItem?.productId || '');
+          if (!productId) return acc;
+          acc[productId] = {
+            productId,
+            stock: Math.max(0, Number(stockItem?.stock || 0)),
+            isActive: Boolean(stockItem?.isActive),
+          };
+          return acc;
+        }, {});
+
+        setStockByProductId(nextMap);
+      } catch {
+        // Ignore transient polling errors
+      }
+    };
+
+    fetchStocks();
+    timer = setInterval(fetchStocks, 10000);
+
+    return () => {
+      mounted = false;
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [items]);
+
+  const stockIssues = useMemo(() => {
+    return items
+      .map((item) => {
+        const stockInfo = stockByProductId[item.productId];
+        if (!stockInfo) return null;
+        const availableStock = Math.max(0, Number(stockInfo.stock || 0));
+        const isInactive = !stockInfo.isActive;
+        const isOutOfStock = availableStock <= 0 || isInactive;
+        const isExceeded = !isOutOfStock && item.quantity > availableStock;
+
+        return {
+          productId: item.productId,
+          itemId: item.id,
+          availableStock,
+          isOutOfStock,
+          isExceeded,
+        };
+      })
+      .filter(Boolean) as Array<{
+        productId: string;
+        itemId: string;
+        availableStock: number;
+        isOutOfStock: boolean;
+        isExceeded: boolean;
+      }>;
+  }, [items, stockByProductId]);
+
+  const hasBlockingStockIssue = stockIssues.some((issue) => issue.isOutOfStock || issue.isExceeded);
 
   const [formData, setFormData] = useState({
     fullName: defaultAddress?.fullName || user?.fullName || user?.name || '',
@@ -330,6 +409,11 @@ export const CheckoutNew: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) return;
+
+    if (hasBlockingStockIssue) {
+      toast.error('Tồn kho đã thay đổi, vui lòng kiểm tra lại sản phẩm trước khi đặt hàng');
+      return;
+    }
 
     setIsProcessing(true);
 
@@ -902,6 +986,11 @@ export const CheckoutNew: React.FC = () => {
                           </div>
                           <div className="flex-1 flex justify-between">
                             {(() => {
+                              const stockInfo = stockByProductId[item.productId];
+                              const availableStock = Math.max(0, Number(stockInfo?.stock ?? 0));
+                              const isInactive = stockInfo ? !stockInfo.isActive : false;
+                              const isOutOfStock = stockInfo ? availableStock <= 0 || isInactive : false;
+                              const isExceeded = stockInfo ? !isOutOfStock && item.quantity > availableStock : false;
                               const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
                               const salePercent = Number(item.salePercent ?? 0);
                               const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
@@ -912,6 +1001,15 @@ export const CheckoutNew: React.FC = () => {
                                   <div>
                                     <p className="font-light">{item.name}</p>
                                     <p className="text-sm text-muted-foreground mt-1">Số lượng: {item.quantity}</p>
+                                    {stockInfo && (
+                                      <p className={`text-xs mt-1 ${isOutOfStock || isExceeded ? 'text-red-600' : 'text-emerald-600'}`}>
+                                        {isOutOfStock
+                                          ? 'Hết hàng'
+                                          : isExceeded
+                                            ? `Vượt tồn kho, chỉ còn ${availableStock}`
+                                            : `Tồn kho hiện tại: ${availableStock}`}
+                                      </p>
+                                    )}
                                     {hasSale ? (
                                       <div className="mt-1 text-sm">
                                         <p className="text-muted-foreground line-through">Giá gốc: {formatPrice(originalUnitPrice)}</p>
@@ -954,7 +1052,7 @@ export const CheckoutNew: React.FC = () => {
                       onClick={handleSubmit}
                       size="lg"
                       className="bg-primary hover:bg-primary/90 text-white px-8"
-                      disabled={isProcessing}
+                      disabled={isProcessing || hasBlockingStockIssue}
                     >
                       {isProcessing ? (
                         <>
@@ -969,6 +1067,12 @@ export const CheckoutNew: React.FC = () => {
                       )}
                     </Button>
                   </div>
+
+                  {hasBlockingStockIssue && (
+                    <p className="text-sm text-red-600">
+                      Một số sản phẩm đã vượt tồn kho hoặc hết hàng. Vui lòng quay lại giỏ hàng để điều chỉnh.
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

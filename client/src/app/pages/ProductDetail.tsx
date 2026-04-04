@@ -6,7 +6,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { toast } from 'sonner';
-import { ShoppingBag, Heart, Share2 } from 'lucide-react';
+import { MessageSquareQuote, ShoppingBag, Heart, Share2, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/app/components/shared/Skeleton';
 import { ErrorState } from '@/app/components/shared/ErrorState';
 import { productsAPI } from '@/services/api';
@@ -18,7 +18,7 @@ export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { user, isFavorite, toggleFavorite } = useAuth();
+  const { user, token, isFavorite, toggleFavorite } = useAuth();
   const { products: allProducts, loading: loadingFavoriteProducts } = useProducts();
 
   const [product, setProduct] = useState<any>(null);
@@ -27,6 +27,11 @@ export const ProductDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewContent, setReviewContent] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [stock, setStock] = useState<number | null>(null);
+  const [stockLoading, setStockLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -43,6 +48,9 @@ export const ProductDetail: React.FC = () => {
         const productData = await productsAPI.getById(id);
         setProduct(productData);
 
+        const reviewData: any = await productsAPI.getReviews(id);
+        setReviews(Array.isArray(reviewData?.reviews) ? reviewData.reviews : []);
+
         // Fetch related products
         const relatedData = await productsAPI.getRelated(id);
         setRelatedProducts(Array.isArray(relatedData) ? relatedData : relatedData.products || []);
@@ -57,6 +65,56 @@ export const ProductDetail: React.FC = () => {
       fetchProduct();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    let mounted = true;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const fetchStock = async (silent = false) => {
+      try {
+        if (!silent) {
+          setStockLoading(true);
+        }
+        const data: any = await productsAPI.getStock(id);
+        if (!mounted) return;
+        const nextStock = Math.max(0, Number(data?.stock || 0));
+        setStock(nextStock);
+      } catch {
+        if (!mounted) return;
+        setStock(null);
+      } finally {
+        if (!silent && mounted) {
+          setStockLoading(false);
+        }
+      }
+    };
+
+    fetchStock();
+    timer = setInterval(() => {
+      fetchStock(true);
+    }, 10000);
+
+    return () => {
+      mounted = false;
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (stock === null) return;
+    if (stock <= 0) {
+      setQuantity(1);
+      return;
+    }
+    if (quantity > stock) {
+      setQuantity(stock);
+      toast.warning('Số lượng đã được điều chỉnh theo tồn kho mới nhất');
+    }
+  }, [stock, quantity]);
 
   // All derived values that depend on `product` — must be computed unconditionally
   // before any early returns to satisfy the Rules of Hooks.
@@ -96,6 +154,9 @@ export const ProductDetail: React.FC = () => {
 
   const currentProductId = product ? String(product._id || product.id || '') : '';
   const favorite = currentProductId ? isFavorite(currentProductId) : false;
+  const availableStock = stock ?? Math.max(0, Number(product?.stock || 0));
+  const isOutOfStock = availableStock <= 0;
+  const isLowStock = !isOutOfStock && availableStock <= 5;
 
   if (error) {
     return (
@@ -142,11 +203,27 @@ export const ProductDetail: React.FC = () => {
   }
 
   const handleAddToCart = () => {
+    if (isOutOfStock) {
+      toast.error('Sản phẩm hiện đã hết hàng');
+      return;
+    }
+    if (quantity > availableStock) {
+      toast.error(`Chỉ còn ${availableStock} sản phẩm trong kho`);
+      return;
+    }
     addToCart(product, quantity);
     toast.success('Đã thêm vào giỏ hàng');
   };
 
   const handleBuyNow = () => {
+    if (isOutOfStock) {
+      toast.error('Sản phẩm hiện đã hết hàng');
+      return;
+    }
+    if (quantity > availableStock) {
+      toast.error(`Chỉ còn ${availableStock} sản phẩm trong kho`);
+      return;
+    }
     addToCart(product, quantity);
     navigate('/cart');
   };
@@ -194,6 +271,41 @@ export const ProductDetail: React.FC = () => {
       toast.success('Đã sao chép link sản phẩm');
     } catch {
       toast.error('Không thể sao chép link');
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    const trimmedContent = reviewContent.trim();
+
+    if (!user || !token) {
+      notify.info('Vui lòng đăng nhập để gửi đánh giá');
+      navigate('/login');
+      return;
+    }
+
+    if (trimmedContent.length < 10) {
+      notify.error('Đánh giá cần tối thiểu 10 ký tự');
+      return;
+    }
+
+    if (!id) {
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      const nextReview: any = await productsAPI.createReview(id, trimmedContent, token);
+      setReviews((prev) => {
+        const review = nextReview?.data ?? nextReview;
+        const filtered = prev.filter((item) => String(item.user?._id || item.user?.id) !== String(user.id));
+        return [review, ...filtered];
+      });
+      setReviewContent('');
+      notify.success('Đánh giá của bạn đã được lưu');
+    } catch (error) {
+      notify.error('Không thể gửi đánh giá', error instanceof Error ? error.message : undefined);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -289,17 +401,33 @@ export const ProductDetail: React.FC = () => {
             {/* Quantity */}
             <div>
               <p className="text-sm mb-2">Số lượng</p>
+              <div className="mb-3">
+                {stockLoading ? (
+                  <p className="text-xs text-muted-foreground">Đang cập nhật tồn kho...</p>
+                ) : isOutOfStock ? (
+                  <p className="text-sm text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    Hết hàng
+                  </p>
+                ) : isLowStock ? (
+                  <p className="text-sm text-amber-600">Chỉ còn {availableStock} sản phẩm</p>
+                ) : (
+                  <p className="text-sm text-emerald-600">Còn hàng: {availableStock} sản phẩm</p>
+                )}
+              </div>
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="w-10 h-10 border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                  disabled={isOutOfStock}
                 >
                   -
                 </button>
                 <span className="text-lg w-12 text-center">{quantity}</span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => setQuantity(Math.min(quantity + 1, Math.max(1, availableStock)))}
                   className="w-10 h-10 border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                  disabled={isOutOfStock || quantity >= availableStock}
                 >
                   +
                 </button>
@@ -310,16 +438,18 @@ export const ProductDetail: React.FC = () => {
             <div className="space-y-3">
               <button
                 onClick={handleBuyNow}
-                className="w-full bg-[#C9A24D] text-white py-4 text-sm tracking-wider uppercase hover:bg-[#b8923f] transition-colors duration-300"
+                className="w-full bg-[#C9A24D] text-white py-4 text-sm tracking-wider uppercase hover:bg-[#b8923f] transition-colors duration-300 disabled:opacity-60"
+                disabled={isOutOfStock}
               >
-                Mua ngay
+                {isOutOfStock ? 'Hết hàng' : 'Mua ngay'}
               </button>
               <button
                 onClick={handleAddToCart}
-                className="w-full border border-gray-900 text-gray-900 py-4 text-sm tracking-wider uppercase hover:bg-gray-900 hover:text-white transition-colors duration-300 flex items-center justify-center space-x-2"
+                className="w-full border border-gray-900 text-gray-900 py-4 text-sm tracking-wider uppercase hover:bg-gray-900 hover:text-white transition-colors duration-300 flex items-center justify-center space-x-2 disabled:opacity-60"
+                disabled={isOutOfStock}
               >
                 <ShoppingBag className="w-5 h-5" />
-                <span>Thêm vào giỏ hàng</span>
+                <span>{isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng'}</span>
               </button>
             </div>
 
@@ -342,6 +472,69 @@ export const ProductDetail: React.FC = () => {
                 <span className="text-sm">Chia sẻ</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        <div className="mb-24 grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <MessageSquareQuote className="w-5 h-5 text-[#C9A24D]" />
+              <div>
+                <h2 className="text-2xl font-light tracking-wide">Đánh giá thật từ khách hàng</h2>
+                <p className="text-sm text-gray-500">Chỉ khách đã mua và hoàn thành đơn mới có thể đánh giá.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {reviews.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500">
+                  Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên chia sẻ trải nghiệm.
+                </div>
+              ) : (
+                reviews.map((review) => (
+                  <div key={review._id} className="rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <div>
+                        <p className="text-sm text-gray-900">{review.user?.fullName || 'Khách hàng đã xác thực'}</p>
+                        <p className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</p>
+                      </div>
+                      {review.isVerifiedPurchase && (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs uppercase tracking-wide text-emerald-700">
+                          Verified purchase
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm leading-6 text-gray-600">{review.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 h-fit">
+            <div>
+              <h3 className="text-xl font-light tracking-wide">Viết đánh giá</h3>
+              <p className="text-sm text-gray-500 mt-1">Chia sẻ cảm nhận thực tế để giúp khách hàng khác mua sắm tự tin hơn.</p>
+            </div>
+
+            <textarea
+              value={reviewContent}
+              onChange={(event) => setReviewContent(event.target.value)}
+              rows={7}
+              maxLength={1200}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#C9A24D]"
+              placeholder="Ví dụ: Thiết kế sang trọng, đóng gói chỉn chu, đeo lên rất tôn da..."
+            />
+            <p className="text-xs text-gray-400 text-right">{reviewContent.length}/1200</p>
+
+            <button
+              type="button"
+              onClick={handleSubmitReview}
+              disabled={submittingReview || reviewContent.trim().length < 10}
+              className="w-full bg-[#C9A24D] text-white py-3 text-sm tracking-wider uppercase hover:bg-[#b8923f] transition-colors duration-300 disabled:opacity-50"
+            >
+              {submittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+            </button>
           </div>
         </div>
 

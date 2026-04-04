@@ -117,6 +117,14 @@ export const OrderHistory: React.FC = () => {
               </div>
 
               <div className="mt-5 pt-4 border-t border-gray-200 flex justify-end gap-3">
+                {order.status === 'completed' && (
+                  <Link
+                    to={`/returns?orderId=${order.id}`}
+                    className="inline-block border border-[#C9A24D] text-[#C9A24D] px-4 py-2 text-sm tracking-wide uppercase hover:bg-[#C9A24D]/10 transition-colors duration-300 rounded"
+                  >
+                    Yêu cầu trả hàng
+                  </Link>
+                )}
                 {canCancelOrder(order.status) && (
                   <button
                     type="button"

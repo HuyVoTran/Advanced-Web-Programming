@@ -12,6 +12,7 @@ import News from '../models/News.js'; // Giả định model này tồn tại
 import NewsletterSubscription from '../models/NewsletterSubscription.js'; // Giả định model này tồn tại
 import sendEmail from '../utils/sendEmail.js'; // Giả định utility này tồn tại
 import { calculateEarnedPoints } from '../utils/membership.js';
+import { createNotification } from '../utils/notification.js';
 
 /**
  * Chuẩn hoá một Order document thành format thống nhất cho admin frontend.
@@ -420,6 +421,25 @@ export const updateOrderStatus = async (req, res, next) => {
 
     await order.save();
 
+    if (order.user?._id) {
+      const statusTextMap = {
+        pending: 'Chờ xác nhận',
+        confirmed: 'Đã xác nhận',
+        shipping: 'Đang giao',
+        completed: 'Hoàn thành',
+        cancelled: 'Đã hủy',
+      };
+
+      await createNotification({
+        userId: order.user._id,
+        type: 'order',
+        title: 'Đơn hàng được cập nhật',
+        message: `Đơn hàng #${order._id} hiện ở trạng thái ${statusTextMap[status] || status}.`,
+        link: `/orders/${order._id}`,
+        metadata: { orderId: String(order._id), status },
+      });
+    }
+
     if (status === 'confirmed' || status === 'cancelled') {
       try {
         await sendOrderStatusEmail(order, status);
@@ -468,6 +488,17 @@ export const rejectOrder = async (req, res, next) => {
     await order.save();
 
     const populatedOrder = await Order.findById(order._id).populate('user').populate('items.product');
+
+    if (populatedOrder?.user?._id) {
+      await createNotification({
+        userId: populatedOrder.user._id,
+        type: 'order',
+        title: 'Đơn hàng bị từ chối',
+        message: `Đơn hàng #${order._id} đã bị từ chối. Lý do: ${rejectionReason}`,
+        link: `/orders/${order._id}`,
+        metadata: { orderId: String(order._id), status: 'cancelled' },
+      });
+    }
 
     try {
       await sendOrderStatusEmail(populatedOrder || order, 'cancelled');

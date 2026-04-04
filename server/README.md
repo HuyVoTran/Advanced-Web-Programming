@@ -206,8 +206,10 @@ DELETE /auth/addresses/:addressId  - Delete address (protected)
 GET    /products                   - Get all products (with filters)
 GET    /products/featured          - Get featured products
 GET    /products/stats             - Get product statistics
+GET    /products/stock?ids=...     - Get stock snapshot for multiple products
 GET    /products/:slug             - Get product by slug
 GET    /products/:slug/related     - Get related products
+GET    /products/:slug/stock       - Get stock snapshot for one product
 ```
 
 ### Categories

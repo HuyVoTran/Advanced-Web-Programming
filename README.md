@@ -155,6 +155,9 @@ Không nằm trong phạm vi hiện tại:
 - `/settings`
 - `/orders`
 - `/orders/:id`
+- `/chat`
+- `/returns`
+- `/notifications`
 
 ### 7.3 Admin routes
 - `/admin`
@@ -164,6 +167,8 @@ Không nằm trong phạm vi hiện tại:
 - `/admin/categories`
 - `/admin/orders`
 - `/admin/orders/:id`
+- `/admin/chat`
+- `/admin/returns`
 - `/admin/users`
 - `/admin/news`
 - `/admin/newsletter`
@@ -209,11 +214,26 @@ EMAIL_SECURE=false
 CLIENT_URL=http://localhost:5173
 SERVER_URL=http://localhost:5000
 EMAIL_LOGO_URL=https://your-public-logo-url
+
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 ```
 
 Ghi chú:
 - `CLIENT_URL` dùng để tạo link trong email (xem đơn, mở form hủy).
 - `EMAIL_LOGO_URL` nên là URL public để email client hiển thị logo ổn định.
+- `GOOGLE_CLIENT_ID` dùng để xác thực `Google ID token` cho API `/api/auth/google`.
+
+### 8.6 Biến môi trường frontend cho Google Login
+
+Trong file env của frontend (ví dụ `.env` trong `client/`):
+
+```env
+VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+```
+
+Ghi chú:
+- Nút Google login sẽ chỉ hiện khi `VITE_GOOGLE_CLIENT_ID` được cấu hình.
+- Backend và frontend phải dùng cùng một `Google OAuth Client ID`.
 
 ## 9. Trạng thái kiểm thử smoke (user flow)
 

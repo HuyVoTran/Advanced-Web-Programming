@@ -1,4 +1,5 @@
 import Product from '../models/Product.js';
+import ProductReview from '../models/ProductReview.js';
 import { sendResponse, sendError, sendPaginatedResponse } from '../utils/response.js';
 import { validatePagination } from '../utils/validators.js';
 
@@ -179,4 +180,113 @@ export const getProductStats = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+export const getSearchSuggestions = async (req, res, next) => {
+  try {
+    const query = String(req.query.q || '').trim();
+
+    if (query.length < 2) {
+      return sendResponse(res, 200, 'Gợi ý tìm kiếm được lấy thành công', []);
+    }
+
+    const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    const products = await Product.find({
+      isActive: true,
+      $or: [
+        { name: pattern },
+        { description: pattern },
+        { material: pattern },
+      ],
+    })
+      .limit(8)
+      .sort({ isFeatured: -1, createdAt: -1 });
+
+    const suggestions = products.map((product) => ({
+      _id: product._id,
+      name: product.name,
+      slug: product.slug,
+      image: product.images?.[0] || '',
+      price: product.price,
+      material: product.material,
+      brandName: typeof product.brand === 'object' ? product.brand?.name || '' : '',
+    }));
+
+    return sendResponse(res, 200, 'Gợi ý tìm kiếm được lấy thành công', suggestions);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProductStockBySlug = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
+
+    const query = isObjectId ? { _id: slug } : { slug };
+    const product = await Product.findOne(query).select('_id name stock isActive updatedAt');
+
+    if (!product) {
+      return sendError(res, 404, 'Sản phẩm không tìm thấy');
+    }
+
+    return sendResponse(res, 200, 'Tồn kho sản phẩm được lấy thành công', {
+      productId: String(product._id),
+      name: product.name,
+      stock: Number(product.stock || 0),
+      isActive: Boolean(product.isActive),
+      updatedAt: product.updatedAt,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProductsStock = async (req, res, next) => {
+  try {
+    const rawIds = String(req.query.ids || '').trim();
+    const ids = rawIds
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean)
+      .filter((id) => /^[0-9a-fA-F]{24}$/.test(id));
+
+    if (ids.length === 0) {
+      return sendResponse(res, 200, 'Tồn kho sản phẩm được lấy thành công', []);
+    }
+
+    const products = await Product.find({ _id: { $in: ids } })
+      .select('_id name stock isActive updatedAt')
+      .lean();
+
+    const stockById = new Map(
+      products.map((product) => [String(product._id), {
+        productId: String(product._id),
+        name: product.name,
+        stock: Number(product.stock || 0),
+        isActive: Boolean(product.isActive),
+        updatedAt: product.updatedAt,
+      }])
+    );
+
+    const orderedStocks = ids.map((productId) => (
+      stockById.get(productId) || {
+        productId,
+        name: '',
+        stock: 0,
+        isActive: false,
+        updatedAt: null,
+      }
+    ));
+
+    return sendResponse(res, 200, 'Tồn kho sản phẩm được lấy thành công', orderedStocks);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProductReviewSummary = async (productId) => {
+  const totalReviews = await ProductReview.countDocuments({ product: productId });
+  return { totalReviews };
 };

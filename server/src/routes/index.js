@@ -13,6 +13,9 @@ import newsletterRoutes from './newsletterRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
 import couponRoutes from './couponRoutes.js';
 import membershipRoutes from './membershipRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
+import returnRoutes from './returnRoutes.js';
+import chatRoutes from './chatRoutes.js';
 
 const router = express.Router();
 
@@ -79,6 +82,9 @@ router.use('/newsletter', newsletterRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/coupons', couponRoutes);
 router.use('/membership', membershipRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/returns', returnRoutes);
+router.use('/chat', chatRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

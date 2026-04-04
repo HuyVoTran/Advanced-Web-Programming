@@ -7,6 +7,7 @@ import { sendResponse, sendError, sendPaginatedResponse } from '../utils/respons
 import { validatePagination } from '../utils/validators.js';
 import sendEmail from '../utils/sendEmail.js';
 import { getMembershipLevelBySpent } from '../utils/membership.js';
+import { createNotification } from '../utils/notification.js';
 
 const RANK_ORDER = {
   member: 0,
@@ -302,6 +303,17 @@ export const createOrder = async (req, res, next) => {
       console.error('[Order] Failed to send order-created email:', emailError);
     }
 
+    if (req.user?.id) {
+      await createNotification({
+        userId: req.user.id,
+        type: 'order',
+        title: 'Đặt hàng thành công',
+        message: `Đơn hàng #${order._id} của bạn đã được tạo thành công.`,
+        link: `/orders/${order._id}`,
+        metadata: { orderId: String(order._id), status: 'pending' },
+      });
+    }
+
     return sendResponse(res, 201, 'Đơn hàng được tạo thành công', populatedOrder || order);
   } catch (error) {
     next(error);
@@ -407,6 +419,17 @@ export const cancelOrder = async (req, res, next) => {
     } catch (emailError) {
       // eslint-disable-next-line no-console
       console.error('[Order] Failed to send order-cancelled email:', emailError);
+    }
+
+    if (ownerId) {
+      await createNotification({
+        userId: ownerId,
+        type: 'order',
+        title: 'Đơn hàng đã được hủy',
+        message: `Đơn hàng #${order._id} đã được hủy thành công.`,
+        link: `/orders/${order._id}`,
+        metadata: { orderId: String(order._id), status: 'cancelled' },
+      });
     }
 
     return sendResponse(res, 200, 'Đơn hàng được hủy thành công', formatOrder(updatedOrder || order));

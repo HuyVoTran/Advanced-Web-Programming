@@ -272,6 +272,36 @@ export const adminApi = {
     return response.data.data;
   },
 
+  getAllReturns: async (status?: string) => {
+    const response = await apiClient.get('/admin/returns', { params: status ? { status } : {} });
+    return response.data.data;
+  },
+
+  updateReturnStatus: async (id: string, status: string, adminNote = '') => {
+    const response = await apiClient.put(`/admin/returns/${id}/status`, { status, adminNote });
+    return response.data.data;
+  },
+
+  getAllChats: async (status?: 'open' | 'closed') => {
+    const response = await apiClient.get('/admin/chats', { params: status ? { status } : {} });
+    return response.data.data;
+  },
+
+  getChatMessages: async (conversationId: string) => {
+    const response = await apiClient.get(`/admin/chats/${conversationId}/messages`);
+    return response.data.data;
+  },
+
+  sendChatMessage: async (conversationId: string, content: string) => {
+    const response = await apiClient.post(`/admin/chats/${conversationId}/messages`, { content });
+    return response.data.data;
+  },
+
+  updateChatStatus: async (conversationId: string, status: 'open' | 'closed') => {
+    const response = await apiClient.put(`/admin/chats/${conversationId}/status`, { status });
+    return response.data.data;
+  },
+
   // ============ UPLOADS ============
   uploadCategoryImage: async (id: string, file: File) => {
     const formData = new FormData();

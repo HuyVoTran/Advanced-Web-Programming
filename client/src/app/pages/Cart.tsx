@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { formatPrice } from '@/utils/constants';
@@ -12,6 +12,13 @@ import { Badge } from '../components/ui/badge';
 import { PageBreadcrumb } from '../components/shared/PageBreadcrumb';
 import { toast } from 'sonner';
 import { resolveImageSrc } from '@/utils/image';
+import { productsAPI } from '@/services/api';
+
+type StockSnapshot = {
+  productId: string;
+  stock: number;
+  isActive: boolean;
+};
 
 export const Cart: React.FC = () => {
   const { items, removeFromCart, updateQuantity, total, clearCart } = useCart();
@@ -20,6 +27,79 @@ export const Cart: React.FC = () => {
     open: false,
   });
   const [confirmClear, setConfirmClear] = useState(false);
+  const [stockByProductId, setStockByProductId] = useState<Record<string, StockSnapshot>>({});
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setStockByProductId({});
+      return;
+    }
+
+    let mounted = true;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const fetchStocks = async () => {
+      try {
+        const ids = Array.from(new Set(items.map((item) => item.productId).filter(Boolean)));
+        const stocks: any[] = await productsAPI.getBulkStock(ids);
+        if (!mounted) return;
+
+        const nextMap = (Array.isArray(stocks) ? stocks : []).reduce<Record<string, StockSnapshot>>((acc, stockItem: any) => {
+          const productId = String(stockItem?.productId || '');
+          if (!productId) return acc;
+          acc[productId] = {
+            productId,
+            stock: Math.max(0, Number(stockItem?.stock || 0)),
+            isActive: Boolean(stockItem?.isActive),
+          };
+          return acc;
+        }, {});
+
+        setStockByProductId(nextMap);
+      } catch {
+        // Ignore transient polling errors
+      }
+    };
+
+    fetchStocks();
+    timer = setInterval(fetchStocks, 10000);
+
+    return () => {
+      mounted = false;
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [items]);
+
+  const stockIssues = useMemo(() => {
+    return items
+      .map((item) => {
+        const stockInfo = stockByProductId[item.productId];
+        if (!stockInfo) return null;
+        const availableStock = Number(stockInfo.stock || 0);
+        const isInactive = !stockInfo.isActive;
+        const isOutOfStock = availableStock <= 0 || isInactive;
+        const isExceeded = !isOutOfStock && item.quantity > availableStock;
+
+        return {
+          itemId: item.id,
+          productId: item.productId,
+          isOutOfStock,
+          isExceeded,
+          availableStock,
+        };
+      })
+      .filter(Boolean) as Array<{
+        itemId: string;
+        productId: string;
+        isOutOfStock: boolean;
+        isExceeded: boolean;
+        availableStock: number;
+      }>;
+  }, [items, stockByProductId]);
+
+  const hasBlockingStockIssue = stockIssues.some((issue) => issue.isOutOfStock || issue.isExceeded);
 
   const handleRemoveItem = (itemId: string) => {
     setConfirmDelete({ open: true, itemId });
@@ -51,6 +131,25 @@ export const Cart: React.FC = () => {
       handleRemoveItem(itemId);
       return;
     }
+
+    const item = items.find((entry) => entry.id === itemId);
+    if (!item) return;
+
+    const stockInfo = stockByProductId[item.productId];
+    const availableStock = Math.max(0, Number(stockInfo?.stock || 0));
+    const isInactive = stockInfo ? !stockInfo.isActive : false;
+
+    if (stockInfo && (isInactive || availableStock <= 0)) {
+      toast.error('Sản phẩm này hiện đang hết hàng');
+      return;
+    }
+
+    if (stockInfo && newQuantity > availableStock) {
+      updateQuantity(itemId, availableStock);
+      toast.warning(`Chỉ còn ${availableStock} sản phẩm trong kho`);
+      return;
+    }
+
     updateQuantity(itemId, newQuantity);
   };
 
@@ -118,6 +217,12 @@ export const Cart: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence mode="popLayout">
               {items.map((item) => {
+                const stockInfo = stockByProductId[item.productId];
+                const availableStock = Math.max(0, Number(stockInfo?.stock ?? 0));
+                const isInactive = stockInfo ? !stockInfo.isActive : false;
+                const isOutOfStock = stockInfo ? availableStock <= 0 || isInactive : false;
+                const isExceeded = stockInfo ? !isOutOfStock && item.quantity > availableStock : false;
+                const isLowStock = stockInfo ? !isOutOfStock && availableStock <= 5 : false;
                 const imageUrl = resolveImageSrc(item.image, 'products') || `https://source.unsplash.com/400x500/?${encodeURIComponent(item.name)}`;
                 const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
                 const salePercent = Number(item.salePercent ?? 0);
@@ -176,6 +281,19 @@ export const Cart: React.FC = () => {
                             <p className="text-primary text-lg">Giá bán: {formatPrice(saleUnitPrice)}</p>
                           )}
                         </div>
+                        {stockInfo && (
+                          <div className="mt-2 text-sm">
+                            {isOutOfStock ? (
+                              <p className="text-red-600">Sản phẩm đang hết hàng</p>
+                            ) : isExceeded ? (
+                              <p className="text-red-600">Vượt tồn kho, chỉ còn {availableStock} sản phẩm</p>
+                            ) : isLowStock ? (
+                              <p className="text-amber-600">Sắp hết hàng: còn {availableStock} sản phẩm</p>
+                            ) : (
+                              <p className="text-emerald-600">Còn hàng: {availableStock} sản phẩm</p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between mt-4">
@@ -195,6 +313,7 @@ export const Cart: React.FC = () => {
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                            disabled={isOutOfStock || (stockInfo ? item.quantity >= availableStock : false)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -288,9 +407,16 @@ export const Cart: React.FC = () => {
                 onClick={() => navigate('/checkout')}
                 className="w-full bg-primary hover:bg-primary/90 text-white py-6 text-sm tracking-wider uppercase mb-3"
                 size="lg"
+                disabled={hasBlockingStockIssue}
               >
                 Thanh toán
               </Button>
+
+              {hasBlockingStockIssue && (
+                <p className="text-sm text-red-600 mb-4">
+                  Vui lòng điều chỉnh giỏ hàng theo tồn kho mới nhất trước khi thanh toán.
+                </p>
+              )}
 
               <Button
                 variant="outline"

@@ -28,6 +28,9 @@ import { OrderHistory } from '@/app/pages/OrderHistory';
 import { OrderDetail } from '@/app/pages/OrderDetail';
 import { Membership } from '@/app/pages/Membership';
 import { FavoriteProducts } from '@/app/pages/FavoriteProducts';
+import { Notifications } from '@/app/pages/Notifications';
+import { Returns } from '@/app/pages/Returns';
+import { UserChat } from '@/app/pages/UserChat';
 import { About } from '@/app/pages/About';
 import { Contact } from '@/app/pages/Contact';
 import { Categories } from '@/app/pages/Categories';
@@ -53,6 +56,8 @@ import { AdminNewsletter } from '@/app/pages/admin/AdminNewsletter';
 import { AdminContacts } from '@/app/pages/admin/AdminContacts';
 import { AdminCoupons } from '@/app/pages/admin/AdminCoupons';
 import { AdminMembership } from '@/app/pages/admin/AdminMembership';
+import { AdminReturns } from '@/app/pages/admin/AdminReturns';
+import { AdminChat } from '@/app/pages/admin/AdminChat';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -104,6 +109,9 @@ function App() {
                 <Route path="/settings" element={<UserSettings />} />
                 <Route path="/orders" element={<OrderHistory />} />
                 <Route path="/orders/:id" element={<OrderDetail />} />
+                <Route path="/chat" element={<UserChat />} />
+                <Route path="/returns" element={<Returns />} />
+                <Route path="/notifications" element={<Notifications />} />
                 <Route path="/membership" element={<Membership />} />
                 <Route path="/favorites" element={<FavoriteProducts />} />
                 <Route path="/about" element={<About />} />
@@ -128,6 +136,8 @@ function App() {
                   <Route path="products/:id" element={<AdminProductForm />} />
                   <Route path="orders" element={<AdminOrders />} />
                   <Route path="orders/:id" element={<AdminOrderDetail />} />
+                  <Route path="chat" element={<AdminChat />} />
+                  <Route path="returns" element={<AdminReturns />} />
                   <Route path="news" element={<AdminNews />} />
                   <Route path="newsletter" element={<AdminNewsletter />} />
                   <Route path="contacts" element={<AdminContacts />} />

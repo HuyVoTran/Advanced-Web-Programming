@@ -79,7 +79,31 @@ export const productsAPI = {
 
   search: (query: string) => apiCall(`/products?search=${encodeURIComponent(query)}`),
 
+  getSearchSuggestions: (query: string) => apiCall(`/products/search/suggestions?q=${encodeURIComponent(query)}`),
+
   getRelated: (productId: string) => apiCall(`/products/${productId}/related`),
+
+  getStock: (productId: string) => apiCall(`/products/${productId}/stock`),
+
+  getBulkStock: (productIds: string[]) => {
+    const ids = Array.from(new Set(productIds.filter(Boolean)));
+    if (ids.length === 0) {
+      return Promise.resolve([] as any[]);
+    }
+    return apiCall(`/products/stock?ids=${encodeURIComponent(ids.join(','))}`);
+  },
+
+  getReviews: (productId: string, token?: string) =>
+    apiCall(`/products/${productId}/reviews`, {
+      ...(token ? { token } : {}),
+    }),
+
+  createReview: (productId: string, content: string, token: string) =>
+    apiCall(`/products/${productId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+      token,
+    }),
 
   getStats: () => apiCall('/products/stats'),
 };
@@ -231,6 +255,38 @@ export const membershipAPI = {
     apiCall(`/membership/redemptions?page=${page}&limit=${limit}`, { token }),
 };
 
+export const notificationsAPI = {
+  getAll: (token: string) => apiCall('/notifications', { token }),
+
+  getUnreadCount: (token: string) => apiCall('/notifications/unread-count', { token }),
+
+  markRead: (id: string, token: string) =>
+    apiCall(`/notifications/${id}/read`, {
+      method: 'PUT',
+      token,
+    }),
+
+  markAllRead: (token: string) =>
+    apiCall('/notifications/read-all', {
+      method: 'PUT',
+      token,
+    }),
+};
+
+export const returnsAPI = {
+  getMine: (token: string) => apiCall('/returns/my', { token }),
+
+  create: (
+    payload: { orderId: string; reason: string; items?: Array<{ productId: string; quantity: number }> },
+    token: string
+  ) =>
+    apiCall('/returns', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token,
+    }),
+};
+
 /**
  * News API
  */
@@ -300,6 +356,12 @@ export const authAPI = {
     apiCall('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+
+  googleLogin: (credential: string) =>
+    apiCall('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
     }),
 
   getProfile: (token: string) => apiCall('/auth/profile', { token }),
@@ -374,6 +436,27 @@ export const adminAPI = {
   getOrders: (token: string) => apiCall('/admin/orders', { token }),
 };
 
+export const chatAPI = {
+  getMyConversations: (token: string) => apiCall('/chat/my', { token }),
+
+  createOrGetMyConversation: (payload: { subject?: string; message?: string }, token: string) =>
+    apiCall('/chat/my', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      token,
+    }),
+
+  getMessages: (conversationId: string, token: string) =>
+    apiCall(`/chat/${conversationId}/messages`, { token }),
+
+  sendMessage: (conversationId: string, content: string, token: string) =>
+    apiCall(`/chat/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+      token,
+    }),
+};
+
 /**
  * Home API
  */
@@ -390,6 +473,7 @@ export default {
   newsAPI,
   contactAPI,
   authAPI,
+  chatAPI,
   adminAPI,
   homeAPI,
 };

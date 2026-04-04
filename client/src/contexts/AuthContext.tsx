@@ -80,6 +80,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<User | null>;
+  loginWithGoogle: (credential: string) => Promise<User | null>;
   register: (name: string, email: string, password: string, phone: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
@@ -268,6 +269,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async (credential: string): Promise<User | null> => {
+    try {
+      const { authAPI } = await import('@/services/api');
+      const response: any = await authAPI.googleLogin(credential);
+      const root = response?.data ?? response ?? {};
+      const tokenFromServer = root?.token ?? root?.accessToken ?? null;
+      const userFromServer = root?.user ?? root?.userInfo ?? null;
+
+      if (!tokenFromServer || !userFromServer) {
+        return null;
+      }
+
+      const normalized = normalizeUser(userFromServer);
+      setUser(normalized);
+      setTokenState(tokenFromServer);
+      return normalized;
+    } catch (error) {
+      return null;
+    }
+  };
+
   const register = async (
     name: string,
     email: string,
@@ -403,6 +425,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         token,
         login,
+        loginWithGoogle,
         register,
         logout,
         updateUser,

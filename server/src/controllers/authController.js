@@ -1,9 +1,29 @@
 import User from '../models/User.js';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { generateToken } from '../utils/jwt.js';
 import { sendResponse, sendError } from '../utils/response.js';
 import { validateEmail, validatePassword } from '../utils/validators.js';
 import sendEmail from '../utils/sendEmail.js';
+
+const googleClient = new OAuth2Client();
+
+const normalizeGoogleEmail = (email = '') => String(email || '').trim().toLowerCase();
+
+const buildAuthResponse = (user) => ({
+  user: {
+    id: user._id,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    isAdmin: user.role === 'admin',
+    phone: user.phone,
+    loyaltyPoints: user.loyaltyPoints || 0,
+    totalSpent: user.totalSpent || 0,
+    totalPointsRedeemed: user.totalPointsRedeemed || 0,
+  },
+  token: generateToken(user._id),
+});
 
 export const register = async (req, res, next) => {
   try {
@@ -92,25 +112,56 @@ export const login = async (req, res, next) => {
       return sendError(res, 403, 'Tài khoản của bạn đã bị vô hiệu hóa');
     }
 
-    // Tạo token
-    const token = generateToken(user._id);
-
-    return sendResponse(res, 200, 'Đăng nhập thành công', {
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        isAdmin: user.role === 'admin',
-        phone: user.phone,
-        loyaltyPoints: user.loyaltyPoints || 0,
-        totalSpent: user.totalSpent || 0,
-        totalPointsRedeemed: user.totalPointsRedeemed || 0,
-      },
-      token,
-    });
+    return sendResponse(res, 200, 'Đăng nhập thành công', buildAuthResponse(user));
   } catch (error) {
     next(error);
+  }
+};
+
+export const googleLogin = async (req, res, next) => {
+  try {
+    const { credential } = req.body;
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+      return sendError(res, 500, 'Thiếu cấu hình GOOGLE_CLIENT_ID trên server');
+    }
+
+    if (!credential || typeof credential !== 'string') {
+      return sendError(res, 400, 'Thiếu Google credential token');
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+
+    const payload = ticket.getPayload();
+    const email = normalizeGoogleEmail(payload?.email || '');
+    const fullName = String(payload?.name || '').trim();
+
+    if (!email || !fullName) {
+      return sendError(res, 400, 'Google token không chứa đầy đủ thông tin người dùng');
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const randomPassword = crypto.randomBytes(24).toString('hex');
+      user = new User({
+        email,
+        fullName,
+        password: randomPassword,
+        phone: '',
+      });
+      await user.save();
+    } else if (!user.isActive) {
+      return sendError(res, 403, 'Tài khoản của bạn đã bị vô hiệu hóa');
+    }
+
+    return sendResponse(res, 200, 'Đăng nhập Google thành công', buildAuthResponse(user));
+  } catch (error) {
+    return sendError(res, 401, 'Google credential không hợp lệ hoặc đã hết hạn');
   }
 };
 

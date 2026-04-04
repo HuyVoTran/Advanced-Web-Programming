@@ -5,12 +5,75 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { toast } from 'sonner';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [googleReady, setGoogleReady] = useState(false);
   const location = useLocation();
+
+  React.useEffect(() => {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+      return;
+    }
+
+    const initGoogle = () => {
+      if (!window.google?.accounts?.id) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response: any) => {
+          const credential = String(response?.credential || '');
+          if (!credential) {
+            toast.error('Google credential không hợp lệ');
+            return;
+          }
+
+          const loggedUser = await loginWithGoogle(credential);
+
+          if (loggedUser) {
+            toast.success('Đăng nhập Google thành công!');
+            if (loggedUser.isAdmin) {
+              navigate('/admin');
+              return;
+            }
+            navigate('/');
+          } else {
+            toast.error('Không thể đăng nhập bằng Google');
+          }
+        },
+      });
+
+      setGoogleReady(true);
+    };
+
+    if (window.google?.accounts?.id) {
+      initGoogle();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initGoogle;
+    document.body.appendChild(script);
+
+    return () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+  }, [loginWithGoogle, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +140,16 @@ export const Login: React.FC = () => {
             >
               Đăng nhập
             </button>
+
+            {googleReady && (
+              <button
+                type="button"
+                onClick={() => window.google?.accounts?.id?.prompt?.()}
+                className="w-full border border-gray-300 text-gray-700 py-3 text-sm tracking-wide hover:bg-gray-50 transition-colors duration-300"
+              >
+                Đăng nhập với Google
+              </button>
+            )}
 
             <div className="text-center mt-4">
               <Link to="/forgot-password" className="text-sm text-[#C9A24D] hover:underline">
