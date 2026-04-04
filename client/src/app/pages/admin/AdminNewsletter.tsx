@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Users, Send, AlertCircle } from 'lucide-react';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { useAdminFetch, useAdminMutation } from '@/hooks/useCustomHooks';
 import { adminApi } from '@/services/adminApi';
 import { toast } from 'sonner';
@@ -53,6 +55,13 @@ export const AdminNewsletter: React.FC = () => {
     (payload) => adminApi.sendNewsletter(payload)
   );
 
+  const stripHtml = (value: string) =>
+    String(value || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -61,6 +70,10 @@ export const AdminNewsletter: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.subject.trim() || !stripHtml(formData.content)) {
+      toast.error('Vui lòng nhập tiêu đề và nội dung email');
+      return;
+    }
     try {
       await sendNewsletter(formData);
       toast.success('Đã gửi thông báo thành công');
@@ -135,15 +148,23 @@ export const AdminNewsletter: React.FC = () => {
 
             <div>
               <label className="block text-sm mb-2 text-gray-700">Nội dung</label>
-              <textarea
-                name="content"
-                value={formData.content}
-                onChange={handleChange}
-                rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A24D]"
-                required
-                disabled={sending}
-              />
+              <div className="rounded-lg border border-gray-300 overflow-hidden [&_.ck-editor__editable_inline]:min-h-[220px]">
+                <CKEditor
+                  editor={ClassicEditor as any}
+                  data={formData.content}
+                  config={{
+                    licenseKey: 'GPL',
+                  }}
+                  disabled={sending}
+                  onChange={(_event: any, editor: any) => {
+                    const data = editor.getData();
+                    setFormData((prev) => ({ ...prev, content: data }));
+                  }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Hỗ trợ định dạng giống trang thêm tin tức (đậm, nghiêng, heading, link, danh sách...).
+              </p>
             </div>
 
             <div>

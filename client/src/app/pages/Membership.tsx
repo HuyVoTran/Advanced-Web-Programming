@@ -6,6 +6,7 @@ import { useAdminFetch } from '@/hooks/useCustomHooks';
 import { membershipAPI } from '@/services/api';
 import { formatPrice } from '@/utils/constants';
 import { toast } from 'sonner';
+import { Stepper } from '@/app/components/shared/Stepper';
 
 type MembershipLevel = {
   rank: string;
@@ -70,6 +71,21 @@ export const Membership: React.FC = () => {
     return [...(overview?.levels || [])].sort((a, b) => a.minSpent - b.minSpent);
   }, [overview?.levels]);
 
+  const membershipSteps = useMemo(
+    () =>
+      sortedLevels.map((level) => ({
+        id: level.rank,
+        label: level.label,
+        description: formatPrice(level.minSpent),
+      })),
+    [sortedLevels]
+  );
+
+  const currentRankStep = useMemo(() => {
+    const idx = sortedLevels.findIndex((level) => level.rank === overview?.currentRank?.rank);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [sortedLevels, overview?.currentRank?.rank]);
+
   const handleRedeem = async (rewardId: string) => {
     if (!token) return;
     setRedeemingId(rewardId);
@@ -118,6 +134,12 @@ export const Membership: React.FC = () => {
               <Sparkles className="w-5 h-5 text-[#C9A24D]" />
               <h3 className="text-lg">Rank Progression</h3>
             </div>
+
+            <Stepper
+              steps={membershipSteps}
+              currentStep={currentRankStep}
+              className="max-w-4xl mx-auto mb-6"
+            />
 
             <div className="w-full h-3 rounded-full bg-gray-100 overflow-hidden mb-2">
               <div className="h-full bg-gradient-to-r from-[#C9A24D] to-[#b8923f]" style={{ width: `${overview.progressPercent}%` }} />

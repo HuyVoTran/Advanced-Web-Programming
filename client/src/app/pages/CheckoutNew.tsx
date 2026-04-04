@@ -58,7 +58,13 @@ export const CheckoutNew: React.FC = () => {
 
   // Coupon state
   const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number; description: string } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: number;
+    description: string;
+    requiredRank?: 'all' | 'member' | 'silver' | 'gold' | 'platinum' | 'diamond';
+    oneTimePerUser?: boolean;
+  } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -189,7 +195,13 @@ export const CheckoutNew: React.FC = () => {
     try {
       const res: any = await couponAPI.validate(code, total, token || undefined);
       const data = res?.data ?? res;
-      setAppliedCoupon({ code: data.code || code, discountAmount: data.discountAmount || 0, description: data.description || '' });
+      setAppliedCoupon({
+        code: data.code || code,
+        discountAmount: data.discountAmount || 0,
+        description: data.description || '',
+        requiredRank: data.requiredRank || 'all',
+        oneTimePerUser: Boolean(data.oneTimePerUser),
+      });
       toast.success(`Áp dụng mã giảm giá thành công! Giảm ${formatPrice(data.discountAmount)}`);
     } catch (err: any) {
       const msg = err?.message || 'Mã giảm giá không hợp lệ';
@@ -833,6 +845,26 @@ export const CheckoutNew: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-green-700">{appliedCoupon.code}</p>
                       {appliedCoupon.description && <p className="text-xs text-green-600">{appliedCoupon.description}</p>}
+                      {(appliedCoupon.requiredRank && appliedCoupon.requiredRank !== 'all') || appliedCoupon.oneTimePerUser ? (
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {appliedCoupon.requiredRank && appliedCoupon.requiredRank !== 'all' && (
+                            <span
+                              className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[11px] uppercase"
+                              title="Coupon yêu cầu hạng tối thiểu"
+                            >
+                              Rank {appliedCoupon.requiredRank}+
+                            </span>
+                          )}
+                          {appliedCoupon.oneTimePerUser && (
+                            <span
+                              className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-[11px]"
+                              title="Mỗi tài khoản chỉ dùng được 1 lần"
+                            >
+                              1 lần / tài khoản
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                     <button onClick={handleRemoveCoupon} className="text-gray-400 hover:text-red-500 transition-colors">
                       <X className="w-4 h-4" />
@@ -857,6 +889,11 @@ export const CheckoutNew: React.FC = () => {
                       {couponLoading ? '...' : 'Áp dụng'}
                     </Button>
                   </div>
+                )}
+                {!appliedCoupon && (
+                  <p className="text-[11px] text-gray-500 mt-2">
+                    Một số coupon có thể yêu cầu hạng membership hoặc giới hạn 1 lần/tài khoản.
+                  </p>
                 )}
               </div>
 
