@@ -130,9 +130,8 @@ export const OrderDetail: React.FC = () => {
     );
   }
 
-  const showCancelButton = user && canCancelOrder;
-
   const canCancelOrder = ['pending', 'confirmed'].includes(order.status);
+  const showCancelButton = user && canCancelOrder;
   const shouldOpenCancelFromQuery = ['1', 'true', 'yes'].includes(
     String(searchParams.get('cancel') || '').toLowerCase()
   );
