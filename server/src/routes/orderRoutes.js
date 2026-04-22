@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post('/', optionalAuth, createOrder);
 router.get('/my-orders', authenticate, getMyOrders);
-router.get('/:id', authenticate, getOrderById);
+router.get('/:id', optionalAuth, getOrderById);
 router.put('/:id/cancel', authenticate, cancelOrder);
 
 export default router;

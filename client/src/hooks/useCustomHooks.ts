@@ -492,13 +492,24 @@ export const useHomeData = () => {
  */
 export const useAdminFetch = <T,>(
   fetchFn: () => Promise<T>,
-  dependencies: any[] = []
+  dependencies: any[] = [],
+  options?: { enabled?: boolean; clearOnDisable?: boolean }
 ): { data: T | null; loading: boolean; error: string | null; refetch: () => Promise<void> } => {
+  const enabled = options?.enabled ?? true;
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = async () => {
+    if (!enabled) {
+      setLoading(false);
+      setError(null);
+      if (options?.clearOnDisable) {
+        setData(null);
+      }
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -513,9 +524,18 @@ export const useAdminFetch = <T,>(
   };
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      setError(null);
+      if (options?.clearOnDisable) {
+        setData(null);
+      }
+      return;
+    }
+
     refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, dependencies);
+  }, [...dependencies, enabled]);
 
   return { data, loading, error, refetch };
 };

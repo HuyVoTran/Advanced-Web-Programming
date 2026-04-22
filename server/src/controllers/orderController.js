@@ -391,10 +391,15 @@ export const getOrderById = async (req, res, next) => {
       return sendError(res, 404, 'Đơn hàng không tìm thấy');
     }
 
-    // Kiểm tra xem người dùng có sở hữu đơn hàng này hay không hoặc là quản trị viên
-    if (req.user && req.user.role === 'user' && order.user && order.user._id.toString() !== req.user.id) {
-      return sendError(res, 403, 'Bạn không có quyền xem đơn hàng này');
+    // Kiểm tra quyền xem: nếu đã đăng nhập, chỉ cho xem nếu là chủ đơn hàng hoặc admin
+    if (req.user && req.user.id) {
+      const isOwner = order.user && order.user._id.toString() === req.user.id;
+      const isAdmin = req.user.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        return sendError(res, 403, 'Bạn không có quyền xem đơn hàng này');
+      }
     }
+    // Nếu chưa đăng nhập (guest), cho phép xem bất kỳ đơn hàng nào
 
     return sendResponse(res, 200, 'Đơn hàng được lấy thành công', formatOrder(order));
   } catch (error) {

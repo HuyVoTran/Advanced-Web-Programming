@@ -167,17 +167,18 @@ export const ProductDetail: React.FC = () => {
 
   const currentProductId = product ? String(product._id || product.id || '') : '';
   const favorite = currentProductId ? isFavorite(currentProductId) : false;
-  const normalizedProductSizeStocks = Array.isArray(product?.sizeStocks)
-    ? product.sizeStocks
-        .map((entry: any) => ({
-          size: String(entry?.size || '').trim(),
-          quantity: Math.max(0, Number(entry?.quantity || 0)),
-        }))
-        .filter((entry: { size: string; quantity: number }) => entry.size.length > 0)
-    : [];
+  const normalizedProductSizeStocks: Array<{ size: string; quantity: number }> =
+    Array.isArray(product?.sizeStocks)
+      ? product.sizeStocks
+          .map((entry: any) => ({
+            size: String(entry?.size || '').trim(),
+            quantity: Math.max(0, Number(entry?.quantity || 0)),
+          }))
+          .filter((entry: { size: string; quantity: number }) => entry.size.length > 0)
+      : [];
   const effectiveSizeStocks = sizeStocks.length > 0 ? sizeStocks : normalizedProductSizeStocks;
   const hasSizeOptions = Boolean(product?.hasSizes) && effectiveSizeStocks.length > 0;
-  const selectedSizeStock = effectiveSizeStocks.find((entry) => entry.size === selectedSize);
+  const selectedSizeStock = effectiveSizeStocks.find((entry: { size: string; quantity: number }) => entry.size === selectedSize);
   const availableStock = hasSizeOptions
     ? Math.max(0, Number(selectedSizeStock?.quantity || 0))
     : stock ?? Math.max(0, Number(product?.stock || 0));
@@ -454,7 +455,7 @@ export const ProductDetail: React.FC = () => {
                 <div className="mb-4">
                   <p className="text-sm mb-2">Size</p>
                   <div className="flex flex-wrap gap-2">
-                    {effectiveSizeStocks.map((entry) => {
+                    {effectiveSizeStocks.map((entry: { size: string; quantity: number }) => {
                       const isSizeOutOfStock = entry.quantity <= 0;
                       const isSelected = selectedSize === entry.size;
                       return (

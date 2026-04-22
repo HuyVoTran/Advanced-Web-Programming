@@ -58,13 +58,21 @@ const rankColor = (rank: string) => {
 export const Membership: React.FC = () => {
   const { token } = useAuth();
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
+  const isAuthenticated = Boolean(token);
 
   const { data: overview, loading: overviewLoading, error: overviewError, refetch: refetchOverview } =
-    useAdminFetch<MembershipOverview>(() => membershipAPI.getOverview(token || ''), [token]);
+    useAdminFetch<MembershipOverview>(() => membershipAPI.getOverview(token || ''), [token], {
+      enabled: isAuthenticated,
+      clearOnDisable: true,
+    });
 
   const { data: rewards, loading: rewardsLoading, refetch: refetchRewards } = useAdminFetch<RewardItem[]>(
     () => membershipAPI.getRewards(token || ''),
-    [token]
+    [token],
+    {
+      enabled: isAuthenticated,
+      clearOnDisable: true,
+    }
   );
 
   const sortedLevels = useMemo(() => {
@@ -106,7 +114,11 @@ export const Membership: React.FC = () => {
       subtitle="Theo dõi hạng thành viên, quyền lợi và đổi điểm"
       icon={Crown}
     >
-      {overviewLoading ? (
+      {!isAuthenticated ? (
+        <div className="bg-amber-50 rounded-lg border border-amber-200 p-6 text-amber-700">
+          Vui lòng đăng nhập để xem hạng thành viên, điểm thưởng và quà đổi điểm.
+        </div>
+      ) : overviewLoading ? (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
       ) : overviewError || !overview ? (
         <div className="bg-red-50 rounded-lg border border-red-200 p-6 text-red-700">{overviewError || 'Không thể tải dữ liệu membership'}</div>

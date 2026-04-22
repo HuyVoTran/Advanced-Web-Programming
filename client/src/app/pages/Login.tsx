@@ -5,6 +5,40 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { toast } from 'sonner';
 
+let googleScriptLoadingPromise: Promise<void> | null = null;
+let initializedGoogleClientId: string | null = null;
+let googleIdentityInitialized = false;
+
+const loadGoogleIdentityScript = () => {
+  if (window.google?.accounts?.id) {
+    return Promise.resolve();
+  }
+
+  if (googleScriptLoadingPromise) {
+    return googleScriptLoadingPromise;
+  }
+
+  googleScriptLoadingPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Không thể tải Google Identity script')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Không thể tải Google Identity script'));
+    document.body.appendChild(script);
+  });
+
+  return googleScriptLoadingPromise;
+};
+
 declare global {
   interface Window {
     google?: any;
@@ -18,62 +52,80 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [googleReady, setGoogleReady] = useState(false);
   const location = useLocation();
+  const loginWithGoogleRef = React.useRef(loginWithGoogle);
+  const navigateRef = React.useRef(navigate);
+
+  React.useEffect(() => {
+    loginWithGoogleRef.current = loginWithGoogle;
+    navigateRef.current = navigate;
+  }, [loginWithGoogle, navigate]);
 
   React.useEffect(() => {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
     if (!googleClientId) {
+      setGoogleReady(false);
       return;
     }
 
-    const initGoogle = () => {
-      if (!window.google?.accounts?.id) return;
+    const initGoogle = async () => {
+      try {
+        await loadGoogleIdentityScript();
 
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: async (response: any) => {
-          const credential = String(response?.credential || '');
-          if (!credential) {
-            toast.error('Google credential không hợp lệ');
-            return;
-          }
+        if (!window.google?.accounts?.id) {
+          setGoogleReady(false);
+          return;
+        }
 
-          const loggedUser = await loginWithGoogle(credential);
+        if (!googleIdentityInitialized || initializedGoogleClientId !== googleClientId) {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: async (response: any) => {
+              const credential = String(response?.credential || '');
+              if (!credential) {
+                toast.error('Google credential không hợp lệ');
+                return;
+              }
 
-          if (loggedUser) {
-            toast.success('Đăng nhập Google thành công!');
-            if (loggedUser.isAdmin) {
-              navigate('/admin');
-              return;
-            }
-            navigate('/');
-          } else {
-            toast.error('Không thể đăng nhập bằng Google');
-          }
-        },
-      });
+              const loggedUser = await loginWithGoogleRef.current(credential);
 
-      setGoogleReady(true);
-    };
+              if (loggedUser) {
+                toast.success('Đăng nhập Google thành công!');
+                if (loggedUser.isAdmin) {
+                  navigateRef.current('/admin');
+                  return;
+                }
+                navigateRef.current('/');
+              } else {
+                toast.error('Không thể đăng nhập bằng Google');
+              }
+            },
+          });
+          initializedGoogleClientId = googleClientId;
+          googleIdentityInitialized = true;
+        }
 
-    if (window.google?.accounts?.id) {
-      initGoogle();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = initGoogle;
-    document.body.appendChild(script);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
+        setGoogleReady(true);
+      } catch {
+        setGoogleReady(false);
       }
     };
-  }, [loginWithGoogle, navigate]);
+
+    void initGoogle();
+  }, []);
+
+  const handleGoogleLogin = () => {
+    if (!window.google?.accounts?.id) {
+      toast.error('Google Sign-In chưa sẵn sàng');
+      return;
+    }
+
+    window.google.accounts.id.prompt((notification: any) => {
+      if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+        toast.error('Google Sign-In chưa khả dụng. Kiểm tra cấu hình Google Client ID và Authorized JavaScript origins.');
+      }
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +196,7 @@ export const Login: React.FC = () => {
             {googleReady && (
               <button
                 type="button"
-                onClick={() => window.google?.accounts?.id?.prompt?.()}
+                onClick={handleGoogleLogin}
                 className="w-full border border-gray-300 text-gray-700 py-3 text-sm tracking-wide hover:bg-gray-50 transition-colors duration-300"
               >
                 Đăng nhập với Google
