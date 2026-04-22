@@ -57,11 +57,8 @@ export const OrderDetail: React.FC = () => {
       )
     : 0;
 
-  React.useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
+  // Guest vẫn có thể xem order detail từ email link
+  // Không cần redirect /login
 
   React.useEffect(() => {
     if (!order || !Array.isArray(order.items) || order.items.length === 0) {
@@ -112,32 +109,28 @@ export const OrderDetail: React.FC = () => {
     };
   }, [order]);
 
-  if (!user) {
-    return null;
-  }
-
   if (!order) {
     return (
-      <UserDashboardLayout
-        title="Chi tiết đơn hàng"
-        subtitle="Thông tin đơn hàng bạn đã đặt"
-        icon={Package}
-        backTo="/orders"
-        backLabel="Quay lại lịch sử đơn hàng"
-      >
-          <div className="border border-gray-200 rounded-lg p-8 text-center">
-            <p className="text-xl mb-2">Không tìm thấy đơn hàng</p>
-            <p className="text-gray-600 mb-6">Đơn hàng có thể chưa được tải hoặc không tồn tại.</p>
-            <Link
-              to="/orders"
-              className="inline-block bg-[#C9A24D] text-white px-6 py-3 rounded hover:bg-[#b8923f] transition-colors"
-            >
-              Quay lại lịch sử đơn hàng
-            </Link>
+      <div className="min-h-screen bg-white pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto">
+            <div className="border border-gray-200 rounded-lg p-8 text-center">
+              <p className="text-xl mb-2">Không tìm thấy đơn hàng</p>
+              <p className="text-gray-600 mb-6">Đơn hàng có thể chưa được tải hoặc không tồn tại.</p>
+              <Link
+                to="/"
+                className="inline-block bg-[#C9A24D] text-white px-6 py-3 rounded hover:bg-[#b8923f] transition-colors"
+              >
+                Quay lại trang chủ
+              </Link>
+            </div>
           </div>
-      </UserDashboardLayout>
+        </div>
+      </div>
     );
   }
+
+  const showCancelButton = user && canCancelOrder;
 
   const canCancelOrder = ['pending', 'confirmed'].includes(order.status);
   const shouldOpenCancelFromQuery = ['1', 'true', 'yes'].includes(
@@ -176,48 +169,43 @@ export const OrderDetail: React.FC = () => {
   };
 
   return (
-    <UserDashboardLayout
-      title="Chi tiết đơn hàng"
-      subtitle="Thông tin đơn hàng bạn đã đặt"
-      icon={Package}
-      backTo="/orders"
-      backLabel="Quay lại lịch sử đơn hàng"
-    >
-        <div className="mb-8">
-          <Link to="/orders" className="inline-flex items-center gap-2 text-[#C9A24D] hover:underline mb-4">
-            <ArrowLeft className="w-4 h-4" />
-            Quay lại lịch sử đơn hàng
-          </Link>
-          <h1 className="text-4xl font-light tracking-wide">Chi tiết đơn hàng</h1>
-        </div>
+    <div className="min-h-screen bg-white pt-24 pb-16">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <Link to="/" className="inline-flex items-center gap-2 text-[#C9A24D] hover:underline mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              Quay lại trang chủ
+            </Link>
+            <h1 className="text-4xl font-light tracking-wide">Chi tiết đơn hàng</h1>
+          </div>
 
-        <div className="border border-gray-200 rounded-lg p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <p className="text-sm text-gray-500">Mã đơn hàng</p>
-              <p className="text-lg font-medium">{order.id}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded text-sm w-fit ${getStatusColor(order.status)}`}>
-                {getStatusText(order.status)}
-              </span>
-              {canCancelOrder && (
-                <button
-                  type="button"
-                  onClick={() => setCancelDialogOpen(true)}
-                  disabled={cancelling}
-                  className="px-4 py-2 rounded text-sm border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                >
-                  {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
-                </button>
-              )}
+          <div className="border border-gray-200 rounded-lg p-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm text-gray-500">Mã đơn hàng</p>
+                <p className="text-lg font-medium">{order.id}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded text-sm w-fit ${getStatusColor(order.status)}`}>
+                  {getStatusText(order.status)}
+                </span>
+                {showCancelButton && (
+                  <button
+                    type="button"
+                    onClick={() => setCancelDialogOpen(true)}
+                    disabled={cancelling}
+                    className="px-4 py-2 rounded text-sm border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="border border-gray-200 rounded-lg p-6 mb-6">
-          <h2 className="text-xl mb-4">Sản phẩm</h2>
-          <div className="space-y-3">
+          <div className="border border-gray-200 rounded-lg p-6 mb-6">
+            <h2 className="text-xl mb-4">Sản phẩm</h2>
             {order.items.map((item, index) => {
               const originalUnitPrice = Number(item.originalPrice ?? item.price ?? 0);
               const finalUnitPrice = Number(item.finalPrice ?? item.price ?? 0);
@@ -384,6 +372,7 @@ export const OrderDetail: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-    </UserDashboardLayout>
+      </div>
+    </div>
   );
 };
