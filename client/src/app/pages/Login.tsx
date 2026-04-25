@@ -10,7 +10,9 @@ let initializedGoogleClientId: string | null = null;
 let googleIdentityInitialized = false;
 
 const loadGoogleIdentityScript = () => {
+  console.log('Loading Google Identity script...');
   if (window.google?.accounts?.id) {
+    console.log('Google Identity already loaded');
     return Promise.resolve();
   }
 
@@ -22,8 +24,14 @@ const loadGoogleIdentityScript = () => {
     const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
 
     if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(), { once: true });
-      existingScript.addEventListener('error', () => reject(new Error('Không thể tải Google Identity script')), { once: true });
+      existingScript.addEventListener('load', () => {
+        console.log('Existing Google script loaded');
+        resolve();
+      }, { once: true });
+      existingScript.addEventListener('error', () => {
+        console.error('Existing Google script error');
+        reject(new Error('Không thể tải Google Identity script'));
+      }, { once: true });
       return;
     }
 
@@ -31,8 +39,14 @@ const loadGoogleIdentityScript = () => {
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Không thể tải Google Identity script'));
+    script.onload = () => {
+      console.log('Google script loaded successfully');
+      resolve();
+    };
+    script.onerror = () => {
+      console.error('Google script load error');
+      reject(new Error('Không thể tải Google Identity script'));
+    };
     document.body.appendChild(script);
   });
 
@@ -62,8 +76,10 @@ export const Login: React.FC = () => {
 
   React.useEffect(() => {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    console.log('Google Client ID:', googleClientId);
 
     if (!googleClientId) {
+      console.log('No Google Client ID, setting googleReady to false');
       setGoogleReady(false);
       return;
     }
@@ -106,7 +122,9 @@ export const Login: React.FC = () => {
         }
 
         setGoogleReady(true);
-      } catch {
+        console.log('Google Sign-In ready');
+      } catch (error) {
+        console.error('Error initializing Google Sign-In:', error);
         setGoogleReady(false);
       }
     };

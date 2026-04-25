@@ -207,7 +207,10 @@ export const ordersAPI = {
 
   getUserOrders: (token: string) => apiCall('/orders/my-orders', { token }),
 
-  getById: (id: string, token: string) => apiCall(`/orders/${id}`, { token }),
+  getById: (id: string, token?: string) =>
+    apiCall(`/orders/${id}`, {
+      ...(token ? { token } : {}),
+    }),
 
   create: (data: any, token?: string) =>
     apiCall('/orders', {

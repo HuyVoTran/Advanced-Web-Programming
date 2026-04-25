@@ -194,22 +194,36 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getOrderById = (orderId: string): Order | undefined => {
     const found = orders.find(order => order.id === orderId);
-    if (found) return found;
-    // Try fetching from backend if token available
-    if (token) {
-      (async () => {
-        try {
-          const res: any = await ordersAPI.getById(orderId, token);
-          const fetched = res?.data ?? res ?? null;
-          if (fetched) {
-            const normalized = normalizeOrder(fetched);
-            setOrders(prev => (prev.some(o => o.id === normalized.id) ? prev : [...prev, normalized]));
+    if (found) {
+      const shouldRefresh = found.items.some(item => !item.image);
+      if (shouldRefresh) {
+        (async () => {
+          try {
+            const res: any = await ordersAPI.getById(orderId, token || undefined);
+            const fetched = res?.data ?? res ?? null;
+            if (fetched) {
+              const normalized = normalizeOrder(fetched);
+              setOrders(prev => prev.map(o => (o.id === normalized.id ? normalized : o)));
+            }
+          } catch (err) {
+            // ignore refresh errors
           }
-        } catch (err) {
-          // ignore
-        }
-      })();
+        })();
+      }
+      return found;
     }
+    (async () => {
+      try {
+        const res: any = await ordersAPI.getById(orderId, token || undefined);
+        const fetched = res?.data ?? res ?? null;
+        if (fetched) {
+          const normalized = normalizeOrder(fetched);
+          setOrders(prev => (prev.some(o => o.id === normalized.id) ? prev : [...prev, normalized]));
+        }
+      } catch (err) {
+        // ignore fetch errors for order detail
+      }
+    })();
     return undefined;
   };
 
